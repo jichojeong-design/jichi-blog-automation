@@ -27,6 +27,9 @@ jobs:
 
       - name: 4. 09:00 KST 지치 블로그 순차 자동 발행 가동
         env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || secrets.GPT_API_KEY }}
+          GPT_API_KEY: ${{ secrets.GPT_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           NAVER_ID: ${{ secrets.NAVER_ID }}
           NAVER_PW: ${{ secrets.NAVER_PW }}
         run: |
