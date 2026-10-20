@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.env
+naver_playwright_profile/
+test_*.png
+temp_*.png
