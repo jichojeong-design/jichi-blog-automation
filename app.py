@@ -72,12 +72,13 @@ with tab_news:
     st.subheader("2. 트렌드 키워드 & 치트키 제목 추천")
     
     col_k1, col_k2 = st.columns(2)
+    clean_k = constants.clean_topic_title(custom_topic)
     with col_k1:
         st.markdown("**🎯 SEMrush 기준 추천 상위 노출 키워드**")
-        st.code(f"1. {custom_topic[:10]} 사용법\n2. {custom_topic[:10]} 가격 비교\n3. {custom_topic[:10]} 장단점", language="text")
+        st.code(f"1. {clean_k} 사용법\n2. {clean_k} 가격 비교\n3. {clean_k} 장단점", language="text")
     with col_k2:
         st.markdown("**🔥 비밀 치트키 조합 추천 제목 (28자 이내)**")
-        titles = constants.generate_cheat_title_templates(custom_topic[:10])
+        titles = constants.generate_cheat_title_templates(clean_k)
         for t in titles:
             st.write(f"- `{t}`")
 

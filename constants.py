@@ -1,17 +1,24 @@
 import random
 
 def clean_topic_title(topic: str) -> str:
-    """기사 제목에서 핵심 명사구만 깔끔하게 8~10자 이내로 정돈"""
+    """기사 제목에서 단어가 중간에 잘리지 않도록 온전한 단어 단위로 14자 이내 추출"""
     if not topic:
         return "AI 신기술"
-    # 괄호 및 특수기호 제거
     cleaned = topic.split("...")[0].split("…")[0].split(":")[0].split("｜")[0].strip()
     words = cleaned.split()
-    # 2~3단어만 취해서 10자 이내로 축약
-    short_topic = " ".join(words[:3])
-    if len(short_topic) > 12:
-        short_topic = short_topic[:12]
-    return short_topic.strip()
+    
+    # 글자 수를 세어가며 단어가 통째로 들어가는 것만 추가 (단어 쪼개짐 원천 차단)
+    selected = []
+    current_len = 0
+    for w in words:
+        if current_len + len(w) + (1 if selected else 0) <= 14:
+            selected.append(w)
+            current_len += len(w) + 1
+        else:
+            break
+            
+    result = " ".join(selected) if selected else (words[0] if words else "AI 트렌드")
+    return result.strip()
 
 def generate_cheat_title_templates(core_topic: str) -> list:
     """
