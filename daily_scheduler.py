@@ -14,7 +14,7 @@ def run_ai_article_routine(article_index: int):
     AI 트렌드 기사 발행 루틴 (1편씩 실행)
     """
     print(f"\n[{datetime.datetime.now()}] 📰 [AI 트렌드 기사 #{article_index}] 자동 수집 & 발행 시작!")
-    articles = collector.fetch_curated_ai_news()
+    articles = collector.get_all_sources()
     if not articles or len(articles) < article_index:
         print("❌ 수집된 최신 기사가 부족합니다.")
         return
@@ -22,7 +22,7 @@ def run_ai_article_routine(article_index: int):
     target = articles[article_index - 1]
     title = f"[AI 속보] {target['title']}"
     
-    body_raw = f"{target['title']}\n\n최신 인공지능 트렌드와 기술적 혁신이 산업 전반에 미치는 파급력을 심층 분석합니다.\n\n출처: {target['source']}\n원문 링크: {target['link']}"
+    body_raw = f"{target['title']}\n\n최신 인공지능 트렌드와 기술적 혁신이 산업 전반에 미치는 파급력을 심층 분석합니다.\n\n출처: {target['source']}\n원문 링크: {target['url']}"
     formatted_body = formatter.format_mobile_text(body_raw)
     paragraphs = formatted_body.split("\n\n")
 
