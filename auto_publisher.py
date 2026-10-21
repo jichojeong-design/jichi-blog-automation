@@ -75,22 +75,24 @@ def post_to_naver_blog(
 
         try:
             print(f"🚀 블로그 글쓰기 진입 중... ({title[:15]}...)")
-            page.goto("https://blog.naver.com/jcjung1401/postwrite", wait_until="networkidle")
-            time.sleep(2)
+            page.goto("https://blog.naver.com/jcjung1401/postwrite", wait_until="domcontentloaded", timeout=60000)
+            time.sleep(3)
 
             # 로그인 여부 체크
             if "nidlogin" in page.url or "login" in page.url:
-                print("❌ 네이버 로그인 인증이 필요합니다! (세션 없음)")
+                print("❌ 네이버 로그인 인증이 필요합니다! (세션 만료 또는 로그인 페이지로 리다이렉트됨)")
                 context.close()
                 if browser:
                     browser.close()
                 return False
 
-            # 작성 중인 글 취소 팝업
+            print("🔍 에디터 로딩 및 팝업 정리 중...")
+            # 작성 중인 글 취소 팝업 (있으면 취소)
             try:
                 cancel_btn = page.locator("button.se-popup-button-cancel")
-                if cancel_btn.is_visible(timeout=3000):
+                if cancel_btn.is_visible(timeout=5000):
                     cancel_btn.click()
+                    print("  - 작성 중인 임시저장 글 팝업 닫음")
                     time.sleep(1)
             except Exception:
                 pass
@@ -98,16 +100,18 @@ def post_to_naver_blog(
             # 도움말 팝업 닫기
             try:
                 help_close = page.locator("button.se-help-panel-close-button")
-                if help_close.is_visible(timeout=2000):
+                if help_close.is_visible(timeout=3000):
                     help_close.click()
+                    print("  - 도움말 패널 닫음")
             except Exception:
                 pass
 
             # 제목 입력
             print("📝 제목 입력 중...")
-            title_input = page.locator(".se-documentTitle .se-ff-nanumgothic, .se-documentTitle [contenteditable='true']")
-            title_input.click()
-            title_input.fill(title)
+            title_input = page.locator(".se-documentTitle .se-ff-nanumgothic, .se-documentTitle [contenteditable='true'], .se-documentTitle textarea, .se-documentTitle input")
+            title_input.first.click(timeout=10000)
+            title_input.first.fill(title)
+            print(f"  - 제목 입력 완료: {title}")
             time.sleep(1)
 
             # 본문 작성 및 이미지 첨부
@@ -121,25 +125,27 @@ def post_to_naver_blog(
                         file_input = page.locator("input[type='file'][accept*='image']")
                         if file_input.count() > 0:
                             file_input.first.set_input_files(img_path)
+                            print(f"  - 이미지 첨부 완료: {img_path}")
                             time.sleep(3)
 
             for p in content_paragraphs:
                 page.keyboard.type(p)
                 page.keyboard.press("Enter")
                 page.keyboard.press("Enter")
-                time.sleep(0.2)
+                time.sleep(0.1)
 
             time.sleep(2)
 
             # 발행 버튼 클릭
-            print("📤 발행 준비 중...")
+            print("📤 1단계 발행 버튼 클릭 중...")
             publish_open_btn = page.locator("button.publish_btn__m9nHH, button[data-action='publish'], button:has-text('발행')").first
-            publish_open_btn.click()
-            time.sleep(1.5)
+            publish_open_btn.click(timeout=10000)
+            time.sleep(2)
 
+            print("📤 2단계 최종 발행 확인 버튼 클릭 중...")
             confirm_publish_btn = page.locator("button.confirm_btn__DAeXZ, button:has-text('발행')").last
-            confirm_publish_btn.click()
-            time.sleep(4)
+            confirm_publish_btn.click(timeout=10000)
+            time.sleep(5)
 
             print(f"✅ 포스팅 완료: {title}")
             context.close()
