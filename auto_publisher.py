@@ -121,17 +121,22 @@ def post_to_naver_blog(
 
             # 본문 작성 및 이미지 첨부
             print("📄 본문 및 이미지 업로드 중...")
-            body_area = page.locator(".se-main-container [contenteditable='true']").first
-            body_area.click()
+            # 제목 입력 후 Enter 키를 누르면 스마트에디터가 자동으로 본문 첫 단락을 생성함
+            page.keyboard.press("Enter")
+            time.sleep(1)
 
             if image_paths:
                 for img_path in image_paths:
                     if os.path.exists(img_path):
-                        file_input = page.locator("input[type='file'][accept*='image']")
-                        if file_input.count() > 0:
-                            file_input.first.set_input_files(img_path)
-                            print(f"  - 이미지 첨부 완료: {img_path}")
-                            time.sleep(3)
+                        # 파일 첨부 인풋
+                        try:
+                            file_input = page.locator("input[type='file'][accept*='image']")
+                            if file_input.count() > 0:
+                                file_input.first.set_input_files(img_path)
+                                print(f"  - 이미지 첨부 완료: {img_path}")
+                                time.sleep(3)
+                        except Exception:
+                            pass
 
             for p in content_paragraphs:
                 page.keyboard.type(p)
