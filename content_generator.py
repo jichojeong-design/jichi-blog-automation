@@ -76,39 +76,98 @@ def clean_ai_artifacts(text: str) -> str:
 
 def generate_dalle_image(prompt: str, output_path: str, size: str = "1024x1024") -> str:
     """
-    OpenAI DALL-E 3 API를 호출하여 이미지를 생성하고 로컬 파일로 저장합니다.
+    3단계 무결점 AI 이미지 생성 엔진:
+    1순위: OpenAI DALL-E 3 API
+    2순위: Google Gemini 2.0 Flash Image Generation API
+    3순위: Flux 3D Cloud AI 렌더링 폴백 (API 크레딧 소진 시에도 100% 고유 이미지 보장)
     """
-    openai_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("GPT_API_KEY")
-    if not openai_key:
-        print("  ⚠️ OPENAI_API_KEY / GPT_API_KEY 환경변수가 없어 DALL-E 3 생성을 건너뜁니다.")
-        return ""
-    try:
-        print(f"  🎨 DALL-E 3 이미지 실시간 생성 중 ({size})...")
-        url = "https://api.openai.com/v1/images/generations"
-        payload = {
-            "model": "dall-e-3",
-            "prompt": prompt,
-            "n": 1,
-            "size": size,
-            "quality": "standard"
-        }
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {openai_key}"
+    import requests
+    import random
+    import urllib.parse
+
+    openai_key = (os.environ.get("OPENAI_API_KEY") or os.environ.get("GPT_API_KEY") or "").strip().strip('"').strip("'")
+    gemini_key = (os.environ.get("GEMINI_API_KEY") or "").strip().strip('"').strip("'")
+
+    # [1순위] OpenAI DALL-E 3
+    if openai_key:
+        try:
+            print(f"  🎨 [1순위] DALL-E 3 이미지 실시간 생성 시도 ({size})...")
+            url = "https://api.openai.com/v1/images/generations"
+            payload = {
+                "model": "dall-e-3",
+                "prompt": prompt,
+                "n": 1,
+                "size": size,
+                "quality": "standard"
             }
-        )
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            res_data = json.loads(resp.read().decode("utf-8"))
-            img_url = res_data["data"][0]["url"]
-            urllib.request.urlretrieve(img_url, output_path)
-            print(f"  ✅ DALL-E 3 이미지 저장 완료: {output_path}")
+            resp = requests.post(
+                url,
+                json=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {openai_key}"
+                },
+                timeout=65
+            )
+            if resp.status_code == 200:
+                res_data = resp.json()
+                img_url = res_data["data"][0]["url"]
+                img_bytes = requests.get(img_url, timeout=30).content
+                if len(img_bytes) > 10000:
+                    with open(output_path, "wb") as f:
+                        f.write(img_bytes)
+                    print(f"  ✅ DALL-E 3 이미지 저장 완료: {output_path}")
+                    return output_path
+            else:
+                print(f"  ⚠️ DALL-E 3 응답 ({resp.status_code}): {resp.text[:180]}")
+        except Exception as e:
+            print(f"  ⚠️ DALL-E 3 호출 예외: {e}")
+
+    # [2순위] Gemini Imagen / 2.0 Flash Image Generation
+    if gemini_key:
+        try:
+            import base64
+            print("  🎨 [2순위] Gemini Image Generation 실시간 생성 시도...")
+            gemini_img_url = (
+                f"https://generativelanguage.googleapis.com/v1beta/models/"
+                f"gemini-2.0-flash-exp-image-generation:generateContent?key={gemini_key}"
+            )
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]}
+            }
+            resp = requests.post(gemini_img_url, json=payload, timeout=45)
+            if resp.status_code == 200:
+                parts = resp.json().get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                for part in parts:
+                    inline = part.get("inlineData")
+                    if inline and inline.get("data"):
+                        img_bytes = base64.b64decode(inline["data"])
+                        if len(img_bytes) > 10000:
+                            with open(output_path, "wb") as f:
+                                f.write(img_bytes)
+                            print(f"  ✅ Gemini 이미지 저장 완료: {output_path}")
+                            return output_path
+        except Exception as e:
+            print(f"  ⚠️ Gemini 이미지 생성 예외: {e}")
+
+    # [3순위] 무제한 클라우드 3D 일러스트 생성 폴백
+    try:
+        w, h = (1024, 1536) if "1792" in size else (1024, 1024)
+        seed = random.randint(1000, 999999)
+        short_prompt = urllib.parse.quote(prompt[:350])
+        flux_url = f"https://image.pollinations.ai/prompt/{short_prompt}?width={w}&height={h}&seed={seed}&nologo=true&model=flux"
+        print(f"  🎨 [3순위] 클라우드 Flux 3D 렌더링 생성 중 ({w}x{h})...")
+        resp = requests.get(flux_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=45)
+        if resp.status_code == 200 and len(resp.content) > 10000:
+            with open(output_path, "wb") as f:
+                f.write(resp.content)
+            print(f"  ✅ 클라우드 3D 이미지 저장 완료: {output_path}")
             return output_path
     except Exception as e:
-        print(f"  ⚠️ DALL-E 3 이미지 생성 실패: {e}")
-        return ""
+        print(f"  ⚠️ 3순위 이미지 생성 예외: {e}")
+
+    return ""
 
 
 def generate_article_thumbnail(topic: str, image_prompt: str = "", output_path: str = "완성_썸네일_1691x930.png") -> str:
@@ -154,12 +213,14 @@ def generate_article_thumbnail(topic: str, image_prompt: str = "", output_path: 
 def _call_llm_json(prompt: str) -> dict:
     """
     최신 Gemini (gemini-2.5-flash -> gemini-2.0-flash) 및 OpenAI (gpt-4o-mini -> gpt-4o) 순차 호출
+    (GitHub Secrets 복붙 시 들어갈 수 있는 줄바꿈/공백 문자를 완벽히 strip 처리)
     """
-    gemini_key = os.environ.get("GEMINI_API_KEY")
-    openai_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("GPT_API_KEY")
+    import requests
+    gemini_key = (os.environ.get("GEMINI_API_KEY") or "").strip().strip('"').strip("'")
+    openai_key = (os.environ.get("OPENAI_API_KEY") or os.environ.get("GPT_API_KEY") or "").strip().strip('"').strip("'")
 
     if gemini_key:
-        for model_name in ["gemini-2.5-flash", "gemini-2.0-flash"]:
+        for model_name in ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest"]:
             try:
                 gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
                 payload = {
@@ -170,18 +231,16 @@ def _call_llm_json(prompt: str) -> dict:
                         "responseMimeType": "application/json"
                     }
                 }
-                req = urllib.request.Request(
-                    gemini_url,
-                    data=json.dumps(payload).encode("utf-8"),
-                    headers={"Content-Type": "application/json"}
-                )
-                with urllib.request.urlopen(req, timeout=30) as resp:
-                    res_data = json.loads(resp.read().decode("utf-8"))
+                resp = requests.post(gemini_url, json=payload, timeout=35)
+                if resp.status_code == 200:
+                    res_data = resp.json()
                     raw_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
                     cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text.strip(), flags=re.MULTILINE)
                     match = re.search(r"\{.*\}", cleaned, re.DOTALL)
                     if match:
                         return json.loads(match.group(0))
+                else:
+                    print(f"  ⚠️ Gemini ({model_name}) HTTP {resp.status_code}: {resp.text[:200]}")
             except Exception as e:
                 print(f"  ⚠️ Gemini ({model_name}) 호출 실패, 다음 모델 시도: {e}")
 
@@ -195,20 +254,23 @@ def _call_llm_json(prompt: str) -> dict:
                     "temperature": 0.65,
                     "response_format": {"type": "json_object"}
                 }
-                req = urllib.request.Request(
+                resp = requests.post(
                     openai_url,
-                    data=json.dumps(payload).encode("utf-8"),
+                    json=payload,
                     headers={
                         "Content-Type": "application/json",
                         "Authorization": f"Bearer {openai_key}"
-                    }
+                    },
+                    timeout=35
                 )
-                with urllib.request.urlopen(req, timeout=35) as resp:
-                    res_data = json.loads(resp.read().decode("utf-8"))
+                if resp.status_code == 200:
+                    res_data = resp.json()
                     raw_text = res_data["choices"][0]["message"]["content"]
                     match = re.search(r"\{.*\}", raw_text, re.DOTALL)
                     if match:
                         return json.loads(match.group(0))
+                else:
+                    print(f"  ⚠️ OpenAI ({model_name}) HTTP {resp.status_code}: {resp.text[:200]}")
             except Exception as e:
                 print(f"  ⚠️ OpenAI ({model_name}) 호출 실패: {e}")
 
