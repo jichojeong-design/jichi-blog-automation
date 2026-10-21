@@ -6,94 +6,94 @@ from playwright.sync_api import sync_playwright
 
 def _upload_single_image(page, img_path: str) -> bool:
     """
-    네이버 스마트에디터 ONE의 상단 [사진] 툴바 버튼을 클릭하고
-    브라우저의 File Chooser 이벤트를 공중에서 가로채(intercept) 이미지를 100% 업로드합니다.
+    네이버 스마트에디터 ONE의 상단 [사진] 툴바 버튼을 실제 마우스 이벤트(Playwright native click)로 클릭하고,
+    File Chooser를 가로채 이미지를 업로드한 뒤 에디터 내 이미지 렌더링까지 검증합니다.
     """
     if not img_path or not os.path.exists(img_path):
         print(f"  ⚠️ 이미지 파일이 존재하지 않습니다: {img_path}")
         return False
 
     abs_img = os.path.abspath(img_path)
-    print(f"  🖼️ 이미지 업로드 시작 (File Chooser 인터셉트): {os.path.basename(abs_img)}")
+    print(f"  🖼️ 이미지 업로드 시작: {os.path.basename(abs_img)} ({os.path.getsize(abs_img) // 1024} KB)")
 
+    before_count = page.locator(".se-component.se-image, img.se-image-resource").count()
     uploaded = False
-    # 1차 시도: Playwright 공식 expect_file_chooser 인터셉트
+
+    # 1차 시도: Playwright native click + expect_file_chooser
     try:
+        img_btn = page.locator(
+            "button.se-image-toolbar-button, "
+            "button[data-name='image'], "
+            ".se-toolbar-item-image button"
+        ).first
         with page.expect_file_chooser(timeout=10000) as fc_info:
-            img_btn = page.locator(
-                "button.se-image-toolbar-button, "
-                "button[data-name='image'], "
-                ".se-toolbar-item-image button"
-            ).first
-            if img_btn.is_visible(timeout=3000):
-                img_btn.click()
-            else:
-                page.evaluate("""
-                    () => {
-                        const btn = document.querySelector(
-                            'button.se-image-toolbar-button, button[data-name="image"], .se-toolbar-item-image button'
-                        );
-                        if (btn) btn.click();
-                    }
-                """)
+            img_btn.click(timeout=5000)
         file_chooser = fc_info.value
         file_chooser.set_files(abs_img)
         uploaded = True
-        print("  ✅ File Chooser 경유 이미지 파일 주입 성공! (서버 렌더링 5초 대기)")
+        print("  ✅ File Chooser 인터셉트 파일 주입 성공! 네이버 이미지 서버 업로드 대기 중...")
     except Exception as fc_err:
-        print(f"  ⚠️ File Chooser 인터셉트 1차 예외 ({fc_err}), 동적 input[type='file'] 폴백 시도...")
+        print(f"  ⚠️ File Chooser 1차 예외 ({fc_err}), input[type='file'] 직접 탐색 시도...")
         try:
             file_input = page.locator("input[type='file']").first
             file_input.set_input_files(abs_img)
             uploaded = True
-            print("  ✅ 동적 input[type='file'] 경유 이미지 업로드 성공!")
+            print("  ✅ input[type='file'] 직접 주입 성공!")
         except Exception as in_err:
-            print(f"  ❌ 이미지 첨부 최종 실패: {in_err}")
+            print(f"  ❌ 이미지 첨부 실패: {in_err}")
             return False
 
     if uploaded:
-        time.sleep(5)
-        # 이미지 컴포넌트 아래의 텍스트 문단으로 포커스 이동
+        # 에디터 DOM에 .se-image 컴포넌트가 실제로 추가될 때까지 최대 12초 대기
+        for _ in range(24):
+            time.sleep(0.5)
+            now_count = page.locator(".se-component.se-image, img.se-image-resource").count()
+            if now_count > before_count:
+                break
+        time.sleep(2.5)
+        after_count = page.locator(".se-component.se-image, img.se-image-resource").count()
+        print(f"  📸 에디터 내 이미지 컴포넌트 확인: {before_count}개 -> {after_count}개")
+
+        # 이미지 아래의 본문 텍스트 영역으로 커서 안전 이동
         page.keyboard.press("ArrowDown")
         time.sleep(0.3)
         page.keyboard.press("Enter")
         time.sleep(0.5)
+        try:
+            text_mod = page.locator(".se-component.se-text .se-module-text").last
+            if text_mod.is_visible(timeout=2000):
+                text_mod.click()
+                time.sleep(0.3)
+        except Exception:
+            pass
     return uploaded
 
 
 def _enable_center_alignment(page):
     """
-    스마트에디터 ONE의 2단계 정렬 드롭다운을 제어하여 현재 문단을 가운데 정렬로 전환합니다.
-    (한 번 가운데 정렬로 전환된 문단에서 Enter를 치면 이후 모든 문단이 가운데 정렬을 자동 유지합니다.)
+    스마트에디터 ONE의 정렬 툴바 드롭다운을 실제 마우스 클릭으로 열어 '가운데 정렬'을 활성화합니다.
     """
     try:
-        # 1단계: 정렬 드롭다운 메뉴 버튼 클릭
-        page.evaluate("""
-            () => {
-                const alignDropdown = document.querySelector(
-                    'button.se-alignment-toolbar-button, ' +
-                    'button[data-name="align-drop-down-with-justify"], ' +
-                    '.se-toolbar-item-align button'
-                );
-                if (alignDropdown) alignDropdown.click();
-            }
-        """)
-        time.sleep(0.5)
-        # 2단계: 열린 서브메뉴에서 '가운데 정렬(center)' 옵션 클릭
-        page.evaluate("""
-            () => {
-                const centerOpt = document.querySelector(
-                    'button[data-value="center"], ' +
-                    'button[data-name="align-center"], ' +
-                    '.se-toolbar-option-align-center-button'
-                );
-                if (centerOpt) centerOpt.click();
-            }
-        """)
-        time.sleep(0.4)
-        print("  📐 가운데 정렬 모드 활성화 완료")
+        align_btn = page.locator(
+            "button.se-alignment-toolbar-button, "
+            "button[data-name='align-drop-down-with-justify'], "
+            ".se-toolbar-item-align button"
+        ).first
+        if align_btn.is_visible(timeout=2500):
+            align_btn.click()
+            time.sleep(0.5)
+            center_opt = page.locator(
+                "button[data-value='center'], "
+                "button[data-name='align-center'], "
+                ".se-toolbar-option-align-center-button"
+            ).first
+            if center_opt.is_visible(timeout=2500):
+                center_opt.click()
+                time.sleep(0.4)
+                print("  📐 가운데 정렬(Center) 툴바 클릭 완료")
+                return
     except Exception as e:
-        print(f"  ⚠️ 가운데 정렬 설정 중 예외 (무시 가능): {e}")
+        print(f"  ⚠️ 가운데 정렬 클릭 중 예외: {e}")
 
 
 def post_to_naver_blog(
@@ -105,10 +105,6 @@ def post_to_naver_blog(
 ) -> bool:
     """
     네이버 블로그 스마트에디터 ONE 무인 자동 발행 엔진 (아르곤 High 완결판)
-    - URL 파라미터(?categoryNo=6/7) + 발행창 2단계 드롭다운 이중 잠금으로 카테고리 100% 보장
-    - page.expect_file_chooser()로 썸네일 및 웹툰 컷 이미지 100% 업로드
-    - 문단 입력 전/후 2단 드롭다운 제어로 본문 전체 가운데 정렬 적용
-    - 소제목([1. ...]) 앞뒤 2줄 여백 + 일반 문단 1줄 여백 정밀 구현
     """
     is_cloud = os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("CLOUD_MODE") == "true"
     naver_id = os.environ.get("NAVER_ID", "jcjung1401")
@@ -176,7 +172,7 @@ def post_to_naver_blog(
             write_url = f"https://blog.naver.com/jcjung1401/postwrite?categoryNo={target_cat_no}"
             print(f"🚀 블로그 글쓰기 진입 중... ({write_url} | 제목: {title[:18]}...)")
             page.goto(write_url, wait_until="domcontentloaded", timeout=60000)
-            time.sleep(4)
+            time.sleep(5)
 
             if "nidlogin" in page.url or "login" in page.url:
                 print("❌ 네이버 로그인 인증이 필요합니다! (세션 만료 또는 로그인 페이지로 리다이렉트됨)")
@@ -242,7 +238,7 @@ def post_to_naver_blog(
             _enable_center_alignment(page)
 
             # 3. 문단별 정밀 타이핑 (소제목 앞뒤 2줄 공백, 일반 문단 1줄 공백, 인라인 웹툰 이미지 업로드)
-            for idx, para in enumerate(content_paragraphs):
+            for para in content_paragraphs:
                 p_text = str(para).strip()
                 if not p_text:
                     continue
@@ -255,11 +251,9 @@ def post_to_naver_blog(
 
                 is_subheading = bool(re.match(r"^\[\d+\.\s*[^\]]+\]$", p_text))
                 if is_subheading:
-                    # 소제목 앞 2줄 공백 확보 (이전 문단 직후 1줄 + 추가 1줄)
                     page.keyboard.press("Enter")
                     time.sleep(0.1)
                     page.keyboard.type(p_text)
-                    # 소제목 뒤 2줄 공백 확보 (줄바꿈 1회 + 빈 줄 2회)
                     page.keyboard.press("Enter")
                     page.keyboard.press("Enter")
                     page.keyboard.press("Enter")
@@ -272,12 +266,11 @@ def post_to_naver_blog(
                             page.keyboard.type(clean_line)
                         if l_i < len(lines) - 1:
                             page.keyboard.press("Enter")
-                    # 일반 문단 간 1줄 빈 줄 유지
                     page.keyboard.press("Enter")
                     page.keyboard.press("Enter")
                     time.sleep(0.1)
 
-            # 본문 하단 해시태그 텍스트 추가 (네이버 본문 검색 인덱싱 보조)
+            # 본문 하단 해시태그 텍스트 추가 (네이버 본문 검색 인덱싱 보장)
             if tags:
                 clean_hashtags = [f"#{t.replace('#', '').strip()}" for t in tags[:7] if t.strip()]
                 if clean_hashtags:
@@ -289,77 +282,39 @@ def post_to_naver_blog(
 
             # 4. 상단 [발행] 버튼 클릭하여 발행 설정 서랍(Drawer) 열기
             print("📤 1단계 상단 [발행] 버튼 클릭 중...")
-            page.evaluate("""
-                () => {
-                    const pubBtn = document.querySelector(
-                        'button[class*="publish_btn"], .se-publish-button'
-                    );
-                    if (pubBtn) {
-                        pubBtn.click();
-                        return;
-                    }
-                    const btns = Array.from(document.querySelectorAll('button'));
-                    const fallback = btns.find(b => b.innerText.trim() === '발행' && !b.className.includes('confirm'));
-                    if (fallback) fallback.click();
-                }
-            """)
+            pub_trigger = page.locator("button[class*='publish_btn'], .se-publish-button").first
+            if pub_trigger.is_visible(timeout=3000):
+                pub_trigger.click()
+            else:
+                page.locator("button", has_text="발행").first.click()
             time.sleep(2.5)
 
-            # 5. 발행 설정 서랍 내 카테고리 2단계 드롭다운 정밀 선택
+            # 5. 발행 설정 서랍 내 카테고리 2단계 드롭다운 정밀 선택 (Playwright Native Click)
             print(f"📁 카테고리 [{target_cat_no}] ('{category_name}') 2단계 드롭다운 검증 및 선택 중...")
-            cat_status = page.evaluate(f"""
-                (targetKeyword) => {{
-                    // 현재 선택된 카테고리 버튼 텍스트 확인 (\\xa0 등 모든 공백 제거 후 비교)
-                    const catBtn = document.querySelector(
-                        '[aria-label*="카테고리"], [class*="option_category"] button, [class*="selectbox_button"]'
-                    );
-                    if (catBtn) {{
-                        const currentTxt = (catBtn.innerText || '').replace(/\\s+/g, '');
-                        if (currentTxt.includes(targetKeyword)) {{
-                            return 'ALREADY_SELECTED:' + currentTxt;
-                        }}
-                        catBtn.click();
-                        return 'OPENED_DROPDOWN:' + currentTxt;
-                    }}
-                    return 'NO_CAT_BTN';
-                }}
-            """, target_cat_keyword)
-            print(f"  - 카테고리 버튼 상태: {cat_status}")
-
-            if not str(cat_status).startswith("ALREADY_SELECTED"):
-                time.sleep(1.0)
-                selected_result = page.evaluate(f"""
-                    (args) => {{
-                        const {{ catNo, keyword }} = args;
-                        // 1순위: value나 data 속성이 catNo인 요소
-                        const byVal = document.querySelector(
-                            `input[name="categoryNo"][value="${{catNo}}"], [data-categoryno="${{catNo}}"], [data-value="${{catNo}}"]`
-                        );
-                        if (byVal) {{
-                            byVal.click();
-                            const lbl = document.querySelector(`label[for="${{byVal.id}}"]`);
-                            if (lbl) lbl.click();
-                            return 'CLICKED_BY_VALUE';
-                        }}
-                        // 2순위: 드롭다운 리스트 내 텍스트(공백/\\xa0 무시) 일치 항목 클릭
-                        const candidates = Array.from(document.querySelectorAll(
-                            '[class*="option_category"] li, [class*="option_category"] label, ' +
-                            '[class*="option_category"] button, [class*="selectbox"] li, ' +
-                            '[class*="selectbox"] label, [role="option"], label, .category_item'
-                        ));
-                        const match = candidates.find(el => {{
-                            const txt = (el.innerText || '').replace(/\\s+/g, '');
-                            return txt === keyword || txt.includes(keyword);
-                        }});
-                        if (match) {{
-                            match.click();
-                            return 'CLICKED_BY_TEXT:' + match.innerText.trim();
-                        }}
-                        return 'NOT_FOUND';
-                    }}
-                """, {"catNo": target_cat_no, "keyword": target_cat_keyword})
-                print(f"  - 카테고리 드롭다운 선택 결과: {selected_result}")
-                time.sleep(1.0)
+            try:
+                cat_btn = page.locator(
+                    "[aria-label*='카테고리'], [class*='option_category'] button, [class*='selectbox_button']"
+                ).first
+                if cat_btn.is_visible(timeout=3000):
+                    current_cat_txt = re.sub(r"\s+", "", cat_btn.inner_text() or "")
+                    print(f"  - 현재 표시된 카테고리: '{current_cat_txt}'")
+                    if target_cat_keyword not in current_cat_txt:
+                        cat_btn.click()
+                        print("  - 카테고리 드롭다운 목록 열기 완료")
+                        time.sleep(1.0)
+                        cat_pattern = re.compile(r"AI\s*정보" if target_cat_no == "6" else r"웹툰")
+                        opt = page.locator(
+                            "[class*='option_category'] label, [class*='option_category'] li, "
+                            "[class*='selectbox'] label, [class*='selectbox'] li, label"
+                        ).filter(has_text=cat_pattern).first
+                        if opt.is_visible(timeout=3000):
+                            opt.click()
+                            print(f"  ✅ 카테고리 '{category_name}' 클릭 완료!")
+                            time.sleep(1.0)
+                    else:
+                        print(f"  ✅ 이미 목표 카테고리('{current_cat_txt}')로 자동 설정되어 있습니다!")
+            except Exception as cat_err:
+                print(f"  ⚠️ 카테고리 드롭다운 제어 중 예외: {cat_err}")
 
             # 6. 발행 설정 서랍 내 태그 입력칸(Tag Input) 입력
             if tags:
@@ -379,41 +334,17 @@ def post_to_naver_blog(
                                 time.sleep(0.25)
                         print("  ✅ 발행창 태그 입력 완료!")
                 except Exception as tag_err:
-                    print(f"  ⚠️ 발행창 태그 입력 중 예외 (본문 해시태그로 대체됨): {tag_err}")
+                    print(f"  ⚠️ 발행창 태그 입력 중 예외: {tag_err}")
             time.sleep(1.0)
 
-            # 7. 최종 [발행] 확인 버튼 클릭
+            # 7. 최종 [발행] 확인 버튼 클릭 (Playwright Native Click)
             print("📤 2단계 최종 [발행] 확인 버튼 클릭 중...")
-            page.evaluate("""
-                () => {
-                    const confirmBtn = document.querySelector(
-                        'button[class*="confirm_btn"], [data-testid="seOnePublishBtn"]'
-                    );
-                    if (confirmBtn) {
-                        confirmBtn.click();
-                        return;
-                    }
-                    const layer = document.querySelector(
-                        '[class*="layer_publish"], [class*="publish_layer"], [class*="layer_popup"]'
-                    );
-                    if (layer) {
-                        const btn = Array.from(layer.querySelectorAll('button')).find(
-                            b => b.innerText.trim() === '발행'
-                        );
-                        if (btn) {
-                            btn.click();
-                            return;
-                        }
-                    }
-                    const allPublishBtns = Array.from(document.querySelectorAll('button')).filter(
-                        b => b.innerText.trim() === '발행'
-                    );
-                    if (allPublishBtns.length > 0) {
-                        allPublishBtns[allPublishBtns.length - 1].click();
-                    }
-                }
-            """)
-            time.sleep(6)
+            confirm_btn = page.locator("button[class*='confirm_btn'], [data-testid='seOnePublishBtn']").first
+            if confirm_btn.is_visible(timeout=3000):
+                confirm_btn.click()
+            else:
+                page.locator("button", has_text="발행").last.click()
+            time.sleep(7)
 
             print(f"✅ 포스팅 최종 완료: {title} (URL: {page.url})")
             context.close()

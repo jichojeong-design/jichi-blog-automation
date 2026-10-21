@@ -6,9 +6,14 @@ on:
     - cron: '0 0 * * *'
   # GitHub 사이트에서 사장님이 원하실 때 언제든 '수동 실행'도 가능하도록 설정
   workflow_dispatch:
+  # 코부장이 [run-now] 커밋 태그로 원격 즉시 출격을 트리거할 수 있도록 지원
+  push:
+    branches:
+      - main
 
 jobs:
   run-daily-blog:
+    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[run-now]')
     runs-on: ubuntu-latest
     steps:
       - name: 1. 코드 체크아웃
