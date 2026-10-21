@@ -75,16 +75,20 @@ def execute_daily_sequence():
     print("=" * 60)
 
     # 1. 09:00 기사 1
-    run_ai_article_routine(1)
-    
-    print("\n⏳ 10분 대기 후 기사 2편 발행 (09:10)...")
-    time.sleep(600)
+    success = run_ai_article_routine(1)
+    if not success:
+        print("⚠️ 기사 1편 발행 실패로 10분 대기 건너뜁니다.")
+    else:
+        print("\n⏳ 10분 대기 후 기사 2편 발행 (09:10)...")
+        time.sleep(600)
     
     # 2. 09:10 기사 2
-    run_ai_article_routine(2)
-    
-    print("\n⏳ 10분 대기 후 기사 3편 발행 (09:20)...")
-    time.sleep(600)
+    success2 = run_ai_article_routine(2)
+    if not success2:
+        print("⚠️ 기사 2편 발행 실패로 10분 대기 건너뜁니다.")
+    else:
+        print("\n⏳ 10분 대기 후 기사 3편 발행 (09:20)...")
+        time.sleep(600)
     
     # 3. 09:20 기사 3
     run_ai_article_routine(3)
