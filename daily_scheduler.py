@@ -9,27 +9,35 @@ import prompt_engine
 import snack_trends
 import auto_publisher
 import notifier
+import content_generator
 
 def run_ai_article_routine(article_index: int):
     """
-    AI 트렌드 기사 발행 루틴 (1편씩 실행)
+    AI 트렌드 기사 풀버전 고품질 발행 루틴 (10년 차 테크 기자 어조 + 1,500자 + 1691x930 썸네일)
     """
-    print(f"\n[{datetime.datetime.now()}] 📰 [AI 트렌드 기사 #{article_index}] 자동 수집 & 발행 시작!")
+    print(f"\n[{datetime.datetime.now()}] 📰 [AI 트렌드 기사 #{article_index}] 고품질 자동 생성 & 발행 시작!")
     articles = collector.get_all_sources()
     if not articles or len(articles) < article_index:
         print("❌ 수집된 최신 기사가 부족합니다.")
-        return
+        return False
 
     target = articles[article_index - 1]
-    title = f"[AI 속보] {target['title']}"
     
-    body_raw = f"{target['title']}\n\n최신 인공지능 트렌드와 기술적 혁신이 산업 전반에 미치는 파급력을 심층 분석합니다.\n\n출처: {target['source']}\n원문 링크: {target['url']}"
-    formatted_body = formatter.format_mobile_text(body_raw)
+    # 1. 10년 차 IT 테크 기자의 심층 분석 원고 생성 (Gemini / GPT)
+    print(f"🤖 AI 기사 심층 분석 원고 생성 중... ({target['title'][:15]}...)")
+    generated = content_generator.generate_article_with_ai(target['title'], target['url'])
+    
+    title = generated.get("title", f"[AI 분석] {target['title'][:25]}")
+    body_text = generated.get("body", target['title'])
+    
+    # 2. 25자 가독성 줄바꿈 포맷팅 적용
+    formatted_body = formatter.format_mobile_text(body_text)
     paragraphs = formatted_body.split("\n\n")
 
-    # 대표 썸네일 합성 (1691x930)
+    # 3. 1691x930 맞춤 썸네일 합성
     thumb_path = os.path.join(os.getcwd(), "완성_썸네일_1691x930.png")
     
+    # 4. 네이버 블로그 'AI 정보' 카테고리 발행
     success = auto_publisher.post_to_naver_blog(
         title=title,
         content_paragraphs=paragraphs,
@@ -40,16 +48,16 @@ def run_ai_article_routine(article_index: int):
     if not success:
         print(f"🚨 [긴급] 기사 #{article_index} 포스팅 실패 감지! 사장님께 비상 알림 메일 발송 중...")
         notifier.send_emergency_alert(
-            failed_task_name=f"09:00 AI 트렌드 기사 #{article_index}",
+            failed_task_name=f"AI 트렌드 기사 #{article_index}",
             error_detail="네이버 스마트에디터 발행 단계 중 지연 또는 일시적 오류 발생"
         )
     return success
 
 def run_ai_webtoon_routine(webtoon_index: int):
     """
-    AI 웹툰 발행 루틴 (1편씩 실행)
+    AI 웹툰 풀버전 고품질 발행 루틴 (지치와 친구들의 티키타카 대본 + 솔직 후기)
     """
-    print(f"\n[{datetime.datetime.now()}] 🎨 [AI 웹툰 #{webtoon_index}] 실시간 트렌드 검증 & 발행 시작!")
+    print(f"\n[{datetime.datetime.now()}] 🎨 [AI 웹툰 #{webtoon_index}] 실시간 트렌드 검증 & 고품질 대본 발행 시작!")
     ranked = snack_trends.get_realtime_ranked_trends()
     best_picks = [x for x in ranked if x.get("is_selected_best")]
     
@@ -59,21 +67,24 @@ def run_ai_webtoon_routine(webtoon_index: int):
     else:
         target = best_picks[webtoon_index - 1]
 
-    title = f"[지치의 편의점 탐방] {target['keyword']} 솔직 시식 후기!"
+    # 캐릭터 믹스 (1편은 지치+송이, 2편은 지치+초코)
+    chars = ["지치 (새싹 요정)", "송이 (삼색 고양이)"] if webtoon_index == 1 else ["지치 (새싹 요정)", "초코 (턱시도 고양이)"]
     
-    body_content = [
-        f"오늘의 화제작: {target['keyword']}",
-        f"🔥 화제 포인트: {target['tag']}",
-        f"🎬 유튜브 실시간 반응: {target['youtube']}",
-        f"📝 내돈내산 시식 후기 요약: {target['naver']}",
-        "지치와 친구들의 생생한 리뷰 만화는 아래 컷에서 확인해 보세요!"
-    ]
-
-    auto_publisher.post_to_naver_blog(
-        title=title,
-        content_paragraphs=body_content,
-        category_name="지치 웹툰"
+    # AI 기반 티키타카 리뷰 대본 생성
+    wt_data = content_generator.generate_webtoon_with_ai(
+        snack_name=target['keyword'],
+        tag=target['tag'],
+        youtube=target['youtube'],
+        naver=target['naver'],
+        chars=chars
     )
+
+    success = auto_publisher.post_to_naver_blog(
+        title=wt_data["title"],
+        content_paragraphs=wt_data["content_paragraphs"],
+        category_name="웹툰"
+    )
+    return success
 
 def execute_daily_sequence():
     """
