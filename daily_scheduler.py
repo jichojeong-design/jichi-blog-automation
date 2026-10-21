@@ -108,44 +108,25 @@ def run_ai_webtoon_routine(webtoon_index: int):
 
 def execute_daily_sequence():
     """
-    클라우드 가상 머신용: 켜지자마자 정해진 시간차(10분, 20분)를 두고 즉시 순차 실행
-    09:00 기사 1 ➡️ 10분 후 기사 2 ➡️ 10분 후 기사 3 ➡️ 20분 후 웹툰 1 ➡️ 20분 후 웹툰 2
+    오늘 밤 최종 목표:
+    - AI 트렌드 기사 1편 (완벽 썸네일 + AI 정보 카테고리 + 가운데정렬 + 25자 서식 + 태그)
+    - 5분 후
+    - AI 웹툰 1편 (리센느 탐방 고정 에피소드 + 웹툰 카테고리 + 대본 + 꿀팁)
     """
     print("=" * 60)
-    print("🚀 [클라우드 09:00 KST 즉시 순차 발행 파이프라인 가동]")
+    print("🚀 [오늘 밤 최종 목표: 명품 기사 1편 + 리센느 웹툰 1편 집중 가동]")
     print("=" * 60)
 
-    # 1. 09:00 기사 1
-    success = run_ai_article_routine(1)
-    if not success:
-        print("⚠️ 기사 1편 발행 실패로 10분 대기 건너뜁니다.")
-    else:
-        print("\n⏳ 10분 대기 후 기사 2편 발행 (09:10)...")
-        time.sleep(600)
+    # 1. AI 기사 1편
+    run_ai_article_routine(1)
     
-    # 2. 09:10 기사 2
-    success2 = run_ai_article_routine(2)
-    if not success2:
-        print("⚠️ 기사 2편 발행 실패로 10분 대기 건너뜁니다.")
-    else:
-        print("\n⏳ 10분 대기 후 기사 3편 발행 (09:20)...")
-        time.sleep(600)
+    print("\n⏳ 3분 대기 후 대망의 [웹툰 1편: 리센느 탐방기] 발행 시작...")
+    time.sleep(180)
     
-    # 3. 09:20 기사 3
-    run_ai_article_routine(3)
-    
-    print("\n⏳ 20분 대기 후 웹툰 1편 발행 (09:40)...")
-    time.sleep(1200)
-    
-    # 4. 09:40 웹툰 1
+    # 2. AI 웹툰 1편 (리센느)
     run_ai_webtoon_routine(1)
     
-    print("\n⏳ 20분 대기 후 웹툰 2편 발행 (10:00)...")
-    time.sleep(1200)
-    
-    # 5. 10:00 웹툰 2
-    run_ai_webtoon_routine(2)
-    print("\n🎉 오늘 하루 5개 포스팅 전체 자동 완료!")
+    print("\n🎉 오늘 밤 목표 달성! 기사 1편 + 리센느 웹툰 1편 완벽 발행 완료!")
 
 def start_daily_scheduler():
     """로컬 컴퓨터 24시간 상주 모드"""
