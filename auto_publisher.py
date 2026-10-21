@@ -148,13 +148,40 @@ def post_to_naver_blog(
 
             # 발행 버튼 클릭
             print("📤 1단계 발행 버튼 클릭 중...")
-            publish_open_btn = page.locator("button.publish_btn__m9nHH, button[data-action='publish'], button:has-text('발행')").first
-            publish_open_btn.click(timeout=10000)
+            # 초록색 상단 메인 [발행] 버튼 정밀 타겟팅
+            # 스마트에디터 ONE의 상단 발행 버튼은 .publish_btn__m9nHH 또는 header 내의 발행 버튼임
+            # (예약발행 reserve_btn 오작동 방지)
+            page.evaluate("""
+                () => {
+                    const btns = Array.from(document.querySelectorAll('button'));
+                    // 텍스트가 정확히 '발행'인 메인 버튼 찾기
+                    const publishBtn = btns.find(b => b.innerText.trim() === '발행' && !b.className.includes('reserve'));
+                    if (publishBtn) {
+                        publishBtn.click();
+                    } else {
+                        // fallback
+                        const fallback = document.querySelector('button[data-action="publish"], .publish_btn__m9nHH');
+                        if (fallback) fallback.click();
+                    }
+                }
+            """)
             time.sleep(2)
 
             print("📤 2단계 최종 발행 확인 버튼 클릭 중...")
-            confirm_publish_btn = page.locator("button.confirm_btn__DAeXZ, button:has-text('발행')").last
-            confirm_publish_btn.click(timeout=10000)
+            # 발행 레이어 팝업 내부의 최종 초록색 [발행] 버튼 클릭
+            page.evaluate("""
+                () => {
+                    const layer = document.querySelector('.layer_publish, .layer_publish__W8d9Z, .publish_layer');
+                    if (layer) {
+                        const confirmBtn = Array.from(layer.querySelectorAll('button')).find(b => b.innerText.trim() === '발행');
+                        if (confirmBtn) confirmBtn.click();
+                    } else {
+                        const btns = Array.from(document.querySelectorAll('button'));
+                        const lastPublish = btns.filter(b => b.innerText.trim() === '발행').pop();
+                        if (lastPublish) lastPublish.click();
+                    }
+                }
+            """)
             time.sleep(5)
 
             print(f"✅ 포스팅 완료: {title}")
