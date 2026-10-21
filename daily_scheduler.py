@@ -10,6 +10,7 @@ import snack_trends
 import auto_publisher
 import notifier
 import content_generator
+import quality_inspector
 
 def run_ai_article_routine(article_index: int):
     """
@@ -53,7 +54,12 @@ def run_ai_article_routine(article_index: int):
             failed_task_name=f"AI 트렌드 기사 #{article_index}",
             error_detail="네이버 스마트에디터 발행 단계 중 지연 또는 일시적 오류 발생"
         )
-    return success
+        return False
+        
+    # 5. 🕵️‍♂️ [코부장 전수 품질 검사 실시!]
+    time.sleep(5)
+    quality_inspector.inspect_latest_post_quality(expected_category="AI 정보", is_article=True)
+    return True
 
 def run_ai_webtoon_routine(webtoon_index: int):
     """
@@ -93,6 +99,11 @@ def run_ai_webtoon_routine(webtoon_index: int):
         category_name="웹툰",
         tags=wt_data.get("tags", ["#편의점신상", "#디저트추천", "#솔직후기", "#내돈내산", "#지치웹툰", "#신상리뷰", "#편의점꿀팁"])
     )
+    
+    if success:
+        time.sleep(5)
+        quality_inspector.inspect_latest_post_quality(expected_category="웹툰", is_article=False)
+
     return success
 
 def execute_daily_sequence():
