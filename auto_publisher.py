@@ -108,9 +108,14 @@ def post_to_naver_blog(
 
             # 제목 입력
             print("📝 제목 입력 중...")
-            title_input = page.locator(".se-documentTitle .se-ff-nanumgothic, .se-documentTitle [contenteditable='true'], .se-documentTitle textarea, .se-documentTitle input")
-            title_input.first.click(timeout=10000)
-            title_input.first.fill(title)
+            # 네이버 스마트에디터 ONE의 실제 제목 입력 영역 정밀 타겟팅
+            title_area = page.locator(".se-documentTitle .se-placeholder, .se-documentTitle [contenteditable='true'], .se-documentTitle .se-module-text").first
+            try:
+                title_area.click(timeout=5000)
+            except Exception:
+                page.keyboard.press("Tab") # 탭 키로 첫 번째 입력칸(제목) 포커스 이동
+            
+            page.keyboard.type(title)
             print(f"  - 제목 입력 완료: {title}")
             time.sleep(1)
 
