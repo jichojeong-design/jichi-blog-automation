@@ -24,6 +24,26 @@ st.markdown("""
 st.markdown('<div class="main-header">🌿 지치 블로그 올인원 자동화 센터 (코다리부장 Ver 1.3)</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">AI 기사와 웹툰을 완벽 분업하여 토큰 낭비를 없애고 퀄리티를 극대화합니다.</div>', unsafe_allow_html=True)
 
+# 🚨 긴급 비상 안전 가동 센터 (Fail-Safe 배너)
+col_alert1, col_alert2 = st.columns([3, 1])
+with col_alert1:
+    st.markdown("""
+    <div style="background-color: #FFF3E0; border: 2px solid #FF9800; padding: 12px 18px; border-radius: 10px; margin-bottom: 15px;">
+        <span style="font-size: 15px; font-weight: bold; color: #E65100;">🚨 [아침 9시 무인 발행 안전 관제 시스템 가동 중]</span><br/>
+        <span style="font-size: 13px; color: #5D4037;">
+            기사 1편이 09:03까지 발행되지 않으면 <b>네이버 메일로 긴급 알림</b>이 즉시 발송됩니다. 출근길 이상 감지 시 오른쪽 비상 버튼을 눌러주세요!
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+with col_alert2:
+    st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
+    st.link_button(
+        "🚨 비상 포스팅 즉시 가동",
+        "https://github.com/jichojeong-design/jichi-blog-automation/actions/workflows/daily_blog.yml",
+        use_container_width=True,
+        help="스마트폰에서 터치 1번으로 클라우드 로봇을 즉시 비상 가동시킵니다."
+    )
+
 tab_news, tab_webtoon, tab_chars = st.tabs(["📰 AI 트렌드 기사", "🎨 AI 웹툰", "👥 캐릭터 레퍼런스 시트"])
 
 # ==========================================
