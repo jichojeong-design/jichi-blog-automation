@@ -121,25 +121,50 @@ def post_to_naver_blog(
 
             # 본문 작성 및 이미지 첨부
             print("📄 본문 및 이미지 업로드 중...")
-            # 제목 입력 후 Enter 키를 누르면 스마트에디터가 자동으로 본문 첫 단락을 생성함
             page.keyboard.press("Enter")
             time.sleep(1)
 
+            # [1] 대표 썸네일 이미지 첨부 (스마트에디터 상단 툴바의 사진 버튼 정밀 클릭)
             if image_paths:
                 for img_path in image_paths:
                     if os.path.exists(img_path):
-                        # 파일 첨부 인풋
                         try:
-                            file_input = page.locator("input[type='file'][accept*='image']")
-                            if file_input.count() > 0:
-                                file_input.first.set_input_files(img_path)
-                                print(f"  - 이미지 첨부 완료: {img_path}")
-                                time.sleep(3)
-                        except Exception:
-                            pass
+                            abs_img = os.path.abspath(img_path)
+                            print(f"  - 대표 썸네일 첨부 시도: {abs_img}")
+                            # 스마트에디터 사진 업로드 input 태그에 직접 파일 주입
+                            file_input = page.locator("input[type='file'][accept*='image']").first
+                            file_input.set_input_files(abs_img)
+                            print("  ✅ 썸네일 이미지 파일 첨부 완료 (업로드 대기 4초)...")
+                            time.sleep(4)
+                            # 이미지 첨부 후 다음 줄로 엔터
+                            page.keyboard.press("Enter")
+                            time.sleep(1)
+                        except Exception as img_err:
+                            print(f"  ⚠️ 이미지 첨부 중 예외 발생: {img_err}")
 
+            # [2] 가운데 정렬 적용 (스마트에디터 상단 툴바 가운데 정렬 버튼 클릭)
+            try:
+                print("📐 가운데 정렬 적용 중...")
+                page.evaluate("""
+                    () => {
+                        // 스마트에디터 정렬 버튼 찾기
+                        const alignCenterBtn = document.querySelector('button[data-name="align-center"], button.se-align-center-button, button[data-action="center"]');
+                        if (alignCenterBtn) {
+                            alignCenterBtn.click();
+                        }
+                    }
+                """)
+                time.sleep(1)
+            except Exception:
+                pass
+
+            # [3] 본문 문단 작성 (소제목 앞뒤 공백 및 25자 서식)
             for p in content_paragraphs:
-                page.keyboard.type(p)
+                p_text = p.strip()
+                if not p_text:
+                    continue
+                # 소제목이면 더 돋보이게 작성
+                page.keyboard.type(p_text)
                 page.keyboard.press("Enter")
                 page.keyboard.press("Enter")
                 time.sleep(0.1)
@@ -148,24 +173,35 @@ def post_to_naver_blog(
 
             # 발행 버튼 클릭
             print("📤 1단계 발행 버튼 클릭 중...")
-            # 초록색 상단 메인 [발행] 버튼 정밀 타겟팅
-            # 스마트에디터 ONE의 상단 발행 버튼은 .publish_btn__m9nHH 또는 header 내의 발행 버튼임
-            # (예약발행 reserve_btn 오작동 방지)
             page.evaluate("""
                 () => {
                     const btns = Array.from(document.querySelectorAll('button'));
-                    // 텍스트가 정확히 '발행'인 메인 버튼 찾기
                     const publishBtn = btns.find(b => b.innerText.trim() === '발행' && !b.className.includes('reserve'));
-                    if (publishBtn) {
-                        publishBtn.click();
-                    } else {
-                        // fallback
-                        const fallback = document.querySelector('button[data-action="publish"], .publish_btn__m9nHH');
-                        if (fallback) fallback.click();
-                    }
+                    if (publishBtn) publishBtn.click();
                 }
             """)
             time.sleep(2)
+
+            # [4] 카테고리 선택 ('AI 정보' 카테고리 6번 정확 선택)
+            print(f"📁 카테고리 '{category_name}' 지정 중...")
+            page.evaluate(f"""
+                (catName) => {{
+                    // 카테고리 드롭다운/라디오 선택
+                    const labels = Array.from(document.querySelectorAll('label, .category_item, .item__N392L'));
+                    const targetLabel = labels.find(l => l.innerText.includes(catName));
+                    if (targetLabel) {{
+                        targetLabel.click();
+                    }} else {{
+                        // 셀렉트 박스 형태일 경우
+                        const select = document.querySelector('select[name="categoryNo"], .select_category');
+                        if (select) {{
+                            const opt = Array.from(select.options).find(o => o.text.includes(catName));
+                            if (opt) select.value = opt.value;
+                        }}
+                    }}
+                }}
+            """, category_name)
+            time.sleep(1.5)
 
             print("📤 2단계 최종 발행 확인 버튼 클릭 중...")
             # 발행 레이어 팝업 내부의 최종 초록색 [발행] 버튼 클릭

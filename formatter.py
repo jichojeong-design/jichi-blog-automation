@@ -6,17 +6,29 @@ def format_mobile_text(text: str, max_chars: int = 25) -> str:
     """
     모바일 가독성 최적화:
     1. 각 줄을 공백/부호 포함 max_chars(기본 25자) 이내로 줄바꿈
-    2. 빈 줄은 문단 사이에만 단 1줄 유지
-    3. 과도한 중복 줄바꿈 정리
+    2. 소제목([1. ...], [2. ...], [3. ...]) 앞뒤에는 2줄 공백을 두어 문단 간격을 시원하게 분리!
+    3. 일반 문단 사이에는 단 1줄 빈 줄 유지
     """
     if not text:
         return ""
+    
+    # 소제목 태그 앞뒤에 강제로 명확한 구분자 삽입
+    text = re.sub(r'(\[\d+\.\s*[^\]]+\])', r'\n\n\1\n\n', text)
     
     paragraphs = re.split(r'\n\s*\n', text.strip())
     formatted_paragraphs = []
     
     for para in paragraphs:
-        cleaned_para = " ".join(para.split())
+        para_clean = para.strip()
+        if not para_clean:
+            continue
+            
+        # 소제목인 경우 줄바꿈 없이 깔끔하게 단독 문단으로 유지
+        if re.match(r'^\[\d+\.\s*[^\]]+\]$', para_clean):
+            formatted_paragraphs.append(para_clean)
+            continue
+            
+        cleaned_para = " ".join(para_clean.split())
         words = cleaned_para.split()
         
         lines = []
