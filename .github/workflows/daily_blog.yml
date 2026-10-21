@@ -32,5 +32,8 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           NAVER_ID: ${{ secrets.NAVER_ID }}
           NAVER_PW: ${{ secrets.NAVER_PW }}
+          NAVER_NID_AUT: ${{ secrets.NAVER_NID_AUT }}
+          NAVER_NID_SES: ${{ secrets.NAVER_NID_SES }}
+          CLOUD_MODE: "true"
         run: |
           python daily_scheduler.py --cloud-mode

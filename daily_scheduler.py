@@ -1,3 +1,4 @@
+import sys
 import time
 import datetime
 import os
@@ -21,15 +22,12 @@ def run_ai_article_routine(article_index: int):
     target = articles[article_index - 1]
     title = f"[AI 속보] {target['title']}"
     
-    # 본문 생성 및 25자 줄바꿈 포맷팅
     body_raw = f"{target['title']}\n\n최신 인공지능 트렌드와 기술적 혁신이 산업 전반에 미치는 파급력을 심층 분석합니다.\n\n출처: {target['source']}\n원문 링크: {target['link']}"
     formatted_body = formatter.format_mobile_text(body_raw)
     paragraphs = formatted_body.split("\n\n")
 
-    # 대표 썸네일 합성 (1691x930)
     thumb_path = os.path.join(os.getcwd(), "완성_썸네일_1691x930.png")
     
-    # 네이버 스마트에디터 포스팅
     auto_publisher.post_to_naver_blog(
         title=title,
         content_paragraphs=paragraphs,
@@ -46,7 +44,6 @@ def run_ai_webtoon_routine(webtoon_index: int):
     best_picks = [x for x in ranked if x.get("is_selected_best")]
     
     if len(best_picks) < webtoon_index:
-        # fallback to non-duplicate
         valid_picks = [x for x in ranked if not x.get("is_duplicate")]
         target = valid_picks[webtoon_index - 1] if len(valid_picks) >= webtoon_index else ranked[0]
     else:
@@ -68,25 +65,48 @@ def run_ai_webtoon_routine(webtoon_index: int):
         category_name="지치 웹툰"
     )
 
-def start_daily_scheduler():
+def execute_daily_sequence():
     """
-    매일 아침 09:00 KST 정밀 5단계 스케줄러 등록
-    09:00 - AI 기사 1
-    09:10 - AI 기사 2
-    09:20 - AI 기사 3
-    09:40 - AI 웹툰 1
-    10:00 - AI 웹툰 2
+    클라우드 가상 머신용: 켜지자마자 정해진 시간차(10분, 20분)를 두고 즉시 순차 실행
+    09:00 기사 1 ➡️ 10분 후 기사 2 ➡️ 10분 후 기사 3 ➡️ 20분 후 웹툰 1 ➡️ 20분 후 웹툰 2
     """
     print("=" * 60)
-    print("⏰ [지치 블로그 무인 자동화 엔진] 스케줄러 가동 중...")
-    print(" 매일 아침:")
-    print("  - 09:00 : AI 트렌드 기사 1편")
-    print("  - 09:10 : AI 트렌드 기사 2편")
-    print("  - 09:20 : AI 트렌드 기사 3편")
-    print("  - 09:40 : AI 웹툰 1편 (Best 1위)")
-    print("  - 10:00 : AI 웹툰 2편 (Best 2위)")
+    print("🚀 [클라우드 09:00 KST 즉시 순차 발행 파이프라인 가동]")
     print("=" * 60)
 
+    # 1. 09:00 기사 1
+    run_ai_article_routine(1)
+    
+    print("\n⏳ 10분 대기 후 기사 2편 발행 (09:10)...")
+    time.sleep(600)
+    
+    # 2. 09:10 기사 2
+    run_ai_article_routine(2)
+    
+    print("\n⏳ 10분 대기 후 기사 3편 발행 (09:20)...")
+    time.sleep(600)
+    
+    # 3. 09:20 기사 3
+    run_ai_article_routine(3)
+    
+    print("\n⏳ 20분 대기 후 웹툰 1편 발행 (09:40)...")
+    time.sleep(1200)
+    
+    # 4. 09:40 웹툰 1
+    run_ai_webtoon_routine(1)
+    
+    print("\n⏳ 20분 대기 후 웹툰 2편 발행 (10:00)...")
+    time.sleep(1200)
+    
+    # 5. 10:00 웹툰 2
+    run_ai_webtoon_routine(2)
+    print("\n🎉 오늘 하루 5개 포스팅 전체 자동 완료!")
+
+def start_daily_scheduler():
+    """로컬 컴퓨터 24시간 상주 모드"""
+    print("=" * 60)
+    print("⏰ [로컬 데스크탑 무인 자동화 엔진] 스케줄러 가동 중...")
+    print("=" * 60)
     schedule.every().day.at("09:00").do(run_ai_article_routine, article_index=1)
     schedule.every().day.at("09:10").do(run_ai_article_routine, article_index=2)
     schedule.every().day.at("09:20").do(run_ai_article_routine, article_index=3)
@@ -98,4 +118,7 @@ def start_daily_scheduler():
         time.sleep(30)
 
 if __name__ == "__main__":
-    start_daily_scheduler()
+    if "--cloud-mode" in sys.argv or os.environ.get("GITHUB_ACTIONS") == "true":
+        execute_daily_sequence()
+    else:
+        start_daily_scheduler()
