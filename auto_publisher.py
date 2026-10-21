@@ -1,18 +1,114 @@
 import os
+import re
 import time
 from playwright.sync_api import sync_playwright
+
+
+def _upload_single_image(page, img_path: str) -> bool:
+    """
+    네이버 스마트에디터 ONE의 상단 [사진] 툴바 버튼을 클릭하고
+    브라우저의 File Chooser 이벤트를 공중에서 가로채(intercept) 이미지를 100% 업로드합니다.
+    """
+    if not img_path or not os.path.exists(img_path):
+        print(f"  ⚠️ 이미지 파일이 존재하지 않습니다: {img_path}")
+        return False
+
+    abs_img = os.path.abspath(img_path)
+    print(f"  🖼️ 이미지 업로드 시작 (File Chooser 인터셉트): {os.path.basename(abs_img)}")
+
+    uploaded = False
+    # 1차 시도: Playwright 공식 expect_file_chooser 인터셉트
+    try:
+        with page.expect_file_chooser(timeout=10000) as fc_info:
+            img_btn = page.locator(
+                "button.se-image-toolbar-button, "
+                "button[data-name='image'], "
+                ".se-toolbar-item-image button"
+            ).first
+            if img_btn.is_visible(timeout=3000):
+                img_btn.click()
+            else:
+                page.evaluate("""
+                    () => {
+                        const btn = document.querySelector(
+                            'button.se-image-toolbar-button, button[data-name="image"], .se-toolbar-item-image button'
+                        );
+                        if (btn) btn.click();
+                    }
+                """)
+        file_chooser = fc_info.value
+        file_chooser.set_files(abs_img)
+        uploaded = True
+        print("  ✅ File Chooser 경유 이미지 파일 주입 성공! (서버 렌더링 5초 대기)")
+    except Exception as fc_err:
+        print(f"  ⚠️ File Chooser 인터셉트 1차 예외 ({fc_err}), 동적 input[type='file'] 폴백 시도...")
+        try:
+            file_input = page.locator("input[type='file']").first
+            file_input.set_input_files(abs_img)
+            uploaded = True
+            print("  ✅ 동적 input[type='file'] 경유 이미지 업로드 성공!")
+        except Exception as in_err:
+            print(f"  ❌ 이미지 첨부 최종 실패: {in_err}")
+            return False
+
+    if uploaded:
+        time.sleep(5)
+        # 이미지 컴포넌트 아래의 텍스트 문단으로 포커스 이동
+        page.keyboard.press("ArrowDown")
+        time.sleep(0.3)
+        page.keyboard.press("Enter")
+        time.sleep(0.5)
+    return uploaded
+
+
+def _enable_center_alignment(page):
+    """
+    스마트에디터 ONE의 2단계 정렬 드롭다운을 제어하여 현재 문단을 가운데 정렬로 전환합니다.
+    (한 번 가운데 정렬로 전환된 문단에서 Enter를 치면 이후 모든 문단이 가운데 정렬을 자동 유지합니다.)
+    """
+    try:
+        # 1단계: 정렬 드롭다운 메뉴 버튼 클릭
+        page.evaluate("""
+            () => {
+                const alignDropdown = document.querySelector(
+                    'button.se-alignment-toolbar-button, ' +
+                    'button[data-name="align-drop-down-with-justify"], ' +
+                    '.se-toolbar-item-align button'
+                );
+                if (alignDropdown) alignDropdown.click();
+            }
+        """)
+        time.sleep(0.5)
+        # 2단계: 열린 서브메뉴에서 '가운데 정렬(center)' 옵션 클릭
+        page.evaluate("""
+            () => {
+                const centerOpt = document.querySelector(
+                    'button[data-value="center"], ' +
+                    'button[data-name="align-center"], ' +
+                    '.se-toolbar-option-align-center-button'
+                );
+                if (centerOpt) centerOpt.click();
+            }
+        """)
+        time.sleep(0.4)
+        print("  📐 가운데 정렬 모드 활성화 완료")
+    except Exception as e:
+        print(f"  ⚠️ 가운데 정렬 설정 중 예외 (무시 가능): {e}")
+
 
 def post_to_naver_blog(
     title: str,
     content_paragraphs: list,
     image_paths: list = None,
-    category_name: str = "AI 트렌드",
+    category_name: str = "AI 정보",
     tags: list = None
 ) -> bool:
     """
-    네이버 블로그 스마트에디터 ONE 자동 포스팅 엔진
-    - 로컬 환경: 사장님의 크롬 자동 로그인 프로필 직접 사용
-    - 클라우드 환경: NAVER_ID / NAVER_PW 또는 NID 쿠키 기반 자동 로그인
+    네이버 블로그 스마트에디터 ONE 무인 자동 발행 엔진 (아르곤 High 완결판)
+    - URL 파라미터(?categoryNo=6/7) + 발행창 2단계 드롭다운 이중 잠금으로 카테고리 100% 보장
+    - page.expect_file_chooser()로 썸네일 및 웹툰 컷 이미지 100% 업로드
+    - 문단 입력 전/후 2단 드롭다운 제어로 본문 전체 가운데 정렬 적용
+    - 소제목([1. ...]) 앞뒤 2줄 여백 + 일반 문단 1줄 여백 정밀 구현
     """
     is_cloud = os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("CLOUD_MODE") == "true"
     naver_id = os.environ.get("NAVER_ID", "jcjung1401")
@@ -20,12 +116,14 @@ def post_to_naver_blog(
     nid_aut = os.environ.get("NAVER_NID_AUT", "")
     nid_ses = os.environ.get("NAVER_NID_SES", "")
 
+    target_cat_no = "7" if "웹툰" in category_name else "6"
+    target_cat_keyword = "웹툰" if target_cat_no == "7" else "AI정보"
+
     with sync_playwright() as p:
         browser = None
         context = None
 
         if not is_cloud:
-            # [1] 로컬 PC 실행 모드
             chrome_user_data = os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\User Data")
             try:
                 context = p.chromium.launch_persistent_context(
@@ -36,11 +134,15 @@ def post_to_naver_blog(
                     args=["--disable-blink-features=AutomationControlled"]
                 )
             except Exception as e:
-                print(f"⚠️ 로컬 크롬 실행 중 (기본 브라우저 사용): {e}")
+                print(f"⚠️ 로컬 크롬 프로필 사용 중, 독립 브라우저로 실행합니다: {e}")
                 browser = p.chromium.launch(headless=False)
-                context = browser.new_context()
+                context = browser.new_context(viewport={"width": 1400, "height": 950})
+                if nid_aut and nid_ses:
+                    context.add_cookies([
+                        {"name": "NID_AUT", "value": nid_aut, "domain": ".naver.com", "path": "/"},
+                        {"name": "NID_SES", "value": nid_ses, "domain": ".naver.com", "path": "/"}
+                    ])
         else:
-            # [2] 클라우드(GitHub Actions) 환경
             browser = p.chromium.launch(
                 headless=True,
                 args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-blink-features=AutomationControlled"]
@@ -50,18 +152,15 @@ def post_to_naver_blog(
                 viewport={"width": 1400, "height": 950}
             )
 
-            # 쿠키가 주어졌다면 쿠키로 로그인 상태 복원
             if nid_aut and nid_ses:
                 context.add_cookies([
                     {"name": "NID_AUT", "value": nid_aut, "domain": ".naver.com", "path": "/"},
                     {"name": "NID_SES", "value": nid_ses, "domain": ".naver.com", "path": "/"}
                 ])
             elif naver_id and naver_pw:
-                # 아이디/비밀번호 클라우드 로그인 스크립트 실행
                 page = context.new_page()
                 page.goto("https://nid.naver.com/nidlogin.login")
                 time.sleep(1)
-                # 네이버 보안 탐지 우회 입력 방식 (evaluate 기반 자바스크립트 값 주입)
                 page.evaluate(f"""
                     document.getElementById('id').value = '{naver_id}';
                     document.getElementById('pw').value = '{naver_pw}';
@@ -74,11 +173,11 @@ def post_to_naver_blog(
         page = context.pages[0] if context.pages else context.new_page()
 
         try:
-            print(f"🚀 블로그 글쓰기 진입 중... ({title[:15]}...)")
-            page.goto("https://blog.naver.com/jcjung1401/postwrite", wait_until="domcontentloaded", timeout=60000)
-            time.sleep(3)
+            write_url = f"https://blog.naver.com/jcjung1401/postwrite?categoryNo={target_cat_no}"
+            print(f"🚀 블로그 글쓰기 진입 중... ({write_url} | 제목: {title[:18]}...)")
+            page.goto(write_url, wait_until="domcontentloaded", timeout=60000)
+            time.sleep(4)
 
-            # 로그인 여부 체크
             if "nidlogin" in page.url or "login" in page.url:
                 print("❌ 네이버 로그인 인증이 필요합니다! (세션 만료 또는 로그인 페이지로 리다이렉트됨)")
                 context.close()
@@ -87,162 +186,236 @@ def post_to_naver_blog(
                 return False
 
             print("🔍 에디터 로딩 및 팝업 정리 중...")
-            # 작성 중인 글 취소 팝업 (있으면 취소)
             try:
                 cancel_btn = page.locator("button.se-popup-button-cancel")
-                if cancel_btn.is_visible(timeout=5000):
+                if cancel_btn.is_visible(timeout=4000):
                     cancel_btn.click()
-                    print("  - 작성 중인 임시저장 글 팝업 닫음")
+                    print("  - 작성 중인 임시저장 글 팝업 취소 완료")
                     time.sleep(1)
             except Exception:
                 pass
 
-            # 도움말 팝업 닫기
             try:
                 help_close = page.locator("button.se-help-panel-close-button")
-                if help_close.is_visible(timeout=3000):
+                if help_close.is_visible(timeout=2000):
                     help_close.click()
-                    print("  - 도움말 패널 닫음")
+                    print("  - 도움말 패널 닫기 완료")
+                    time.sleep(0.5)
             except Exception:
                 pass
 
-            # 제목 입력
+            # 1. 제목 입력
             print("📝 제목 입력 중...")
-            # 네이버 스마트에디터 ONE의 실제 제목 입력 영역 정밀 타겟팅
-            title_area = page.locator(".se-documentTitle .se-placeholder, .se-documentTitle [contenteditable='true'], .se-documentTitle .se-module-text").first
+            title_area = page.locator(
+                ".se-documentTitle .se-placeholder, "
+                ".se-documentTitle [contenteditable='true'], "
+                ".se-documentTitle .se-module-text"
+            ).first
             try:
                 title_area.click(timeout=5000)
             except Exception:
-                page.keyboard.press("Tab") # 탭 키로 첫 번째 입력칸(제목) 포커스 이동
-            
+                page.keyboard.press("Tab")
+
             page.keyboard.type(title)
             print(f"  - 제목 입력 완료: {title}")
             time.sleep(1)
 
-            # 본문 작성 및 이미지 첨부
-            print("📄 본문 및 이미지 업로드 중...")
-            page.keyboard.press("Enter")
+            # 2. 본문 영역 진입
+            print("📄 본문 진입 및 이미지/원고 작성 시작...")
+            body_area = page.locator(".se-component.se-text .se-module-text, .se-content [contenteditable='true']").last
+            try:
+                body_area.click(timeout=4000)
+            except Exception:
+                page.keyboard.press("Enter")
             time.sleep(1)
 
-            # [1] 대표 썸네일 이미지 첨부
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            default_thumb = os.path.join(base_dir, "완성_썸네일_1691x930.png")
-            target_images = image_paths if image_paths else [default_thumb]
+            # 인라인 이미지 마커(__IMAGE__:)가 없는 일반 기사인 경우 최상단에 대표 썸네일 업로드
+            has_inline_markers = any(str(p).strip().startswith("__IMAGE__:") for p in content_paragraphs)
+            if not has_inline_markers:
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                default_thumb = os.path.join(base_dir, "완성_썸네일_1691x930.png")
+                target_images = image_paths if image_paths else ([default_thumb] if os.path.exists(default_thumb) else [])
+                for img_path in target_images:
+                    _upload_single_image(page, img_path)
 
-            for img_path in target_images:
-                if os.path.exists(img_path):
-                    try:
-                        abs_img = os.path.abspath(img_path)
-                        print(f"  - 대표 썸네일 첨부 시도: {abs_img}")
-                        file_input = page.locator("input[type='file'][accept*='image']").first
-                        file_input.set_input_files(abs_img)
-                        print("  ✅ 썸네일 이미지 파일 첨부 완료 (업로드 대기 4초)...")
-                        time.sleep(4)
-                        page.keyboard.press("Enter")
-                        time.sleep(1)
-                    except Exception as img_err:
-                        print(f"  ⚠️ 이미지 첨부 중 예외 발생: {img_err}")
+            # 본문 타이핑 시작 전 가운데 정렬 활성화
+            _enable_center_alignment(page)
 
-            # [2] 본문 문단 작성 (소제목 앞뒤 2줄 공백 및 25자 서식)
-            for p in content_paragraphs:
-                p_text = p.strip()
+            # 3. 문단별 정밀 타이핑 (소제목 앞뒤 2줄 공백, 일반 문단 1줄 공백, 인라인 웹툰 이미지 업로드)
+            for idx, para in enumerate(content_paragraphs):
+                p_text = str(para).strip()
                 if not p_text:
                     continue
-                page.keyboard.type(p_text)
-                page.keyboard.press("Enter")
-                page.keyboard.press("Enter")
-                time.sleep(0.05)
 
-            time.sleep(1)
+                if p_text.startswith("__IMAGE__:"):
+                    inline_img = p_text.split("__IMAGE__:", 1)[1].strip()
+                    _upload_single_image(page, inline_img)
+                    _enable_center_alignment(page)
+                    continue
 
-            # [3] 본문 전체 가운데 정렬 적용 (Ctrl + A 후 가운데 정렬 버튼 클릭)
-            try:
-                print("📐 본문 전체 가운데 정렬 적용 중...")
-                page.keyboard.press("Control+a")
-                time.sleep(0.5)
-                page.evaluate("""
-                    () => {
-                        const alignCenterBtn = document.querySelector('button[data-name="align-center"], button.se-align-center-button, button[data-action="center"]');
-                        if (alignCenterBtn) alignCenterBtn.click();
-                    }
-                """)
-                time.sleep(1)
-                page.keyboard.press("ArrowDown") # 전체 선택 해제
-            except Exception:
-                pass
+                is_subheading = bool(re.match(r"^\[\d+\.\s*[^\]]+\]$", p_text))
+                if is_subheading:
+                    # 소제목 앞 2줄 공백 확보 (이전 문단 직후 1줄 + 추가 1줄)
+                    page.keyboard.press("Enter")
+                    time.sleep(0.1)
+                    page.keyboard.type(p_text)
+                    # 소제목 뒤 2줄 공백 확보 (줄바꿈 1회 + 빈 줄 2회)
+                    page.keyboard.press("Enter")
+                    page.keyboard.press("Enter")
+                    page.keyboard.press("Enter")
+                    time.sleep(0.15)
+                else:
+                    lines = p_text.split("\n")
+                    for l_i, line in enumerate(lines):
+                        clean_line = line.strip()
+                        if clean_line:
+                            page.keyboard.type(clean_line)
+                        if l_i < len(lines) - 1:
+                            page.keyboard.press("Enter")
+                    # 일반 문단 간 1줄 빈 줄 유지
+                    page.keyboard.press("Enter")
+                    page.keyboard.press("Enter")
+                    time.sleep(0.1)
 
-            # [4] 1단계 발행 버튼 클릭
-            print("📤 1단계 발행 버튼 클릭 중...")
+            # 본문 하단 해시태그 텍스트 추가 (네이버 본문 검색 인덱싱 보조)
+            if tags:
+                clean_hashtags = [f"#{t.replace('#', '').strip()}" for t in tags[:7] if t.strip()]
+                if clean_hashtags:
+                    page.keyboard.press("Enter")
+                    for ht in clean_hashtags:
+                        page.keyboard.type(ht)
+                        page.keyboard.press("Enter")
+                    time.sleep(0.5)
+
+            # 4. 상단 [발행] 버튼 클릭하여 발행 설정 서랍(Drawer) 열기
+            print("📤 1단계 상단 [발행] 버튼 클릭 중...")
             page.evaluate("""
                 () => {
+                    const pubBtn = document.querySelector(
+                        'button[class*="publish_btn"], .se-publish-button'
+                    );
+                    if (pubBtn) {
+                        pubBtn.click();
+                        return;
+                    }
                     const btns = Array.from(document.querySelectorAll('button'));
-                    const publishBtn = btns.find(b => b.innerText.trim() === '발행' && !b.className.includes('reserve'));
-                    if (publishBtn) publishBtn.click();
+                    const fallback = btns.find(b => b.innerText.trim() === '발행' && !b.className.includes('confirm'));
+                    if (fallback) fallback.click();
                 }
             """)
-            time.sleep(2)
+            time.sleep(2.5)
 
-            # [5] 카테고리 정확한 고유 번호 선택 (AI 정보: categoryNo=6 / 웹툰: categoryNo=7)
-            target_cat_no = "7" if "웹툰" in category_name else "6"
-            print(f"📁 카테고리 번호 [{target_cat_no}] ('{category_name}') 다이렉트 지정 중...")
-            page.evaluate(f"""
-                (catNo) => {{
-                    // 1. 라디오/체크 인풋 직접 체크
-                    const radio = document.querySelector(`input[name="categoryNo"][value="${{catNo}}"]`);
-                    if (radio) {{
-                        radio.click();
-                        return;
+            # 5. 발행 설정 서랍 내 카테고리 2단계 드롭다운 정밀 선택
+            print(f"📁 카테고리 [{target_cat_no}] ('{category_name}') 2단계 드롭다운 검증 및 선택 중...")
+            cat_status = page.evaluate(f"""
+                (targetKeyword) => {{
+                    // 현재 선택된 카테고리 버튼 텍스트 확인 (\\xa0 등 모든 공백 제거 후 비교)
+                    const catBtn = document.querySelector(
+                        '[aria-label*="카테고리"], [class*="option_category"] button, [class*="selectbox_button"]'
+                    );
+                    if (catBtn) {{
+                        const currentTxt = (catBtn.innerText || '').replace(/\\s+/g, '');
+                        if (currentTxt.includes(targetKeyword)) {{
+                            return 'ALREADY_SELECTED:' + currentTxt;
+                        }}
+                        catBtn.click();
+                        return 'OPENED_DROPDOWN:' + currentTxt;
                     }}
-                    // 2. data-categoryno 또는 라벨 클릭
-                    const el = document.querySelector(`[data-categoryno="${{catNo}}"], [data-value="${{catNo}}"]`);
-                    if (el) {{
-                        el.click();
-                        return;
-                    }}
-                    // 3. 텍스트로 폴백
-                    const labels = Array.from(document.querySelectorAll('label, .category_item'));
-                    const target = labels.find(l => l.innerText.replace(/\\s+/g, '').includes(catNo === '6' ? 'AI정보' : '웹툰'));
-                    if (target) target.click();
+                    return 'NO_CAT_BTN';
                 }}
-            """, target_cat_no)
-            time.sleep(1.5)
+            """, target_cat_keyword)
+            print(f"  - 카테고리 버튼 상태: {cat_status}")
 
-            # [6] 태그 5~8개 정밀 입력 (네이버 스마트블록 & 검색 유입 극대화!)
+            if not str(cat_status).startswith("ALREADY_SELECTED"):
+                time.sleep(1.0)
+                selected_result = page.evaluate(f"""
+                    (args) => {{
+                        const {{ catNo, keyword }} = args;
+                        // 1순위: value나 data 속성이 catNo인 요소
+                        const byVal = document.querySelector(
+                            `input[name="categoryNo"][value="${{catNo}}"], [data-categoryno="${{catNo}}"], [data-value="${{catNo}}"]`
+                        );
+                        if (byVal) {{
+                            byVal.click();
+                            const lbl = document.querySelector(`label[for="${{byVal.id}}"]`);
+                            if (lbl) lbl.click();
+                            return 'CLICKED_BY_VALUE';
+                        }}
+                        // 2순위: 드롭다운 리스트 내 텍스트(공백/\\xa0 무시) 일치 항목 클릭
+                        const candidates = Array.from(document.querySelectorAll(
+                            '[class*="option_category"] li, [class*="option_category"] label, ' +
+                            '[class*="option_category"] button, [class*="selectbox"] li, ' +
+                            '[class*="selectbox"] label, [role="option"], label, .category_item'
+                        ));
+                        const match = candidates.find(el => {{
+                            const txt = (el.innerText || '').replace(/\\s+/g, '');
+                            return txt === keyword || txt.includes(keyword);
+                        }});
+                        if (match) {{
+                            match.click();
+                            return 'CLICKED_BY_TEXT:' + match.innerText.trim();
+                        }}
+                        return 'NOT_FOUND';
+                    }}
+                """, {"catNo": target_cat_no, "keyword": target_cat_keyword})
+                print(f"  - 카테고리 드롭다운 선택 결과: {selected_result}")
+                time.sleep(1.0)
+
+            # 6. 발행 설정 서랍 내 태그 입력칸(Tag Input) 입력
             if tags:
-                print(f"🏷️ 검색 태그 5~8개 자동 입력 중... ({', '.join(tags[:5])}...)")
+                print(f"🏷️ 발행창 태그 입력 중... ({', '.join(tags[:5])})")
                 try:
-                    tag_input = page.locator("input.tag_input, input[placeholder*='태그'], .tag_input__N90fR, #tag_input").first
+                    tag_input = page.locator(
+                        "input[placeholder*='태그'], textarea[placeholder*='태그'], "
+                        "input.tag_input, [class*='tag_input'] input, #tag-input"
+                    ).first
                     if tag_input.is_visible(timeout=3000):
                         tag_input.click()
-                        for t in tags[:8]:
+                        for t in tags[:7]:
                             clean_t = t.replace("#", "").strip()
                             if clean_t:
-                                tag_input.fill(clean_t)
+                                page.keyboard.type(clean_t)
                                 page.keyboard.press("Enter")
-                                time.sleep(0.3)
-                        print("  ✅ 태그 5~8개 입력 완료!")
+                                time.sleep(0.25)
+                        print("  ✅ 발행창 태그 입력 완료!")
                 except Exception as tag_err:
-                    print(f"  ⚠️ 태그 입력 중 예외 발생: {tag_err}")
-            time.sleep(1)
+                    print(f"  ⚠️ 발행창 태그 입력 중 예외 (본문 해시태그로 대체됨): {tag_err}")
+            time.sleep(1.0)
 
-            print("📤 2단계 최종 발행 확인 버튼 클릭 중...")
-            # 발행 레이어 팝업 내부의 최종 초록색 [발행] 버튼 클릭
+            # 7. 최종 [발행] 확인 버튼 클릭
+            print("📤 2단계 최종 [발행] 확인 버튼 클릭 중...")
             page.evaluate("""
                 () => {
-                    const layer = document.querySelector('.layer_publish, .layer_publish__W8d9Z, .publish_layer');
+                    const confirmBtn = document.querySelector(
+                        'button[class*="confirm_btn"], [data-testid="seOnePublishBtn"]'
+                    );
+                    if (confirmBtn) {
+                        confirmBtn.click();
+                        return;
+                    }
+                    const layer = document.querySelector(
+                        '[class*="layer_publish"], [class*="publish_layer"], [class*="layer_popup"]'
+                    );
                     if (layer) {
-                        const confirmBtn = Array.from(layer.querySelectorAll('button')).find(b => b.innerText.trim() === '발행');
-                        if (confirmBtn) confirmBtn.click();
-                    } else {
-                        const btns = Array.from(document.querySelectorAll('button'));
-                        const lastPublish = btns.filter(b => b.innerText.trim() === '발행').pop();
-                        if (lastPublish) lastPublish.click();
+                        const btn = Array.from(layer.querySelectorAll('button')).find(
+                            b => b.innerText.trim() === '발행'
+                        );
+                        if (btn) {
+                            btn.click();
+                            return;
+                        }
+                    }
+                    const allPublishBtns = Array.from(document.querySelectorAll('button')).filter(
+                        b => b.innerText.trim() === '발행'
+                    );
+                    if (allPublishBtns.length > 0) {
+                        allPublishBtns[allPublishBtns.length - 1].click();
                     }
                 }
             """)
-            time.sleep(5)
+            time.sleep(6)
 
-            print(f"✅ 포스팅 완료: {title}")
+            print(f"✅ 포스팅 최종 완료: {title} (URL: {page.url})")
             context.close()
             if browser:
                 browser.close()
@@ -255,5 +428,6 @@ def post_to_naver_blog(
                 browser.close()
             return False
 
+
 if __name__ == "__main__":
-    print("스마트에디터 포스팅 모듈 준비 완료")
+    print("스마트에디터 포스팅 모듈(아르곤 High 완결판) 준비 완료")

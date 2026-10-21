@@ -2,157 +2,454 @@ import os
 import json
 import urllib.request
 import re
+from bs4 import BeautifulSoup
+import constants
+import formatter
 
-def generate_article_with_ai(topic: str, url: str) -> dict:
+BANNED_PHRASES = [
+    "핵심은 ~이 아니라", "단순한 ~이 아니라", "중요한 점은", "주목할 점은",
+    "방향은 분명합니다", "관건입니다", "시사하는 바가 큽니다", "귀추가 주목됩니다",
+    "귀추가 주목되는", "첫째,", "둘째,", "셋째,"
+]
+
+
+def scrape_article_facts(url: str) -> str:
     """
-    OpenAI 또는 Gemini API를 호출하여 10년 차 IT 테크 기자의 1,500~1,800자 고품질 본문 생성
+    기사 원문 URL에서 실제 본문 팩트를 추출하여 AI가 할루시네이션이나 짧은 템플릿 없이
+    1,500~1,800자 심층 분석 기사를 작성하도록 지원합니다.
+    """
+    if not url or not url.startswith("http"):
+        return ""
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            html = resp.read().decode("utf-8", errors="ignore")
+            soup = BeautifulSoup(html, "html.parser")
+            for tag in soup(["script", "style", "header", "footer", "nav", "aside"]):
+                tag.decompose()
+            article_div = (
+                soup.select_one("#article-view-content-div")
+                or soup.select_one(".article-body")
+                or soup.select_one(".entry-content")
+                or soup.select_one("article")
+            )
+            if article_div:
+                text = article_div.get_text(" ", strip=True)
+            else:
+                paras = [p.get_text(" ", strip=True) for p in soup.select("p") if len(p.get_text(strip=True)) > 30]
+                text = " ".join(paras)
+            text = re.sub(r"\s+", " ", text).strip()
+            return text[:2500]
+    except Exception as e:
+        print(f"  ⚠️ 원문 팩트 추출 실패 ({url}): {e}")
+        return ""
+
+
+def clean_ai_artifacts(text: str) -> str:
+    """AI 특유의 인용 태그([cite:...]), 불필요한 이모지, 금지 표현 등을 정밀 세탁"""
+    if not text:
+        return ""
+    text = re.sub(r"\[cite:[^\]]+\]", "", text)
+    # 9대 금지 표현 자동 치환
+    replacements = {
+        "중요한 점은": "특히 눈여겨볼 대목은",
+        "주목할 점은": "업계가 시선을 두는 배경은",
+        "방향은 분명합니다": "흐름은 이미 예고되어 있습니다",
+        "관건입니다": "승부처가 될 전망입니다",
+        "시사하는 바가 큽니다": "던지는 파장이 적지 않습니다",
+        "귀추가 주목됩니다": "향후 행보에 이목이 쏠립니다",
+        "귀추가 주목되는": "향후 행보에 이목이 쏠리는",
+        "첫째,": "우선,",
+        "둘째,": "여기에 더해,",
+        "셋째,": "아울러,"
+    }
+    for bad, good in replacements.items():
+        text = text.replace(bad, good)
+    # AI 티가 나는 과도한 아이콘 제거
+    for emo in ["🌱", "🔥", "🎬", "✨", "💡", "📝", "🚀", "📌", "✅"]:
+        text = text.replace(emo, "")
+    return text.strip()
+
+
+def generate_dalle_image(prompt: str, output_path: str, size: str = "1024x1024") -> str:
+    """
+    OpenAI DALL-E 3 API를 호출하여 이미지를 생성하고 로컬 파일로 저장합니다.
+    """
+    openai_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("GPT_API_KEY")
+    if not openai_key:
+        print("  ⚠️ OPENAI_API_KEY / GPT_API_KEY 환경변수가 없어 DALL-E 3 생성을 건너뜁니다.")
+        return ""
+    try:
+        print(f"  🎨 DALL-E 3 이미지 실시간 생성 중 ({size})...")
+        url = "https://api.openai.com/v1/images/generations"
+        payload = {
+            "model": "dall-e-3",
+            "prompt": prompt,
+            "n": 1,
+            "size": size,
+            "quality": "standard"
+        }
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {openai_key}"
+            }
+        )
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            res_data = json.loads(resp.read().decode("utf-8"))
+            img_url = res_data["data"][0]["url"]
+            urllib.request.urlretrieve(img_url, output_path)
+            print(f"  ✅ DALL-E 3 이미지 저장 완료: {output_path}")
+            return output_path
+    except Exception as e:
+        print(f"  ⚠️ DALL-E 3 이미지 생성 실패: {e}")
+        return ""
+
+
+def generate_article_thumbnail(topic: str, image_prompt: str = "", output_path: str = "완성_썸네일_1691x930.png") -> str:
+    """
+    기사 주제에 맞는 1:1 3D 일러스트를 DALL-E 3로 생성한 뒤,
+    사장님의 '썸네일_원본첨부.png' 좌측 라운드 카드 영역(x:62~789, y:52~853)에 정밀 합성합니다.
+    """
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    template_path = os.path.join(base_dir, "썸네일_원본첨부.png")
+    full_out_path = output_path if os.path.isabs(output_path) else os.path.join(base_dir, output_path)
+    temp_inner = os.path.join(base_dir, "temp_dalle_article_inner.png")
+
+    if not image_prompt:
+        image_prompt = (
+            f"A high-end 3D isometric digital illustration representing the technology news topic: '{topic}'. "
+            "Futuristic glowing AI core, sleek modern server and holographic data streams, vibrant lighting, "
+            "Pixar and Blender 3D render style. Strictly NO text, NO letters, NO numbers, NO logos anywhere in the image."
+        )
+
+    generated_inner = generate_dalle_image(image_prompt, temp_inner, size="1024x1024")
+    if generated_inner and os.path.exists(generated_inner) and os.path.exists(template_path):
+        try:
+            composed = formatter.compose_thumbnail(
+                inner_image_path=generated_inner,
+                output_path=full_out_path,
+                template_path=template_path
+            )
+            print(f"  🖼️ 1691x930 맞춤 썸네일 합성 완료: {composed}")
+            return composed
+        except Exception as e:
+            print(f"  ⚠️ 썸네일 합성 중 오류 발생: {e}")
+
+    # DALL-E 호출이 불가능하거나 실패한 경우 기존 완성 썸네일 또는 temp_uploaded_inner로 즉시 합성 보장
+    fallback_inner = os.path.join(base_dir, "temp_uploaded_inner.png")
+    if not os.path.exists(full_out_path) and os.path.exists(fallback_inner) and os.path.exists(template_path):
+        try:
+            formatter.compose_thumbnail(fallback_inner, full_out_path, template_path)
+        except Exception:
+            pass
+    return full_out_path
+
+
+def _call_llm_json(prompt: str) -> dict:
+    """
+    최신 Gemini (gemini-2.5-flash -> gemini-2.0-flash) 및 OpenAI (gpt-4o-mini -> gpt-4o) 순차 호출
     """
     gemini_key = os.environ.get("GEMINI_API_KEY")
     openai_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("GPT_API_KEY")
-    
-    prompt = f"""당신은 10년 차 IT·산업 전문 테크 기자입니다.
-주제: {topic}
-출처 링크: {url}
 
-아래 [작성 기준]을 철저히 준수하여 완벽한 블로그 기사 원고를 작성해 주세요.
+    if gemini_key:
+        for model_name in ["gemini-2.5-flash", "gemini-2.0-flash"]:
+            try:
+                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {
+                        "temperature": 0.65,
+                        "maxOutputTokens": 4096,
+                        "responseMimeType": "application/json"
+                    }
+                }
+                req = urllib.request.Request(
+                    gemini_url,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    res_data = json.loads(resp.read().decode("utf-8"))
+                    raw_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+                    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text.strip(), flags=re.MULTILINE)
+                    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+                    if match:
+                        return json.loads(match.group(0))
+            except Exception as e:
+                print(f"  ⚠️ Gemini ({model_name}) 호출 실패, 다음 모델 시도: {e}")
+
+    if openai_key:
+        for model_name in ["gpt-4o-mini", "gpt-4o"]:
+            try:
+                openai_url = "https://api.openai.com/v1/chat/completions"
+                payload = {
+                    "model": model_name,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.65,
+                    "response_format": {"type": "json_object"}
+                }
+                req = urllib.request.Request(
+                    openai_url,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {openai_key}"
+                    }
+                )
+                with urllib.request.urlopen(req, timeout=35) as resp:
+                    res_data = json.loads(resp.read().decode("utf-8"))
+                    raw_text = res_data["choices"][0]["message"]["content"]
+                    match = re.search(r"\{.*\}", raw_text, re.DOTALL)
+                    if match:
+                        return json.loads(match.group(0))
+            except Exception as e:
+                print(f"  ⚠️ OpenAI ({model_name}) 호출 실패: {e}")
+
+    return {}
+
+
+def generate_article_with_ai(topic: str, url: str) -> dict:
+    """
+    원문 팩트를 먼저 크롤링한 뒤, 10년 차 IT 테크 기자의 1,500~1,800자 고품질 본문 및 DALL-E 프롬프트를 생성합니다.
+    """
+    scraped_facts = scrape_article_facts(url)
+    cheat_titles = constants.generate_cheat_title_templates(topic)
+    sample_title = cheat_titles[0] if cheat_titles else f'"{constants.clean_topic_title(topic)}" 결국 터졌다'
+
+    prompt = f"""당신은 10년 차 IT·산업 전문 테크 기자입니다.
+헤드라인 주제: {topic}
+출처 링크: {url}
+원문 팩트 발췌: {scraped_facts if scraped_facts else '공식 발표 및 최신 업계 동향 기반 작성'}
+
+아래 [작성 기준]을 철저히 준수하여 네이버 블로그 'AI 정보' 카테고리에 발행할 심층 분석 기사를 작성하세요.
 
 [작성 기준]
-1. 문체 및 분량:
-   - 10년 차 IT 기자의 전문적이고 날카로운 문체 (~합니다 체)
-   - 분량: 공백 제외 1,300 ~ 1,600자
-   - 소제목은 [1. 핵심 배경], [2. 기술적 진보와 시장 반응], [3. 앞으로의 과제와 전망] 형태로 자연스럽게 2~3개 사용
-   - 문단당 2~4문장으로 가독성 높게 작성
-2. 9대 금지 표현 엄격 배제:
-   - '핵심은 ~이 아니라', '단순한 ~이 아니라', '중요한 점은', '주목할 점은', '방향은 분명합니다', '관건입니다', '시사하는 바가 큽니다', '귀추가 주목됩니다' 사용 금지!
-3. 출력 형식 (반드시 JSON 형식으로 출력):
+1. 제목 (title):
+   - 공백 포함 28자 이내의 완결된 문장 (절대 단어가 중간에 짤리지 말 것!)
+   - 참고 치트키 스타일 예시: {sample_title}
+2. 본문 (body):
+   - 10년 차 IT 기자의 냉철하고 입체적인 문체 (~합니다 체 일관 유지)
+   - 분량: 공백 포함 1,500 ~ 1,800자 (최소 5~6개 문단으로 깊이 있게 분석할 것)
+   - 도입부 첫 문단(3초 훅)에서 사건의 핵심 수치와 산업적 파장을 즉각 제시할 것
+   - 소제목은 [1. ...], [2. ...], [3. ...] 형식으로 본문 흐름에 맞게 정확히 3개 포함할 것
+   - 문단당 3~4문장으로 깊이 있게 서술하고, 마지막 문단은 독자에게 던지는 실질적인 확인 조건이나 질문으로 마무리할 것
+   - 본문 마지막 줄에 '출처: {url}' 한 줄을 덧붙일 것
+   - 이모지(🌱, 🔥, ✨, 💡 등) 절대 사용 금지!
+3. 9대 금지 표현 엄격 배제:
+   - '핵심은 ~이 아니라', '단순한 ~이 아니라', '중요한 점은', '주목할 점은', '방향은 분명합니다', '관건입니다', '시사하는 바가 큽니다', '귀추가 주목됩니다', '첫째/둘째/셋째' 절대 사용 금지!
+4. DALL-E 3 영문 프롬프트 (image_prompt):
+   - 이 기사의 핵심 주제를 상징하는 1:1 비율 3D 디지털 일러스트 영문 프롬프트 (글자, 알파벳, 숫자, 로고가 절대 들어가지 않도록 명시)
+
+반드시 아래 JSON 구조로만 응답하세요:
 {{
-  "title": "28자 이내로 완결된 고클릭률 치트키 제목 (상황반전/타겟공감/호기심)",
-  "body": "위 기준을 충족하는 10년차 IT 테크 기자의 심층 분석 본문 텍스트 (줄바꿈 포함)",
-  "tags": ["#태그1", "#태그2", "#태그3", "#태그4", "#태그5"]
+  "title": "28자 이내 완결된 고클릭률 제목",
+  "body": "1,500~1,800자 심층 분석 본문 텍스트 (문단 사이 빈 줄 포함)",
+  "tags": ["#태그1", "#태그2", "#태그3", "#태그4", "#태그5", "#태그6"],
+  "image_prompt": "A high-end 3D isometric illustration of ... Strictly no text, no letters, no numbers."
 }}
 """
 
-    # 1. Gemini API 우선 시도 (사장님 보유 키)
-    if gemini_key:
-        try:
-            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
-            }
-            req = urllib.request.Request(gemini_url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
-            with urllib.request.urlopen(req, timeout=20) as resp:
-                res_data = json.loads(resp.read().decode("utf-8"))
-                raw_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
-                # JSON 파싱
-                match = re.search(r'\{.*\}', raw_text, re.DOTALL)
-                if match:
-                    parsed = json.loads(match.group(0))
-                    return parsed
-        except Exception as e:
-            print("Gemini API 호출 실패, fallback으로 넘어갑니다:", e)
+    parsed = _call_llm_json(prompt)
+    if parsed and parsed.get("body") and len(parsed.get("body", "")) >= 700:
+        clean_title = clean_ai_artifacts(parsed.get("title", sample_title))
+        if len(clean_title) > 30 or not clean_title:
+            clean_title = sample_title
+        clean_body = clean_ai_artifacts(parsed["body"])
+        if url and url not in clean_body:
+            clean_body += f"\n\n출처: {url}"
+        tags = parsed.get("tags") or ["#인공지능", "#AI트렌드", "#테크뉴스", "#IT분석", "#빅테크", "#지치블로그"]
+        return {
+            "title": clean_title,
+            "body": clean_body,
+            "tags": tags[:7],
+            "image_prompt": parsed.get("image_prompt", "")
+        }
 
-    # 2. OpenAI API 시도
-    if openai_key:
-        try:
-            openai_url = "https://api.openai.com/v1/chat/completions"
-            payload = {
-                "model": "gpt-4o-mini",
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.7
-            }
-            req = urllib.request.Request(openai_url, data=json.dumps(payload).encode("utf-8"), headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {openai_key}"
-            })
-            with urllib.request.urlopen(req, timeout=20) as resp:
-                res_data = json.loads(resp.read().decode("utf-8"))
-                raw_text = res_data["choices"][0]["message"]["content"]
-                match = re.search(r'\{.*\}', raw_text, re.DOTALL)
-                if match:
-                    return json.loads(match.group(0))
-        except Exception as e:
-            print("OpenAI API 호출 실패:", e)
+    # 비상용 고품질 1,500자 폴백 (원문 팩트 연동 + 단어 잘림 없는 치트키 제목)
+    fact_snippet = scraped_facts[:450] if scraped_facts else f"{topic} 관련 글로벌 테크 업계의 기술 경쟁이 새로운 국면에 접어들었습니다."
+    fallback_body = f"""{topic} 소식이 공식 전해지면서 글로벌 인공지능 생태계와 엔터프라이즈 시장 전반에 적지 않은 파장이 일고 있습니다. 기존 서비스 구조를 뛰어넘는 기술적 전환점이 마련되었다는 분석과 함께, 실제 현업 도입 과정에서의 실효성을 둘러싼 논의가 동시에 급물살을 타고 있습니다. 빅테크 기업들이 주도해 온 생성형 AI 패권 경쟁이 이제는 실질적인 운영 효율성과 수익성 증명 단계로 이동했음을 보여주는 대목입니다.
 
-    # Fallback 기본 고품질 템플릿
+[1. 핵심 배경과 원문 주요 팩트]
+
+이번 발표의 구체적인 내용을 살펴보면 기술적 지향점이 명확히 드러납니다. {fact_snippet} 그동안 산업 현장의 실무진들은 고도화된 추론 성능을 유지하면서도 인프라 도입 비용과 응답 지연 시간을 동시에 낮출 수 있는 실질적인 해법을 꾸준히 요구해 왔습니다. 이번 행보는 그러한 시장의 목마름을 정면으로 겨냥한 전략적 포석으로 풀이됩니다.
+
+[2. 기술적 진보와 시장 경쟁 구도의 변화]
+
+이번 조치가 갖는 본질적인 의미는 데이터 처리 효율성과 시스템 연동성을 대폭 끌어올려 기업들의 도입 장벽을 낮추었다는 데 있습니다. 특히 보안성과 자체 데이터 통제권을 중시하는 금융, 제조, IT 서비스 기업들 입장에서는 기존 폐쇄형 구조에서 벗어나 보다 유연하게 AI 파이프라인을 설계할 수 있는 선택지를 확보하게 되었습니다. 경쟁사들 역시 이에 대응하기 위해 차세대 모델의 업데이트 주기를 앞당기며 치열한 맞불 작전에 나설 것으로 전망됩니다.
+
+[3. 실무 적용 과제와 향후 확인할 조건]
+
+다만 발표된 기술 사양이 실제 대규모 상용 트래픽 환경에서도 흔들림 없이 재현될 수 있을지는 면밀한 검증이 필요합니다. 기업 내부 레거시 시스템과의 통합 과정에서 발생하는 추가 엔지니어링 비용과 보안 규정 준수 여부 역시 실무진이 반드시 따져봐야 할 변수입니다. 과연 이번 기술 개편이 시장의 기대를 충족하며 실질적인 비즈니스 생산성 향상으로 이어질 수 있을지, 초기 도입 기업들의 실제 성능 지표와 비용 절감 성과를 차분히 지켜봐야 할 시점입니다.
+
+출처: {url}"""
+
     return {
-        "title": f"'{topic[:14]}' 공개에 업계 긴장… 기술 격차 벌어지나",
-        "body": f"""인공지능(AI) 생태계의 판도를 뒤흔들 새로운 기술적 혁신이 공식 발표되며 산업계 전반에 커다란 파장을 일으키고 있습니다. 단순한 성능 개선을 넘어, 기존 시장의 규칙을 재정의하는 수준의 구조적 변화가 시작되었다는 평가가 지배적입니다.
-
-[1. 핵심 배경과 시장의 요구]
-글로벌 빅테크 기업들이 앞다투어 고도화된 추론 모델과 효율성 극대화 솔루션을 내놓는 가운데, 이번 발표는 현업 실무진들이 겪어온 고비용·저효율의 한계를 정면으로 돌파했다는 점에서 의미가 깊습니다. 실제 산업 현장에서는 복잡한 워크플로우를 안정적으로 처리할 수 있는 신뢰성 높은 인프라를 절실히 요구해 왔습니다.
-
-[2. 기술적 진보와 산업 파급력]
-이번 혁신의 본질은 처리 속도와 자원 효율성을 극대화하면서도 결과물의 정밀도를 획기적으로 끌어올렸다는 사실에 있습니다. 특히 기업 내부 데이터와의 연동성 및 보안성이 대폭 강화되면서 엔터프라이즈 시장에서의 도입 장벽이 급격히 낮아질 것으로 관측됩니다. 유수의 테크 기업들이 기존 독점적 체제에서 벗어나 새로운 기술 스택을 검토하기 시작한 배경입니다.
-
-[3. 앞으로의 과제와 시장 전망]
-물론 기술의 대중화와 안정적인 상용화를 위해서는 여전히 해결해야 할 과제들이 남아 있습니다. 대규모 트래픽 발생 시의 연산 비용 최적화와 함께, 각 산업군별 맞춤형 파인튜닝의 유연성이 실제 시장 점유율을 가르는 핵심 변수가 될 것입니다. 기술적 우위가 실제 비즈니스 임팩트로 연결될 수 있을지 업계의 시선이 집중되고 있습니다.
-
-출처 및 공식 발표: {url}""",
-        "tags": ["#인공지능", "#AI트렌드", "#테크뉴스", "#IT기사", "#지치블로그"]
+        "title": sample_title,
+        "body": clean_ai_artifacts(fallback_body),
+        "tags": ["#인공지능", "#AI트렌드", "#테크뉴스", "#IT기사", "#빅테크", "#지치블로그"],
+        "image_prompt": ""
     }
 
-def generate_webtoon_with_ai(snack_name: str, tag: str, youtube: str, naver: str, chars: list) -> dict:
+
+def generate_webtoon_with_ai(
+    snack_name: str,
+    tag: str,
+    youtube: str,
+    naver: str,
+    chars: list,
+    generate_images: bool = True
+) -> dict:
     """
-    어제 사장님과 확립한 명품 레이아웃 기준 100% 반영:
-    1. 말풍선 한글 깨짐 방지: 2~3글자 단어("우와!", "대박!", "진짜?!")만 제한
-    2. 만화 컷 아래에 캐릭터별 상세 대화문(티키타카) 완벽 배치
-    3. 내돈내산 꿀팁 & 솔직 장단점 요약
-    4. 해시태그 5~8개
+    사장님의 명품 웹툰 레이아웃 기준 100% 반영:
+    1. 말풍선 한글 깨짐 방지: DALL-E 3 프롬프트에 2~3글자 감탄사("우와!", "대박!", "진짜?!", "꿀맛!")만 허용
+    2. 만화 컷 이미지 2장(상반부 1~3컷, 하반부 4~6컷)을 실제 생성하여 본문 중간에 정밀 배치
+    3. 제미나이 티가 나는 유치한 아이콘(🌱, 🔥, 🎬, ✨, 💡, 📝) 완전 배제
+    4. 실구매 후기 기반 먹는 꿀팁 & 장단점 요약 + 해시태그 5~8개
     """
-    main_char = chars[0]
-    sub_char = chars[1] if len(chars) > 1 else "송이 (삼색 고양이)"
     main_name = "지치"
+    sub_char = chars[1] if len(chars) > 1 else "송이 (삼색 고양이)"
     sub_name = "송이" if "송이" in sub_char else "초코"
-    
-    title = f"[지치의 편의점 탐방] {snack_name} 솔직 시식 후기! (내돈내산 꿀팁)"
-    
-    content_paragraphs = [
-        f"안녕하세요, 지치입니다.",
-        f"오늘은 SNS에서 난리 난 화제의 신상, [CU 리센느(RESCENE) 빵 5종 (시나몬롤·메론빵·옥수수빵)]을 직접 맛보고 솔직하게 리뷰해보려고 해요.",
-        f"오늘의 시식 메이트: {main_name} & {sub_name}",
-        f"화제의 중심: {tag.replace('🔥', '').strip()}",
-        "",
-        "---",
-        "[만화 1부: 편의점 오픈런과 첫 만남]",
-        f"{main_name}: \"우와! 드디어 구했다! 요즘 편의점에서 품절 대란이라는 {snack_name}!\"",
-        f"{sub_name}: \"대박이다냥! 패키지부터 묵직한 게 장난 아니다냥! 빨리 뜯어보자냥!\"",
-        f"{main_name}: \"유튜브에서 보니까 이건 그냥 먹는 것보다 꿀팁이 따로 있다던데?\"",
-        f"{sub_name}: \"진짜?! 벌써부터 침 나온다냥! 얼른 한입 먹어보자냥!\"",
-        "",
-        "---",
-        "[만화 2부: 본격 시식과 솔직 티키타카]",
-        f"{main_name}: \"한 입 베어 무는 순간 입안 가득 진한 풍미가 싹 퍼져! 유튜브 반응이 괜히 나온 게 아니었어!\"",
-        f"{sub_name}: \"꿀맛이다냥! 크림이 진짜 부드럽고 식감이 쫀득하게 살아있다냥!\"",
-        f"{main_name}: \"단맛도 너무 과하지 않고 딱 적당해서 질리지 않고 계속 들어가는 맛이야!\"",
-        f"{sub_name}: \"이건 무조건 재구매 각이다냥! 지치야 내일 또 사러 가자냥!\"",
-        "",
-        "---",
-        "[지치의 내돈내산 시식 총평 & 솔직 꿀팁]",
-        f"실구매자 반응 요약: {naver.replace('📝', '').strip()}",
-        "지치만의 특급 꿀팁:",
-        "1. 차갑게 냉장/냉동 보관 후 살짝 얼려 먹으면 크림이 아이스크림처럼 변해 풍미 극대화!",
-        "2. 빵류는 에어프라이어에 180도 3분만 살짝 돌리면 겉바속촉 갓 구운 빵집 퀄리티 완성!",
-        "",
-        "솔직 장단점 요약:",
-        "• 장점: 편의점 퀄리티를 뛰어넘는 진한 원재료 맛과 푸짐한 양",
-        "• 단점: 인기가 너무 많아서 편의점 재고 찾기가 하늘의 별 따기!",
-        "",
-        "오늘도 지치와 친구들의 달콤한 탐방기를 끝까지 읽어주셔서 감사합니다."
-    ]
-    
-    tags = [
-        f"#{snack_name.replace(' ', '')}",
-        "#편의점신상",
-        "#솔직후기",
-        "#내돈내산",
-        "#지치웹툰",
-        "#디저트추천",
-        "#편의점꿀팁"
-    ]
-    
+
+    char_en = (
+        "'Jichi' (a cute chubby light-green sprout fairy with a single green leaf on head) and "
+        + (
+            "'Songi' (a cute calico cat with orange and black patches on head and a completely clean white muzzle without any dots)"
+            if sub_name == "송이"
+            else "'Choco' (a cute black and white tuxedo cat with bright round eyes)"
+        )
+    )
+
+    prompt = f"""당신은 네이버 인기 웹툰 작가이자 디저트 전문 리뷰어입니다.
+대상 제품: {snack_name}
+화제 포인트: {tag}
+유튜브/SNS 반응: {youtube}
+실구매자 후기 및 꿀팁: {naver}
+등장 캐릭터: {main_name}(새싹 요정) & {sub_name}(고양이 친구, 말끝에 자연스럽게 '~냥' 사용)
+
+[작성 규칙]
+1. 이모지/아이콘(🌱, 🔥, 🎬, ✨, 💡, 📝 등)은 본문과 제목에 절대 단 한 개도 넣지 마세요! 사람이 직접 깔끔하게 타이핑한 블로그 스타일이어야 합니다.
+2. 제목(title): 26자 이내의 호기심 유발 완결형 제목 (예: "{snack_name}, 직접 먹어보니 반전인 이유")
+3. 구성:
+   - intro: 제품 소개 및 오늘의 시식 포인트 (2~3문장)
+   - part1_dialogue: 상반부 만화(1~4컷) 아래에 들어갈 캐릭터 대화 및 상황 묘사 (4줄 리스트)
+   - part2_dialogue: 하반부 만화(5~8컷) 아래에 들어갈 본격 시식 티키타카 및 반전 대화 (4줄 리스트)
+   - review_summary: 실구매 후기 기반 맛있게 먹는 꿀팁 및 솔직 장단점 요약 (3~4문장)
+   - tags: 관련 해시태그 6개 리스트
+
+반드시 아래 JSON 형식으로만 응답하세요:
+{{
+  "title": "제목 텍스트",
+  "intro": "도입부 문단 텍스트",
+  "part1_dialogue": [
+    "1컷 · 지치가 편의점 매대에서 신상을 발견한다. / 지치: \\"드디어 찾았다!\\"",
+    "2컷 · ...",
+    "3컷 · ...",
+    "4컷 · ..."
+  ],
+  "part2_dialogue": [
+    "5컷 · ...",
+    "6컷 · ...",
+    "7컷 · ...",
+    "8컷 · ..."
+  ],
+  "review_summary": "실구매 후기 종합 및 맛있게 먹는 팁 요약 문단",
+  "tags": ["#태그1", "#태그2", "#태그3", "#태그4", "#태그5", "#태그6"]
+}}
+"""
+
+    parsed = _call_llm_json(prompt)
+
+    # DALL-E 3 웹툰 컷 이미지 2장 생성 (세로형 1024x1792)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    img1_path = os.path.join(base_dir, "webtoon_cut_1.png")
+    img2_path = os.path.join(base_dir, "webtoon_cut_2.png")
+    generated_images = []
+
+    if generate_images:
+        dalle_prompt_1 = (
+            f"A 3-panel vertical webtoon comic strip in cute 3D Pixar animation style. "
+            f"Characters: {char_en}. "
+            f"Scene: Discovering the trending Korean convenience store dessert '{snack_name}' on a shelf and opening the package excitedly. "
+            f"Speech bubbles MUST contain ONLY 1 short 2-letter Korean exclamation like '우와!' or '대박!' in clean bold font, no long sentences. "
+            f"Warm cozy lighting, vibrant colors, high detail."
+        )
+        dalle_prompt_2 = (
+            f"A 3-panel vertical webtoon comic strip in cute 3D Pixar animation style. "
+            f"Characters: {char_en}. "
+            f"Scene: Tasting '{snack_name}' together at a cozy wooden table with delighted expressions, showing the rich cream and texture inside. "
+            f"Speech bubbles MUST contain ONLY 1 short 2-letter Korean exclamation like '꿀맛!' or '진짜?!' with heart icons, no long text. "
+            f"Warm atmosphere, clean 3D render."
+        )
+        res1 = generate_dalle_image(dalle_prompt_1, img1_path, size="1024x1792")
+        res2 = generate_dalle_image(dalle_prompt_2, img2_path, size="1024x1792")
+        if res1 and os.path.exists(res1):
+            generated_images.append(res1)
+        if res2 and os.path.exists(res2):
+            generated_images.append(res2)
+
+    if parsed and parsed.get("part1_dialogue") and parsed.get("part2_dialogue"):
+        title = clean_ai_artifacts(parsed.get("title", f"{snack_name}, 품절 대란인 진짜 이유"))
+        intro = clean_ai_artifacts(parsed.get("intro", ""))
+        p1 = [clean_ai_artifacts(line) for line in parsed.get("part1_dialogue", [])]
+        p2 = [clean_ai_artifacts(line) for line in parsed.get("part2_dialogue", [])]
+        summary = clean_ai_artifacts(parsed.get("review_summary", ""))
+        tags = parsed.get("tags") or [
+            f"#{re.sub(r'[^가-힣a-zA-Z0-9]', '', snack_name)[:12]}",
+            "#편의점신상", "#디저트추천", "#솔직후기", "#내돈내산", "#지치웹툰"
+        ]
+    else:
+        clean_snack = snack_name.split("(")[0].strip()
+        title = f"{clean_snack}, 직접 먹어보니 품절 대란인 이유"
+        intro = f"요즘 SNS와 편의점 디저트 코너에서 가장 뜨거운 반응을 얻고 있는 {snack_name} 소식을 준비했습니다. {main_name}와 {sub_name}가 직접 확인한 맛 포인트와 더욱 맛있게 즐기는 방법을 웹툰으로 만나보세요."
+        p1 = [
+            f"1컷 · {main_name}가 편의점 매대에서 품절 대란인 {clean_snack}을 발견한다.\n{main_name}: “우와! 드디어 구했다!”",
+            f"2컷 · {sub_name}가 묵직한 패키지를 보며 눈을 반짝인다.\n{sub_name}: “대박이다냥! 보기만 해도 엄청 기대된다냥!”",
+            f"3컷 · 포장을 열자 고소한 향과 함께 먹음직스러운 비주얼이 드러난다.\n{main_name}: “그냥 먹어도 맛있지만 숨겨진 꿀팁이 따로 있대!”",
+            f"4컷 · 반으로 가른 단면에 가득 찬 크림과 필링이 모습을 드러낸다.\n{sub_name}: “진짜?! 안에 속재료가 끝까지 꽉 차 있다냥!”"
+        ]
+        p2 = [
+            f"5컷 · {main_name}가 추천 레시피대로 준비한 첫 입을 맛본다.\n{main_name}: “입안 가득 진한 풍미가 퍼지는 게 기대 이상이야!”",
+            f"6컷 · {sub_name}도 한 입 크게 베어 물며 감탄한다.\n{sub_name}: “꿀맛이다냥! 겉은 쫀득하고 속은 정말 부드럽다냥!”",
+            f"7컷 · 단맛 밸런스와 식감을 꼼꼼하게 비교하며 대화를 나눈다.\n{main_name}: “우유나 아메리카노랑 같이 먹으면 단맛이 딱 잡히네!”",
+            f"8컷 · 빈 접시를 보며 아쉬워하는 {sub_name}와 웃는 {main_name}.\n{sub_name}: “이건 내일 또 사러 가야 한다냥!”"
+        ]
+        summary = (
+            f"실구매 후기 요약: {clean_ai_artifacts(youtube)} {clean_ai_artifacts(naver)}\n"
+            "더 맛있게 즐기는 팁: 크림이 들어간 제품은 냉장 보관 후 차갑게 드시면 풍미가 한층 살아나며, "
+            "베이커리류는 에어프라이어 180도에서 2~3분만 데워 드시면 갓 구운 식감을 즐기실 수 있습니다."
+        )
+        tags = [
+            f"#{re.sub(r'[^가-힣a-zA-Z0-9]', '', clean_snack)[:12]}",
+            "#편의점신상",
+            "#솔직후기",
+            "#디저트추천",
+            "#지치웹툰",
+            "#편의점꿀팁"
+        ]
+
+    # 본문 문단 리스트 조립 (이미지 1 -> 1부 대사 -> 이미지 2 -> 2부 대사 -> 총평)
+    content_paragraphs = [intro]
+    if len(generated_images) >= 1:
+        content_paragraphs.append(f"__IMAGE__:{generated_images[0]}")
+    content_paragraphs.extend(p1)
+    if len(generated_images) >= 2:
+        content_paragraphs.append(f"__IMAGE__:{generated_images[1]}")
+    content_paragraphs.extend(p2)
+    content_paragraphs.append(summary)
+    content_paragraphs.append(
+        "구매 후기를 참고해 구성한 창작 웹툰입니다.\n이미지는 AI 제작 도구를 활용한 일러스트이며 실제 제품과 개인차에 따라 느낌이 다를 수 있습니다."
+    )
+
     return {
         "title": title,
         "content_paragraphs": content_paragraphs,
-        "tags": tags
+        "image_paths": generated_images,
+        "tags": tags[:7]
     }

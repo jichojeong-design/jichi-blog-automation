@@ -75,3 +75,25 @@ def is_already_published_live(target_keyword: str, blog_id: str = "jcjung1401") 
             return True, f"이미 발행됨 ({p['date']}: {title[:18]}...)"
             
     return False, ""
+
+
+def is_article_already_published_live(headline: str, blog_id: str = "jcjung1401") -> bool:
+    """
+    AI 정보 카테고리(categoryNo=6) 및 전체 글(categoryNo=0)을 실시간 조회하여
+    이미 발행된 뉴스 기사인지 중복 여부를 판별합니다.
+    """
+    live_posts = get_live_published_titles(blog_id=blog_id, category_no=0)
+    tokens = [
+        tok for tok in re.split(r"[\s,\(\)\[\]\"'‘’“”…·:]+", headline)
+        if len(tok) >= 2 and tok not in ["AI", "인공지능", "공개", "출시", "발표", "개발", "기술"]
+    ]
+    if not tokens:
+        return False
+
+    for p in live_posts:
+        title = p["title"]
+        matched = [tok for tok in tokens[:5] if tok in title]
+        if len(matched) >= 2:
+            return True
+    return False
+

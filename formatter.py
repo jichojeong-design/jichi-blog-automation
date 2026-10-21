@@ -35,8 +35,9 @@ def format_mobile_text(text: str, max_chars: int = 25) -> str:
         current_line = ""
         
         for word in words:
+            is_url = word.startswith(("http://", "https://", "www."))
             if not current_line:
-                if len(word) > max_chars:
+                if len(word) > max_chars and not is_url:
                     for i in range(0, len(word), max_chars):
                         lines.append(word[i:i+max_chars])
                 else:
@@ -46,7 +47,7 @@ def format_mobile_text(text: str, max_chars: int = 25) -> str:
                     current_line += " " + word
                 else:
                     lines.append(current_line)
-                    if len(word) > max_chars:
+                    if len(word) > max_chars and not is_url:
                         for i in range(0, len(word), max_chars):
                             if i + max_chars < len(word):
                                 lines.append(word[i:i+max_chars])
