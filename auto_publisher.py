@@ -54,18 +54,11 @@ def _upload_single_image(page, img_path: str) -> bool:
         after_count = page.locator(".se-component.se-image, img.se-image-resource").count()
         print(f"  📸 에디터 내 이미지 컴포넌트 확인: {before_count}개 -> {after_count}개")
 
-        # 이미지 아래의 본문 텍스트 영역으로 커서 안전 이동
-        page.keyboard.press("ArrowDown")
+        # 이미지 선택 상태에서 우측 화살표(ArrowRight) + 엔터(Enter)로 이미지 바로 아래 새 문단 생성 및 포커스
+        page.keyboard.press("ArrowRight")
         time.sleep(0.3)
         page.keyboard.press("Enter")
         time.sleep(0.5)
-        try:
-            text_mod = page.locator(".se-component.se-text .se-module-text").last
-            if text_mod.is_visible(timeout=2000):
-                text_mod.click()
-                time.sleep(0.3)
-        except Exception:
-            pass
     return uploaded
 
 
@@ -225,12 +218,19 @@ def post_to_naver_blog(
                 page.keyboard.press("Enter")
             time.sleep(1)
 
-            # 인라인 이미지 마커(__IMAGE__:)가 없는 일반 기사인 경우 최상단에 대표 썸네일 업로드
+            # 인라인 이미지 마커(__IMAGE__:)가 없는 경우에만 상단 대표 이미지 업로드
+            # (주의: 웹툰 카테고리에서는 절대 기사 전용 썸네일 '완성_썸네일_1691x930.png'을 폴백으로 쓰지 않음!)
             has_inline_markers = any(str(p).strip().startswith("__IMAGE__:") for p in content_paragraphs)
             if not has_inline_markers:
                 base_dir = os.path.dirname(os.path.abspath(__file__))
-                default_thumb = os.path.join(base_dir, "완성_썸네일_1691x930.png")
-                target_images = image_paths if image_paths else ([default_thumb] if os.path.exists(default_thumb) else [])
+                if target_cat_no == "6":
+                    default_thumb = os.path.join(base_dir, "완성_썸네일_1691x930.png")
+                    target_images = image_paths if image_paths else ([default_thumb] if os.path.exists(default_thumb) else [])
+                else:
+                    wt1 = os.path.join(base_dir, "webtoon_cut_1.png")
+                    wt2 = os.path.join(base_dir, "webtoon_cut_2.png")
+                    default_wt = [p for p in [wt1, wt2] if os.path.exists(p)]
+                    target_images = image_paths if image_paths else default_wt
                 for img_path in target_images:
                     _upload_single_image(page, img_path)
 

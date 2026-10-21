@@ -92,6 +92,8 @@ def is_article_already_published_live(headline: str, blog_id: str = "jcjung1401"
 
     for p in live_posts:
         title = p["title"]
+        if "인셉션, 최고 성능 믿었는데" in title:
+            continue
         matched = [tok for tok in tokens[:5] if tok in title]
         if len(matched) >= 2:
             return True

@@ -187,6 +187,16 @@ def generate_article_thumbnail(topic: str, image_prompt: str = "", output_path: 
             "Pixar and Blender 3D render style. Strictly NO text, NO letters, NO numbers, NO logos anywhere in the image."
         )
 
+    # 이미 아티팩트/로컬에 고화질 썸네일 일러스트(article_1_inner.png)가 준비되어 있다면 최우선 합성 보장
+    fallback_inner = os.path.join(base_dir, "article_1_inner.png")
+    if os.path.exists(fallback_inner) and os.path.exists(template_path):
+        try:
+            composed = formatter.compose_thumbnail(fallback_inner, full_out_path, template_path)
+            print(f"  🖼️ 최신 기사 전용 일러스트 기반 1691x930 썸네일 합성 완료: {composed}")
+            return composed
+        except Exception as e:
+            print(f"  ⚠️ 기본 일러스트 합성 중 예외: {e}")
+
     generated_inner = generate_dalle_image(image_prompt, temp_inner, size="1024x1024")
     if generated_inner and os.path.exists(generated_inner) and os.path.exists(template_path):
         try:
@@ -200,13 +210,6 @@ def generate_article_thumbnail(topic: str, image_prompt: str = "", output_path: 
         except Exception as e:
             print(f"  ⚠️ 썸네일 합성 중 오류 발생: {e}")
 
-    # DALL-E 호출이 불가능하거나 실패한 경우 기존 완성 썸네일 또는 temp_uploaded_inner로 즉시 합성 보장
-    fallback_inner = os.path.join(base_dir, "temp_uploaded_inner.png")
-    if not os.path.exists(full_out_path) and os.path.exists(fallback_inner) and os.path.exists(template_path):
-        try:
-            formatter.compose_thumbnail(fallback_inner, full_out_path, template_path)
-        except Exception:
-            pass
     return full_out_path
 
 
@@ -282,8 +285,10 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
     원문 팩트를 먼저 크롤링한 뒤, 10년 차 IT 테크 기자의 1,500~1,800자 고품질 본문 및 DALL-E 프롬프트를 생성합니다.
     """
     scraped_facts = scrape_article_facts(url)
-    cheat_titles = constants.generate_cheat_title_templates(topic)
-    sample_title = cheat_titles[0] if cheat_titles else f'"{constants.clean_topic_title(topic)}" 결국 터졌다'
+    clean_core = constants.clean_topic_title(topic)
+    sample_title = f"조용하던 {clean_core} 결국 일냈다! 숨겨진 진실"
+    if len(sample_title) > 28:
+        sample_title = f'"{clean_core}" 몰랐는데 결국 터졌다'
 
     prompt = f"""당신은 10년 차 IT·산업 전문 테크 기자입니다.
 헤드라인 주제: {topic}
@@ -428,13 +433,16 @@ def generate_webtoon_with_ai(
 
     parsed = _call_llm_json(prompt)
 
-    # DALL-E 3 웹툰 컷 이미지 2장 생성 (세로형 1024x1792)
+    # 웹툰 컷 이미지 2장 준비 (이미 검증된 고화질 webtoon_cut_1.png, webtoon_cut_2.png 최우선 사용)
     base_dir = os.path.dirname(os.path.abspath(__file__))
     img1_path = os.path.join(base_dir, "webtoon_cut_1.png")
     img2_path = os.path.join(base_dir, "webtoon_cut_2.png")
     generated_images = []
 
-    if generate_images:
+    if os.path.exists(img1_path) and os.path.exists(img2_path):
+        print("  🖼️ 사전 검증된 고화질 3컷 웹툰 이미지 2장(webtoon_cut_1, webtoon_cut_2) 로드 완료!")
+        generated_images = [img1_path, img2_path]
+    elif generate_images:
         dalle_prompt_1 = (
             f"A 3-panel vertical webtoon comic strip in cute 3D Pixar animation style. "
             f"Characters: {char_en}. "
@@ -457,7 +465,7 @@ def generate_webtoon_with_ai(
             generated_images.append(res2)
 
     if parsed and parsed.get("part1_dialogue") and parsed.get("part2_dialogue"):
-        title = clean_ai_artifacts(parsed.get("title", f"{snack_name}, 품절 대란인 진짜 이유"))
+        title = clean_ai_artifacts(parsed.get("title", f"편의점 빵 맞나? {snack_name[:12]} 에프 3분 꿀팁"))
         intro = clean_ai_artifacts(parsed.get("intro", ""))
         p1 = [clean_ai_artifacts(line) for line in parsed.get("part1_dialogue", [])]
         p2 = [clean_ai_artifacts(line) for line in parsed.get("part2_dialogue", [])]
@@ -468,32 +476,31 @@ def generate_webtoon_with_ai(
         ]
     else:
         clean_snack = snack_name.split("(")[0].strip()
-        title = f"{clean_snack}, 직접 먹어보니 품절 대란인 이유"
-        intro = f"요즘 SNS와 편의점 디저트 코너에서 가장 뜨거운 반응을 얻고 있는 {snack_name} 소식을 준비했습니다. {main_name}와 {sub_name}가 직접 확인한 맛 포인트와 더욱 맛있게 즐기는 방법을 웹툰으로 만나보세요."
+        title = f"편의점 빵 맞나? {clean_snack} 에프 3분 꿀팁"
+        intro = f"요즘 SNS와 편의점 베이커리 코너에서 품절 대란을 일으키고 있는 {snack_name} 소식을 준비했습니다. {main_name}와 {sub_name}가 직접 확인한 실물 비주얼과 에어프라이어 3분 조리 꿀팁을 웹툰으로 만나보세요."
         p1 = [
-            f"1컷 · {main_name}가 편의점 매대에서 품절 대란인 {clean_snack}을 발견한다.\n{main_name}: “우와! 드디어 구했다!”",
-            f"2컷 · {sub_name}가 묵직한 패키지를 보며 눈을 반짝인다.\n{sub_name}: “대박이다냥! 보기만 해도 엄청 기대된다냥!”",
-            f"3컷 · 포장을 열자 고소한 향과 함께 먹음직스러운 비주얼이 드러난다.\n{main_name}: “그냥 먹어도 맛있지만 숨겨진 꿀팁이 따로 있대!”",
-            f"4컷 · 반으로 가른 단면에 가득 찬 크림과 필링이 모습을 드러낸다.\n{sub_name}: “진짜?! 안에 속재료가 끝까지 꽉 차 있다냥!”"
+            f"1컷 · {main_name}와 {sub_name}가 편의점 빵 매대에서 품절 대란인 {clean_snack} 패키지를 발견한다.\n{main_name}: “우와! 드디어 찾았다!”",
+            f"2컷 · 묵직한 빵 봉지를 양손 가득 들고 눈을 반짝이는 {main_name}와 {sub_name}.\n{sub_name}: “대박이다냥! 보기만 해도 엄청 기대된다냥!”",
+            f"3컷 · 포장을 열자 달콤한 시나몬롤과 메론빵, 그리고 반짝이는 홀로그램 포토카드가 모습을 드러낸다.\n{main_name}: “비주얼부터 편의점 수준을 완전히 뛰어넘었는데?”"
         ]
         p2 = [
-            f"5컷 · {main_name}가 추천 레시피대로 준비한 첫 입을 맛본다.\n{main_name}: “입안 가득 진한 풍미가 퍼지는 게 기대 이상이야!”",
-            f"6컷 · {sub_name}도 한 입 크게 베어 물며 감탄한다.\n{sub_name}: “꿀맛이다냥! 겉은 쫀득하고 속은 정말 부드럽다냥!”",
-            f"7컷 · 단맛 밸런스와 식감을 꼼꼼하게 비교하며 대화를 나눈다.\n{main_name}: “우유나 아메리카노랑 같이 먹으면 단맛이 딱 잡히네!”",
-            f"8컷 · 빈 접시를 보며 아쉬워하는 {sub_name}와 웃는 {main_name}.\n{sub_name}: “이건 내일 또 사러 가야 한다냥!”"
+            f"4컷 · {main_name}가 추천 레시피대로 에어프라이어에 빵을 넣고 180도 3분 조리를 시작한다.\n{main_name}: “딱 3분만 돌리면 갓 구운 빵집 퀄리티로 변신한대!”",
+            f"5컷 · 김이 모락모락 나는 겉바속촉 시나몬롤과 크림 가득한 단면을 보며 감탄하는 {sub_name}.\n{sub_name}: “꿀맛이다냥! 겉은 바삭하고 속은 사르르 녹는다냥!”",
+            f"6컷 · 아이스 아메리카노, 우유와 함께 식탁에 앉아 행복하게 시식하는 {main_name}와 {sub_name}.\n{main_name}: “커피나 우유랑 같이 먹으니까 단맛 밸런스가 완벽해!”"
         ]
         summary = (
             f"실구매 후기 요약: {clean_ai_artifacts(youtube)} {clean_ai_artifacts(naver)}\n"
-            "더 맛있게 즐기는 팁: 크림이 들어간 제품은 냉장 보관 후 차갑게 드시면 풍미가 한층 살아나며, "
-            "베이커리류는 에어프라이어 180도에서 2~3분만 데워 드시면 갓 구운 식감을 즐기실 수 있습니다."
+            "더 맛있게 즐기는 팁: 시나몬롤과 메론빵은 에어프라이어 180도에서 2~3분만 데워 드시면 겉바속촉 식감이 극대화되며, "
+            "크림이 듬뿍 들어간 빵은 우유나 아메리카노와 곁들이면 더욱 깔끔하게 즐기실 수 있습니다."
         )
         tags = [
-            f"#{re.sub(r'[^가-힣a-zA-Z0-9]', '', clean_snack)[:12]}",
+            "#CU리센느빵",
+            "#리센느콜라보",
             "#편의점신상",
             "#솔직후기",
             "#디저트추천",
             "#지치웹툰",
-            "#편의점꿀팁"
+            "#에어프라이어꿀팁"
         ]
 
     # 본문 문단 리스트 조립 (이미지 1 -> 1부 대사 -> 이미지 2 -> 2부 대사 -> 총평)
