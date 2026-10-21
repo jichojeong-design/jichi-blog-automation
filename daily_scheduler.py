@@ -55,22 +55,28 @@ def run_ai_article_routine(article_index: int):
 
 def run_ai_webtoon_routine(webtoon_index: int):
     """
-    AI 웹툰 풀버전 고품질 발행 루틴 (지치와 친구들의 티키타카 대본 + 솔직 후기)
+    AI 웹툰 풀버전 고품질 발행 루틴:
+    - [웹툰 1편]: 사장님 전략 반영! 조회수 폭발 화제템 '리센느(RESCENE) 콜라보 신상 탐방' 고정!
+    - [웹툰 2편]: 실시간 1~5위 트렌드 중 기발행 제외 검증된 1등 신상(연세우유 밤티라미수 등) 고정!
     """
-    print(f"\n[{datetime.datetime.now()}] 🎨 [AI 웹툰 #{webtoon_index}] 실시간 트렌드 검증 & 고품질 대본 발행 시작!")
-    ranked = snack_trends.get_realtime_ranked_trends()
-    best_picks = [x for x in ranked if x.get("is_selected_best")]
-    
-    if len(best_picks) < webtoon_index:
-        valid_picks = [x for x in ranked if not x.get("is_duplicate")]
-        target = valid_picks[webtoon_index - 1] if len(valid_picks) >= webtoon_index else ranked[0]
+    if webtoon_index == 1:
+        print(f"\n[{datetime.datetime.now()}] 🎨 [AI 웹툰 #1] 🔥 화제성 1등 '리센느(RESCENE)' 고정 에피소드 발행 시작!")
+        target = {
+            "keyword": "CU 리센느(RESCENE) 빵 5종 (시나몬롤·메론빵·옥수수빵)",
+            "tag": "🔥 걸그룹 콜라보 품절 대란 신상 (조회수 1등 화제작)",
+            "youtube": "포토카드 모으는 재미와 빵 자체 퀄리티가 편의점 수준을 넘었다는 극찬 리뷰 다수.",
+            "naver": "에어프라이어에 3분 돌려먹으면 겉바속촉 갓 구운 빵집 퀄리티 완성! 시나몬 향이 진해서 커피랑 찰떡궁합."
+        }
+        chars = ["지치 (새싹 요정)", "송이 (삼색 고양이)"]
     else:
-        target = best_picks[webtoon_index - 1]
+        print(f"\n[{datetime.datetime.now()}] 🎨 [AI 웹툰 #2] 🍰 편의점/카페 실시간 인기 신상 에피소드 발행 시작!")
+        ranked = snack_trends.get_realtime_ranked_trends()
+        # 리센느를 제외한 미발행 최우선 신상 선정
+        valid_picks = [x for x in ranked if not x.get("is_duplicate") and "리센느" not in x.get("keyword", "")]
+        target = valid_picks[0] if valid_picks else ranked[0]
+        chars = ["지치 (새싹 요정)", "초코 (턱시도 고양이)"]
 
-    # 캐릭터 믹스 (1편은 지치+송이, 2편은 지치+초코)
-    chars = ["지치 (새싹 요정)", "송이 (삼색 고양이)"] if webtoon_index == 1 else ["지치 (새싹 요정)", "초코 (턱시도 고양이)"]
-    
-    # AI 기반 티키타카 리뷰 대본 생성
+    # AI 기반 지치와 친구들의 티키타카 리뷰 대본 생성
     wt_data = content_generator.generate_webtoon_with_ai(
         snack_name=target['keyword'],
         tag=target['tag'],
