@@ -203,6 +203,24 @@ def post_to_naver_blog(
             """, category_name)
             time.sleep(1.5)
 
+            # [5] 태그 5~8개 정밀 입력 (네이버 스마트블록 & 검색 유입 극대화!)
+            if tags:
+                print(f"🏷️ 검색 태그 5~8개 자동 입력 중... ({', '.join(tags[:5])}...)")
+                try:
+                    tag_input = page.locator("input.tag_input, input[placeholder*='태그'], .tag_input__N90fR, #tag_input").first
+                    if tag_input.is_visible(timeout=3000):
+                        tag_input.click()
+                        for t in tags[:8]:
+                            clean_t = t.replace("#", "").strip()
+                            if clean_t:
+                                tag_input.fill(clean_t)
+                                page.keyboard.press("Enter")
+                                time.sleep(0.3)
+                        print("  ✅ 태그 5~8개 입력 완료!")
+                except Exception as tag_err:
+                    print(f"  ⚠️ 태그 입력 중 예외 발생: {tag_err}")
+            time.sleep(1)
+
             print("📤 2단계 최종 발행 확인 버튼 클릭 중...")
             # 발행 레이어 팝업 내부의 최종 초록색 [발행] 버튼 클릭
             page.evaluate("""

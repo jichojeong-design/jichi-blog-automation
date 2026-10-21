@@ -37,12 +37,14 @@ def run_ai_article_routine(article_index: int):
     # 3. 1691x930 맞춤 썸네일 합성
     thumb_path = os.path.join(os.getcwd(), "완성_썸네일_1691x930.png")
     
-    # 4. 네이버 블로그 'AI 정보' 카테고리 발행
+    # 4. 네이버 블로그 'AI 정보' 카테고리 및 검색 태그 5~8개 발행
+    tags = generated.get("tags", ["#인공지능", "#AI트렌드", "#테크뉴스", "#IT기사", "#지치블로그", "#신기술", "#AI정보"])
     success = auto_publisher.post_to_naver_blog(
         title=title,
         content_paragraphs=paragraphs,
         image_paths=[thumb_path] if os.path.exists(thumb_path) else None,
-        category_name="AI 정보"
+        category_name="AI 정보",
+        tags=tags
     )
     
     if not success:
@@ -88,7 +90,8 @@ def run_ai_webtoon_routine(webtoon_index: int):
     success = auto_publisher.post_to_naver_blog(
         title=wt_data["title"],
         content_paragraphs=wt_data["content_paragraphs"],
-        category_name="웹툰"
+        category_name="웹툰",
+        tags=wt_data.get("tags", ["#편의점신상", "#디저트추천", "#솔직후기", "#내돈내산", "#지치웹툰", "#신상리뷰", "#편의점꿀팁"])
     )
     return success
 
