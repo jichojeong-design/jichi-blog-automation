@@ -8,6 +8,7 @@ import formatter
 import prompt_engine
 import snack_trends
 import auto_publisher
+import notifier
 
 def run_ai_article_routine(article_index: int):
     """
@@ -26,14 +27,23 @@ def run_ai_article_routine(article_index: int):
     formatted_body = formatter.format_mobile_text(body_raw)
     paragraphs = formatted_body.split("\n\n")
 
+    # 대표 썸네일 합성 (1691x930)
     thumb_path = os.path.join(os.getcwd(), "완성_썸네일_1691x930.png")
     
-    auto_publisher.post_to_naver_blog(
+    success = auto_publisher.post_to_naver_blog(
         title=title,
         content_paragraphs=paragraphs,
         image_paths=[thumb_path] if os.path.exists(thumb_path) else None,
-        category_name="AI 트렌드"
+        category_name="AI 정보"
     )
+    
+    if not success:
+        print(f"🚨 [긴급] 기사 #{article_index} 포스팅 실패 감지! 사장님께 비상 알림 메일 발송 중...")
+        notifier.send_emergency_alert(
+            failed_task_name=f"09:00 AI 트렌드 기사 #{article_index}",
+            error_detail="네이버 스마트에디터 발행 단계 중 지연 또는 일시적 오류 발생"
+        )
+    return success
 
 def run_ai_webtoon_routine(webtoon_index: int):
     """
