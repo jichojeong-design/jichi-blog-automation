@@ -124,54 +124,54 @@ def post_to_naver_blog(
             page.keyboard.press("Enter")
             time.sleep(1)
 
-            # [1] 대표 썸네일 이미지 첨부 (스마트에디터 상단 툴바의 사진 버튼 정밀 클릭)
-            if image_paths:
-                for img_path in image_paths:
-                    if os.path.exists(img_path):
-                        try:
-                            abs_img = os.path.abspath(img_path)
-                            print(f"  - 대표 썸네일 첨부 시도: {abs_img}")
-                            # 스마트에디터 사진 업로드 input 태그에 직접 파일 주입
-                            file_input = page.locator("input[type='file'][accept*='image']").first
-                            file_input.set_input_files(abs_img)
-                            print("  ✅ 썸네일 이미지 파일 첨부 완료 (업로드 대기 4초)...")
-                            time.sleep(4)
-                            # 이미지 첨부 후 다음 줄로 엔터
-                            page.keyboard.press("Enter")
-                            time.sleep(1)
-                        except Exception as img_err:
-                            print(f"  ⚠️ 이미지 첨부 중 예외 발생: {img_err}")
+            # [1] 대표 썸네일 이미지 첨부
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            default_thumb = os.path.join(base_dir, "완성_썸네일_1691x930.png")
+            target_images = image_paths if image_paths else [default_thumb]
 
-            # [2] 가운데 정렬 적용 (스마트에디터 상단 툴바 가운데 정렬 버튼 클릭)
-            try:
-                print("📐 가운데 정렬 적용 중...")
-                page.evaluate("""
-                    () => {
-                        // 스마트에디터 정렬 버튼 찾기
-                        const alignCenterBtn = document.querySelector('button[data-name="align-center"], button.se-align-center-button, button[data-action="center"]');
-                        if (alignCenterBtn) {
-                            alignCenterBtn.click();
-                        }
-                    }
-                """)
-                time.sleep(1)
-            except Exception:
-                pass
+            for img_path in target_images:
+                if os.path.exists(img_path):
+                    try:
+                        abs_img = os.path.abspath(img_path)
+                        print(f"  - 대표 썸네일 첨부 시도: {abs_img}")
+                        file_input = page.locator("input[type='file'][accept*='image']").first
+                        file_input.set_input_files(abs_img)
+                        print("  ✅ 썸네일 이미지 파일 첨부 완료 (업로드 대기 4초)...")
+                        time.sleep(4)
+                        page.keyboard.press("Enter")
+                        time.sleep(1)
+                    except Exception as img_err:
+                        print(f"  ⚠️ 이미지 첨부 중 예외 발생: {img_err}")
 
-            # [3] 본문 문단 작성 (소제목 앞뒤 공백 및 25자 서식)
+            # [2] 본문 문단 작성 (소제목 앞뒤 2줄 공백 및 25자 서식)
             for p in content_paragraphs:
                 p_text = p.strip()
                 if not p_text:
                     continue
-                # 소제목이면 더 돋보이게 작성
                 page.keyboard.type(p_text)
                 page.keyboard.press("Enter")
                 page.keyboard.press("Enter")
-                time.sleep(0.1)
+                time.sleep(0.05)
 
-            time.sleep(2)
+            time.sleep(1)
 
-            # 발행 버튼 클릭
+            # [3] 본문 전체 가운데 정렬 적용 (Ctrl + A 후 가운데 정렬 버튼 클릭)
+            try:
+                print("📐 본문 전체 가운데 정렬 적용 중...")
+                page.keyboard.press("Control+a")
+                time.sleep(0.5)
+                page.evaluate("""
+                    () => {
+                        const alignCenterBtn = document.querySelector('button[data-name="align-center"], button.se-align-center-button, button[data-action="center"]');
+                        if (alignCenterBtn) alignCenterBtn.click();
+                    }
+                """)
+                time.sleep(1)
+                page.keyboard.press("ArrowDown") # 전체 선택 해제
+            except Exception:
+                pass
+
+            # [4] 1단계 발행 버튼 클릭
             print("📤 1단계 발행 버튼 클릭 중...")
             page.evaluate("""
                 () => {
@@ -182,28 +182,32 @@ def post_to_naver_blog(
             """)
             time.sleep(2)
 
-            # [4] 카테고리 선택 ('AI 정보' 카테고리 6번 정확 선택)
-            print(f"📁 카테고리 '{category_name}' 지정 중...")
+            # [5] 카테고리 정확한 고유 번호 선택 (AI 정보: categoryNo=6 / 웹툰: categoryNo=7)
+            target_cat_no = "7" if "웹툰" in category_name else "6"
+            print(f"📁 카테고리 번호 [{target_cat_no}] ('{category_name}') 다이렉트 지정 중...")
             page.evaluate(f"""
-                (catName) => {{
-                    // 카테고리 드롭다운/라디오 선택
-                    const labels = Array.from(document.querySelectorAll('label, .category_item, .item__N392L'));
-                    const targetLabel = labels.find(l => l.innerText.includes(catName));
-                    if (targetLabel) {{
-                        targetLabel.click();
-                    }} else {{
-                        // 셀렉트 박스 형태일 경우
-                        const select = document.querySelector('select[name="categoryNo"], .select_category');
-                        if (select) {{
-                            const opt = Array.from(select.options).find(o => o.text.includes(catName));
-                            if (opt) select.value = opt.value;
-                        }}
+                (catNo) => {{
+                    // 1. 라디오/체크 인풋 직접 체크
+                    const radio = document.querySelector(`input[name="categoryNo"][value="${{catNo}}"]`);
+                    if (radio) {{
+                        radio.click();
+                        return;
                     }}
+                    // 2. data-categoryno 또는 라벨 클릭
+                    const el = document.querySelector(`[data-categoryno="${{catNo}}"], [data-value="${{catNo}}"]`);
+                    if (el) {{
+                        el.click();
+                        return;
+                    }}
+                    // 3. 텍스트로 폴백
+                    const labels = Array.from(document.querySelectorAll('label, .category_item'));
+                    const target = labels.find(l => l.innerText.replace(/\\s+/g, '').includes(catNo === '6' ? 'AI정보' : '웹툰'));
+                    if (target) target.click();
                 }}
-            """, category_name)
+            """, target_cat_no)
             time.sleep(1.5)
 
-            # [5] 태그 5~8개 정밀 입력 (네이버 스마트블록 & 검색 유입 극대화!)
+            # [6] 태그 5~8개 정밀 입력 (네이버 스마트블록 & 검색 유입 극대화!)
             if tags:
                 print(f"🏷️ 검색 태그 5~8개 자동 입력 중... ({', '.join(tags[:5])}...)")
                 try:
