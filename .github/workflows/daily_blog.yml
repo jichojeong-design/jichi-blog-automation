@@ -35,5 +35,6 @@ jobs:
           NAVER_NID_AUT: ${{ secrets.NAVER_NID_AUT }}
           NAVER_NID_SES: ${{ secrets.NAVER_NID_SES }}
           CLOUD_MODE: "true"
+          PYTHONUNBUFFERED: "1"
         run: |
-          python daily_scheduler.py --cloud-mode
+          python -u daily_scheduler.py --cloud-mode
