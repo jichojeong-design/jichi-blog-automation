@@ -153,7 +153,7 @@ def execute_daily_sequence():
 
     if event_name == "schedule" or "--full-daily" in sys.argv:
         print("=" * 60)
-        print("🚀 [09:00 KST 정규 무인 스케줄러: AI 기사 3편 + 웹툰 2편 연속 발행 가동]")
+        print("🚀 [09:00 KST 정규 무인 스케줄러: AI 기사 3편 연속 발행 가동 (웹툰은 사장님 지시로 일시 보류)]")
         print("=" * 60)
         for i in range(1, 4):
             run_ai_article_routine(i)
@@ -161,27 +161,13 @@ def execute_daily_sequence():
                 print(f"\n⏳ 네이버 봇 필터링 우회를 위해 10분 대기 후 기사 #{i+1} 발행을 시작합니다...")
                 time.sleep(600)
 
-        print("\n⏳ 뉴스 섹션 완료! 20분 대기 후 [웹툰 #1] 발행을 시작합니다...")
-        time.sleep(1200)
-        run_ai_webtoon_routine(1)
-
-        print("\n⏳ 20분 대기 후 [웹툰 #2] 발행을 시작합니다...")
-        time.sleep(1200)
-        run_ai_webtoon_routine(2)
-        print("\n🎉 오늘 하루치 정규 포스팅 5편(기사 3 + 웹툰 2) 발행 완료!")
+        print("\n🎉 오늘 하루치 정규 기사 3편 발행 완료! (웹툰 자동화는 사장님 지시로 안전 보류되었습니다)")
     else:
         print("=" * 60)
-        print("🚀 [즉시 실행 모드: 명품 AI 기사 1편 + 리센느 웹툰 1편 집중 발행 가동]")
+        print("🚀 [즉시 실행 모드: AI 기사 1편 집중 발행 가동 (웹툰 안전 보류)]")
         print("=" * 60)
-
         run_ai_article_routine(1)
-
-        print("\n⏳ 2분 대기 후 대망의 [웹툰 1편: 리센느 탐방기] 발행 시작...")
-        time.sleep(120)
-
-        run_ai_webtoon_routine(1)
-
-        print("\n🎉 목표 달성! 명품 AI 기사 1편 + 리센느 웹툰 1편 완벽 발행 완료!")
+        print("\n🎉 AI 기사 1편 발행 완료!")
 
 
 def start_daily_scheduler():
