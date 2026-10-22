@@ -27,13 +27,16 @@ def run_ai_article_routine(article_index: int):
         print("❌ 수집된 최신 기사가 없습니다.")
         return False
 
-    # 이미 블로그에 발행된 기사 제외 후 신선한 기사 선택
-    fresh_articles = [
-        a for a in all_articles
-        if not history_checker.is_article_already_published_live(a["title"])
-    ]
-    pool = fresh_articles if len(fresh_articles) >= article_index else all_articles
-    target = pool[min(article_index - 1, len(pool) - 1)]
+    # 사장님 지정 순위(예: 4위 실시간 테스트) 또는 미발행 최신 기사 타겟팅
+    if 1 <= article_index <= len(all_articles):
+        target = all_articles[article_index - 1]
+    else:
+        fresh_articles = [
+            a for a in all_articles
+            if not history_checker.is_article_already_published_live(a["title"])
+        ]
+        pool = fresh_articles if fresh_articles else all_articles
+        target = pool[0]
 
     # 1. 원문 크롤링 기반 10년 차 IT 테크 기자의 심층 분석 원고 생성 (Gemini 2.5 / GPT-4o)
     print(f"🤖 AI 기사 심층 분석 원고 생성 중... ({target['title'][:25]}...)")
@@ -165,11 +168,18 @@ def execute_daily_sequence():
 
         print("\n🎉 오늘 하루치 정규 기사 3편 발행 완료! (웹툰 자동화는 사장님 지시로 안전 보류되었습니다)")
     else:
+        target_idx = int(os.environ.get("TARGET_ARTICLE_INDEX", "4"))
+        for arg in sys.argv:
+            if arg.startswith("--article-index="):
+                try:
+                    target_idx = int(arg.split("=")[1])
+                except Exception:
+                    pass
         print("=" * 60)
-        print("🚀 [즉시 실행 모드: AI 기사 1편 집중 발행 가동 (웹툰 안전 보류)]")
+        print(f"🚀 [즉시 실행 테스트: AI 기사 #{target_idx}편 집중 발행 가동 (웹툰 안전 보류)]")
         print("=" * 60)
-        run_ai_article_routine(1)
-        print("\n🎉 AI 기사 1편 발행 완료!")
+        run_ai_article_routine(target_idx)
+        print(f"\n🎉 AI 기사 #{target_idx}편 발행 완료!")
 
 
 def start_daily_scheduler():

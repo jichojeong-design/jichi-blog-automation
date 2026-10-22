@@ -1,6 +1,7 @@
 import urllib.request
 import urllib.parse
 import re
+import html
 
 def get_live_published_titles(blog_id: str = "jcjung1401", category_no: int = 7) -> list:
     """
@@ -19,7 +20,8 @@ def get_live_published_titles(blog_id: str = "jcjung1401", category_no: int = 7)
             for t_bytes, d_bytes in matches:
                 try:
                     # %EB%8D... 형태를 언쿼트하여 바이트 변환 후 UTF-8로 완벽 복원!
-                    clean_title = urllib.parse.unquote_to_bytes(t_bytes.decode('ascii', errors='ignore')).decode('utf-8', errors='ignore')
+                    raw_str = t_bytes.decode('ascii', errors='ignore')
+                    clean_title = html.unescape(urllib.parse.unquote_plus(raw_str, encoding='utf-8', errors='ignore'))
                     clean_date = d_bytes.decode('utf-8', errors='ignore')
                     published_items.append({"title": clean_title, "date": clean_date})
                 except Exception:
