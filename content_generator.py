@@ -187,16 +187,7 @@ def generate_article_thumbnail(topic: str, image_prompt: str = "", output_path: 
             "Pixar and Blender 3D render style. Strictly NO text, NO letters, NO numbers, NO logos anywhere in the image."
         )
 
-    # 이미 아티팩트/로컬에 고화질 썸네일 일러스트(article_1_inner.png)가 준비되어 있다면 최우선 합성 보장
-    fallback_inner = os.path.join(base_dir, "article_1_inner.png")
-    if os.path.exists(fallback_inner) and os.path.exists(template_path):
-        try:
-            composed = formatter.compose_thumbnail(fallback_inner, full_out_path, template_path)
-            print(f"  🖼️ 최신 기사 전용 일러스트 기반 1691x930 썸네일 합성 완료: {composed}")
-            return composed
-        except Exception as e:
-            print(f"  ⚠️ 기본 일러스트 합성 중 예외: {e}")
-
+    # 1. 기사 고유의 맞춤 1:1 일러스트 생성 시도
     generated_inner = generate_dalle_image(image_prompt, temp_inner, size="1024x1024")
     if generated_inner and os.path.exists(generated_inner) and os.path.exists(template_path):
         try:
@@ -205,10 +196,20 @@ def generate_article_thumbnail(topic: str, image_prompt: str = "", output_path: 
                 output_path=full_out_path,
                 template_path=template_path
             )
-            print(f"  🖼️ 1691x930 맞춤 썸네일 합성 완료: {composed}")
+            print(f"  🖼️ 기사 맞춤 1691x930 썸네일 합성 완료: {composed}")
             return composed
         except Exception as e:
             print(f"  ⚠️ 썸네일 합성 중 오류 발생: {e}")
+
+    # 2. DALL-E 실패 시 차선책 (템플릿 기반 폴백)
+    fallback_inner = os.path.join(base_dir, "article_1_inner.png")
+    if os.path.exists(fallback_inner) and os.path.exists(template_path):
+        try:
+            composed = formatter.compose_thumbnail(fallback_inner, full_out_path, template_path)
+            print(f"  🖼️ 기본 3D 일러스트 기반 1691x930 썸네일 합성 완료: {composed}")
+            return composed
+        except Exception as e:
+            print(f"  ⚠️ 기본 일러스트 합성 중 예외: {e}")
 
     return full_out_path
 
@@ -286,9 +287,8 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
     """
     scraped_facts = scrape_article_facts(url)
     clean_core = constants.clean_topic_title(topic)
-    sample_title = f"조용하던 {clean_core} 결국 일냈다! 숨겨진 진실"
-    if len(sample_title) > 28:
-        sample_title = f'"{clean_core}" 몰랐는데 결국 터졌다'
+    cheat_titles = constants.generate_cheat_title_templates(clean_core)
+    sample_title = cheat_titles[0] if cheat_titles else f"{clean_core} 전격 공개… 숨겨진 핵심"
 
     prompt = f"""당신은 10년 차 IT·산업 전문 테크 기자입니다.
 헤드라인 주제: {topic}
