@@ -139,12 +139,12 @@ def run_ai_webtoon_routine(webtoon_index: int):
         tags=wt_data.get(
             "tags",
             ["#편의점신상", "#디저트추천", "#솔직후기", "#내돈내산", "#지치웹툰", "#신상리뷰", "#편의점꿀팁"]
-        )
+        ),
+        save_draft=True
     )
 
     if success:
-        time.sleep(5)
-        quality_inspector.inspect_latest_post_quality(expected_category="웹툰", is_article=False)
+        print(f"✅ [웹툰 임시저장 성공] 사장님 퇴근 후 검토를 위해 블로그 임시저장함에 안전 등록 완료: {wt_data['title']}")
 
     return success
 
@@ -245,8 +245,9 @@ def start_daily_scheduler():
     schedule.every().day.at("09:00").do(run_ai_article_routine, article_index=1)
     schedule.every().day.at("09:10").do(run_ai_article_routine, article_index=2)
     schedule.every().day.at("09:20").do(run_ai_article_routine, article_index=3)
-    schedule.every().day.at("09:40").do(run_ai_webtoon_routine, webtoon_index=1)
-    schedule.every().day.at("10:00").do(run_ai_webtoon_routine, webtoon_index=2)
+    # [사장님 특별 지시] 웹툰은 수동 검토를 거쳐 발행하므로 자동발행 스케줄(09:40, 10:00)은 안전 비활성화 (AI 기사만 자동발행)
+    # schedule.every().day.at("09:40").do(run_ai_webtoon_routine, webtoon_index=1)
+    # schedule.every().day.at("10:00").do(run_ai_webtoon_routine, webtoon_index=2)
 
     while True:
         schedule.run_pending()
