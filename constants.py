@@ -2,7 +2,7 @@ import re
 import random
 
 def clean_topic_title(topic: str) -> str:
-    """기사 제목에서 말머리, 괄호, 특수부호를 제거하고 핵심 키워드를 깔끔하게 정제 (최대 12자)"""
+    """기사 제목에서 말머리, 괄호, 쉼표, 특수부호를 제거하고 검색에 걸리는 핵심 명사 추출 (최대 11자)"""
     if not topic:
         return "AI 신기술"
     
@@ -10,8 +10,8 @@ def clean_topic_title(topic: str) -> str:
     cleaned = re.sub(r'\[[^\]]*\]', '', topic)
     cleaned = re.sub(r'\([^\)]*\)', '', cleaned)
     
-    # 2. 따옴표, 쉼표, 말줄임표 제거 및 구분자 앞부분만 추출
-    cleaned = cleaned.replace('"', '').replace("'", "").replace("…", " ").replace("...", " ")
+    # 2. 불필요한 따옴표, 쉼표, 말줄임표 제거 및 구분자 앞부분만 추출
+    cleaned = cleaned.replace('"', '').replace("'", "").replace(",", "").replace("…", " ").replace("...", " ")
     cleaned = re.split(r'[:|｜\-–]', cleaned)[0].strip()
     
     words = cleaned.split()
@@ -21,8 +21,7 @@ def clean_topic_title(topic: str) -> str:
     selected = []
     curr_len = 0
     for w in words:
-        # 단어 길이가 12자 이내까지만 온전한 단어로 추가
-        if curr_len + len(w) + (1 if selected else 0) <= 12:
+        if curr_len + len(w) + (1 if selected else 0) <= 11:
             selected.append(w)
             curr_len += len(w) + 1
         else:
@@ -38,11 +37,11 @@ def generate_cheat_title_templates(core_topic: str) -> list:
     topic = clean_topic_title(core_topic)
     
     patterns = [
-        f'{topic} 직접 써보니… 진짜 충격 반전',        # ~24자
-        f'조용하던 {topic} 결국 일냈다! 핵심 총정리',   # ~25자
-        f'{topic} 기대했는데 아니었다? 충격 근황',      # ~24자
-        f'{topic} 아직도 모르면 손해… 업계 발칵',       # ~24자
-        f'다들 {topic} 난리 났는데… 과연 쓸만할까'      # ~25자
+        f'"{topic}" 직접 써보니… 진짜 충격 반전',      # ~24자
+        f'조용하던 {topic} 결국 해냈다! 핵심 총정리',   # ~25자
+        f'{topic} 기대했는데 아니었다? 충격 근황',      # ~23자
+        f'{topic} 아직도 모르면 손해… 업계 발칵',       # ~23자
+        f'다들 {topic} 난리 났는데… 과연 쓸만할까'      # ~24자
     ]
     
     valid_titles = [p for p in patterns if len(p) <= 28]
