@@ -57,7 +57,8 @@ def run_ai_article_routine(article_index: int):
         topic=target["title"],
         image_prompt=image_prompt,
         output_path=thumb_filename,
-        summary_lines=summary_lines
+        summary_lines=summary_lines,
+        article_index=article_index
     )
 
     # 4. 네이버 블로그 'AI 정보' 카테고리 및 검색 태그 5~8개 발행

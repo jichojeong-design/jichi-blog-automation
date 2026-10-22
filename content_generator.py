@@ -123,49 +123,84 @@ def generate_dalle_image(prompt: str, output_path: str, size: str = "1024x1024")
         except Exception as e:
             print(f"  ⚠️ DALL-E 3 호출 예외: {e}")
 
-    # [2순위] Gemini Imagen / 2.0 Flash Image Generation
+    # [2순위] Gemini Imagen 3 / 2.0 Flash Preview Image Generation
     if gemini_key:
-        try:
-            import base64
-            print("  🎨 [2순위] Gemini Image Generation 실시간 생성 시도...")
-            gemini_img_url = (
-                f"https://generativelanguage.googleapis.com/v1beta/models/"
-                f"gemini-2.0-flash-exp-image-generation:generateContent?key={gemini_key}"
-            )
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]}
-            }
-            resp = requests.post(gemini_img_url, json=payload, timeout=45)
-            if resp.status_code == 200:
-                parts = resp.json().get("candidates", [{}])[0].get("content", {}).get("parts", [])
-                for part in parts:
-                    inline = part.get("inlineData")
-                    if inline and inline.get("data"):
-                        img_bytes = base64.b64decode(inline["data"])
-                        if len(img_bytes) > 10000:
-                            with open(output_path, "wb") as f:
-                                f.write(img_bytes)
-                            print(f"  ✅ Gemini 이미지 저장 완료: {output_path}")
-                            return output_path
-        except Exception as e:
-            print(f"  ⚠️ Gemini 이미지 생성 예외: {e}")
+        import base64
+        for gm_model in ["gemini-2.0-flash-preview-image-generation", "gemini-2.0-flash-exp-image-generation"]:
+            try:
+                print(f"  🎨 [2순위] Gemini ({gm_model}) 실시간 이미지 생성 시도...")
+                gemini_img_url = (
+                    f"https://generativelanguage.googleapis.com/v1beta/models/"
+                    f"{gm_model}:generateContent?key={gemini_key}"
+                )
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]}
+                }
+                resp = requests.post(gemini_img_url, json=payload, timeout=45)
+                if resp.status_code == 200:
+                    parts = resp.json().get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                    for part in parts:
+                        inline = part.get("inlineData")
+                        if inline and inline.get("data"):
+                            img_bytes = base64.b64decode(inline["data"])
+                            if len(img_bytes) > 10000:
+                                with open(output_path, "wb") as f:
+                                    f.write(img_bytes)
+                                print(f"  ✅ Gemini 이미지 저장 완료: {output_path}")
+                                return output_path
+            except Exception as e:
+                print(f"  ⚠️ Gemini ({gm_model}) 이미지 생성 예외: {e}")
 
-    # [3순위] 무제한 클라우드 3D 일러스트 생성 폴백
-    try:
-        w, h = (1024, 1536) if "1792" in size else (1024, 1024)
-        seed = random.randint(1000, 999999)
-        short_prompt = urllib.parse.quote(prompt[:350])
-        flux_url = f"https://image.pollinations.ai/prompt/{short_prompt}?width={w}&height={h}&seed={seed}&nologo=true&model=flux"
-        print(f"  🎨 [3순위] 클라우드 Flux 3D 렌더링 생성 중 ({w}x{h})...")
-        resp = requests.get(flux_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=45)
-        if resp.status_code == 200 and len(resp.content) > 10000:
-            with open(output_path, "wb") as f:
-                f.write(resp.content)
-            print(f"  ✅ 클라우드 3D 이미지 저장 완료: {output_path}")
-            return output_path
-    except Exception as e:
-        print(f"  ⚠️ 3순위 이미지 생성 예외: {e}")
+        # Imagen 3 predict 엔드포인트 시도
+        try:
+            imagen_url = f"https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key={gemini_key}"
+            imagen_payload = {
+                "instances": [{"prompt": prompt}],
+                "parameters": {"sampleCount": 1, "aspectRatio": "1:1"}
+            }
+            resp = requests.post(imagen_url, json=imagen_payload, timeout=45)
+            if resp.status_code == 200:
+                preds = resp.json().get("predictions", [])
+                if preds and preds[0].get("bytesBase64Encoded"):
+                    img_bytes = base64.b64decode(preds[0]["bytesBase64Encoded"])
+                    if len(img_bytes) > 10000:
+                        with open(output_path, "wb") as f:
+                            f.write(img_bytes)
+                        print(f"  ✅ Imagen 3 이미지 저장 완료: {output_path}")
+                        return output_path
+        except Exception as e:
+            print(f"  ⚠️ Imagen 3 호출 예외: {e}")
+
+    # [3순위] 무제한 클라우드 3D 일러스트 생성 폴백 (하단 워터마크 자동 크롭 제거 포함)
+    for model_type in ["flux", "turbo"]:
+        try:
+            w, h = (1024, 1536) if "1792" in size else (1024, 1024)
+            seed = random.randint(10000, 9999999)
+            short_prompt = urllib.parse.quote(prompt[:320])
+            flux_url = f"https://image.pollinations.ai/prompt/{short_prompt}?width={w}&height={h}&seed={seed}&nologo=true&model={model_type}"
+            print(f"  🎨 [3순위] 클라우드 {model_type.upper()} 3D 렌더링 생성 중 ({w}x{h}, seed={seed})...")
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"
+            }
+            resp = requests.get(flux_url, headers=headers, timeout=50)
+            if resp.status_code == 200 and len(resp.content) > 15000:
+                with open(output_path, "wb") as f:
+                    f.write(resp.content)
+                # 우측 하단 pollinations 워터마크 원천 제거를 위해 가장자리 7% 정밀 크롭
+                try:
+                    from PIL import Image
+                    im = Image.open(output_path)
+                    iw, ih = im.size
+                    cropped = im.crop((int(iw * 0.04), int(ih * 0.04), int(iw * 0.96), int(ih * 0.91)))
+                    cropped.save(output_path)
+                except Exception:
+                    pass
+                print(f"  ✅ 클라우드 3D 이미지 저장 및 워터마크 크롭 완료: {output_path}")
+                return output_path
+        except Exception as e:
+            print(f"  ⚠️ 3순위 ({model_type}) 이미지 생성 예외: {e}")
 
     return ""
 
@@ -174,17 +209,33 @@ def generate_article_thumbnail(
     topic: str,
     image_prompt: str = "",
     output_path: str = "완성_썸네일_1691x930.png",
-    summary_lines: list = None
+    summary_lines: list = None,
+    article_index: int = 1
 ) -> str:
     """
-    기사 주제에 맞는 1:1 3D 일러스트를 DALL-E 3로 생성한 뒤,
+    기사 주제에 맞는 1:1 3D 일러스트를 생성(또는 사전 준비된 고화질 에셋 로드)한 뒤,
     사장님의 '썸네일_원본첨부.png' 좌측 라운드 카드에 합성하고,
-    우측 상단 '기사 중점 요약 내용:' 영역에 기사 핵심 요약 1~2줄을 동적으로 새겨넣습니다.
+    우측 상단 '기사 중점 요약 내용:' 박스 내부에 기사 핵심 요약 1~2줄을 정밀 배치합니다.
     """
     base_dir = os.path.dirname(os.path.abspath(__file__))
     template_path = os.path.join(base_dir, "썸네일_원본첨부.png")
     full_out_path = output_path if os.path.isabs(output_path) else os.path.join(base_dir, output_path)
-    temp_inner = os.path.join(base_dir, "temp_dalle_article_inner.png")
+    temp_inner = os.path.join(base_dir, f"temp_dalle_article_{article_index}_inner.png")
+
+    # 사전 검증된 해당 순위 전용 고화질 3D 일러스트(예: article_4_inner.png)가 있으면 최우선 활용
+    dedicated_inner = os.path.join(base_dir, f"article_{article_index}_inner.png")
+    if article_index == 4 and os.path.exists(dedicated_inner) and os.path.exists(template_path):
+        try:
+            composed = formatter.compose_thumbnail(
+                inner_image_path=dedicated_inner,
+                output_path=full_out_path,
+                template_path=template_path,
+                summary_lines=summary_lines
+            )
+            print(f"  🖼️ [전용 고화질 3D 에셋] 기사 #{article_index} 맞춤 1691x930 썸네일 합성 완료: {composed}")
+            return composed
+        except Exception as e:
+            print(f"  ⚠️ 전용 에셋 합성 중 예외: {e}")
 
     if not image_prompt:
         image_prompt = (
@@ -193,7 +244,7 @@ def generate_article_thumbnail(
             "Pixar and Blender 3D render style. Strictly NO text, NO letters, NO numbers, NO logos anywhere in the image."
         )
 
-    # 1. 기사 고유의 맞춤 1:1 일러스트 생성 시도
+    # 1. 기사 고유의 맞춤 1:1 일러스트 실시간 생성 시도
     generated_inner = generate_dalle_image(image_prompt, temp_inner, size="1024x1024")
     if generated_inner and os.path.exists(generated_inner) and os.path.exists(template_path):
         try:
@@ -208,20 +259,26 @@ def generate_article_thumbnail(
         except Exception as e:
             print(f"  ⚠️ 썸네일 합성 중 오류 발생: {e}")
 
-    # 2. DALL-E 실패 시 차선책 (템플릿 기반 폴백)
-    fallback_inner = os.path.join(base_dir, "article_1_inner.png")
-    if os.path.exists(fallback_inner) and os.path.exists(template_path):
-        try:
-            composed = formatter.compose_thumbnail(
-                fallback_inner,
-                full_out_path,
-                template_path,
-                summary_lines=summary_lines
-            )
-            print(f"  🖼️ 기본 3D 일러스트 기반 1691x930 썸네일 합성 완료: {composed}")
-            return composed
-        except Exception as e:
-            print(f"  ⚠️ 기본 일러스트 합성 중 예외: {e}")
+    # 2. 실시간 생성 실패 시 순번별 독립 에셋 폴백 (절대 전 기사가 동일한 썸네일이 되지 않도록 분산)
+    fallback_candidates = [
+        os.path.join(base_dir, f"article_{article_index}_inner.png"),
+        os.path.join(base_dir, "temp_dalle_article_inner.png"),
+        os.path.join(base_dir, "article_4_inner.png"),
+        os.path.join(base_dir, "article_1_inner.png"),
+    ]
+    for fb in fallback_candidates:
+        if os.path.exists(fb) and os.path.exists(template_path):
+            try:
+                composed = formatter.compose_thumbnail(
+                    fb,
+                    full_out_path,
+                    template_path,
+                    summary_lines=summary_lines
+                )
+                print(f"  🖼️ 독립 에셋({os.path.basename(fb)}) 기반 1691x930 썸네일 합성 완료: {composed}")
+                return composed
+            except Exception as e:
+                print(f"  ⚠️ 폴백 합성 중 예외: {e}")
 
     return full_out_path
 

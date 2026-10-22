@@ -90,50 +90,53 @@ def compose_thumbnail(
     template = Image.open(template_path).convert("RGBA")
     inner_img = Image.open(inner_image_path).convert("RGBA")
     
-    # [1] 좌측 카드 영역 맞춤 합성 (상단 52부터 여백 밀착)
-    box_x = 62
-    box_y = 52
-    box_w = 728
-    box_h = 802
-    radius = 68
+    # [1] 좌측 카드 영역 맞춤 합성 (외곽 그린 테두리 안쪽에 여백 없이 100% 정밀 밀착)
+    box_x = 58
+    box_y = 57
+    box_w = 740
+    box_h = 791
+    radius = 64
     
     inner_resized = ImageOps.fit(inner_img, (box_w, box_h), Image.Resampling.LANCZOS)
     mask = create_rounded_mask((box_w, box_h), radius=radius)
     template.paste(inner_resized, (box_x, box_y), mask)
     
-    # [2] 우측 상단 핵심 요약 1~2줄 동적 마킹
+    # [2] 우측 상단 요약 박스 내부(점선 테두리·새싹 아이콘·우측 하단 잎사귀 보존)에 1~2줄 정밀 배치
     if summary_lines and len(summary_lines) >= 1:
         draw = ImageDraw.Draw(template)
-        # 상단 '기사 중점 요약 내용:' 라벨 아래부터 지치 새싹 머리 위까지 깔끔 커버
-        bg_box = (760, 155, 1560, 415)
-        draw.rounded_rectangle(bg_box, radius=24, fill=(255, 254, 245, 255), outline=(215, 225, 200, 255), width=3)
         
-        # 폰트 로드 (동봉된 나눔고딕볼드 또는 윈도우 맑은고딕)
         base_dir = os.path.dirname(os.path.abspath(__file__))
         local_font = os.path.join(base_dir, "NanumGothicBold.ttf")
         win_font = "C:/Windows/Fonts/malgunbd.ttf"
+        font_path = local_font if os.path.exists(local_font) else (win_font if os.path.exists(win_font) else None)
         
-        font = None
-        for fp in [local_font, win_font]:
-            if os.path.exists(fp):
+        def _get_fitted_font(text_str: str, max_width: int = 472, start_size: int = 34):
+            if not font_path:
+                return ImageFont.load_default()
+            sz = start_size
+            while sz > 20:
                 try:
-                    font = ImageFont.truetype(fp, 48)
-                    break
+                    f = ImageFont.truetype(font_path, sz)
+                    if draw.textlength(text_str, font=f) <= max_width:
+                        return f
                 except Exception:
-                    pass
-        if not font:
-            font = ImageFont.load_default()
+                    break
+                sz -= 1
+            return ImageFont.truetype(font_path, 22)
             
-        text_color = (25, 75, 35, 255) # 고급스러운 딥 포레스트 그린
+        text_color = (25, 75, 35, 255)  # 딥 포레스트 그린
         
         l1 = str(summary_lines[0]).strip()
         l2 = str(summary_lines[1]).strip() if len(summary_lines) > 1 else ""
         
         if l2:
-            draw.text((1160, 230), l1, fill=text_color, font=font, anchor="mm")
-            draw.text((1160, 335), l2, fill=text_color, font=font, anchor="mm")
+            f1 = _get_fitted_font(l1, max_width=472, start_size=34)
+            f2 = _get_fitted_font(l2, max_width=472, start_size=34)
+            draw.text((920, 232), l1, fill=text_color, font=f1, anchor="lm")
+            draw.text((920, 284), l2, fill=text_color, font=f2, anchor="lm")
         else:
-            draw.text((1160, 285), l1, fill=text_color, font=font, anchor="mm")
+            f1 = _get_fitted_font(l1, max_width=472, start_size=35)
+            draw.text((920, 256), l1, fill=text_color, font=f1, anchor="lm")
             
     template.save(output_path, "PNG")
     return output_path
