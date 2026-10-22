@@ -149,6 +149,60 @@ def run_ai_webtoon_routine(webtoon_index: int):
     return success
 
 
+def run_rescene_draft_routine():
+    """
+    [사장님 특별 지시] CU 리센느 '제나의 딸기잼 샌드' 실물 사진 + DALL-E 3 컷 연동 임시저장 루틴
+    - 임시저장(save_draft=True)으로 진행하여 사장님께서 블로그 임시저장함에서 직접 검토/수정 가능
+    """
+    print(f"\n[{datetime.datetime.now()}] 🍓 [CU 리센느 딸기샌드 실물 연동 웹툰] 임시저장 생성 시작!")
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    wt1 = os.path.join(base_dir, "webtoon_cut_1.png")
+    wt2 = os.path.join(base_dir, "webtoon_cut_2.png")
+    real_photo = os.path.join(base_dir, "rescene_detail_2.jpg")
+
+    paragraphs = [
+        "안녕하세요, 지치 블로그의 귀여운 마스코트 지치와 송이입니다!",
+        "오늘 지치와 송이가 탐방할 화제의 편의점 디저트는 바로 요즘 포토카드 수집 열풍과 품절 대란을 일으키고 있는 CU X 걸그룹 리센느(RESCENE) 콜라보 신상, '제나의 딸기잼 샌드'입니다!",
+        f"__IMAGE__:{wt1}",
+        "지치: '우와! 송이야, 저기 핑크색 봉지 보여? 드디어 리센느 딸기샌드 찾았다!'",
+        "송이: '대박이다냥! 편의점 빵 매대에서 가장 눈에 띄는 핑크빛 패키지라 한눈에 알아봤다냥!'",
+        "지치와 송이가 조심스럽게 봉지를 열자마자 달콤하고 상큼한 딸기향이 솔솔 풍겨옵니다.",
+        f"__IMAGE__:{real_photo}",
+        "[CU 리센느 '제나의 딸기잼 샌드' 실물 팩트 체크]",
+        "- 가격: 2,500원 (CU 단독 출시 BAKE405 라인업)",
+        "- 콘셉트: 일본식 딸기 마가린빵에서 아이디어를 얻어 개발된 부드러운 샌드빵",
+        "- 내용물: 핫도그 번 스타일의 푹신한 빵 속에 상큼달콤한 딸기잼과 부드러운 버터크림이 가득!",
+        "- 특별 구성: 리센느 멤버 투명 포토카드(총 27종 중 랜덤 1종) 동봉! 이번 시식에서는 멤버 '제나'의 러블리한 실물 투명 포토카드가 쏙 나왔습니다.",
+        f"__IMAGE__:{wt2}",
+        "송이: '칼로 쓱 잘라보니 단면에 딸기잼이랑 크림이 빈틈없이 꽉 차 있다냥!'",
+        "지치: '크림만 있으면 느끼할 텐데, 진한 딸기잼이 상큼하게 잡아줘서 달콤함이 두 배야! 완전 꿀맛!'",
+        "송이: '시원한 흰 우유 한 잔이랑 같이 먹으니까 빵집 샌드위치 부럽지 않다냥! 포토카드 수집 재미까지 최고다냥!'",
+        "[지치와 송이의 총평 & 꿀팁]",
+        "1. 퍽퍽함 없이 폭신한 빵 결에 딸기잼과 크림의 단짠 밸런스가 아주 훌륭합니다.",
+        "2. 그냥 드셔도 맛있지만, 에어프라이어 170도에 살짝 돌려 우유나 아이스 아메리카노와 함께 드시면 갓 구운 브런치 퀄리티를 즐기실 수 있습니다.",
+        "3. 리센느 팬분들은 물론, 달콤한 편의점 빵을 좋아하시는 모든 분들께 강력 추천합니다!"
+    ]
+
+    formatted_paragraphs = []
+    for p in paragraphs:
+        p_str = str(p).strip()
+        if not p_str:
+            continue
+        if p_str.startswith("__IMAGE__:"):
+            formatted_paragraphs.append(p_str)
+        else:
+            formatted_paragraphs.append(formatter.format_mobile_text(p_str, max_chars=26))
+
+    success = auto_publisher.post_to_naver_blog(
+        title="[지치와 송이의 편의점 탐방] CU 리센느 '제나의 딸기잼 샌드' 솔직 리뷰!",
+        content_paragraphs=formatted_paragraphs,
+        category_name="웹툰",
+        tags=["#CU신상", "#리센느", "#제나의딸기잼샌드", "#리센느빵", "#편의점디저트", "#지치웹툰", "#지치블로그"],
+        save_draft=True
+    )
+    return success
+
+
 def execute_daily_sequence():
     """
     클라우드(GitHub Actions) 실행 시퀀스:
@@ -169,18 +223,11 @@ def execute_daily_sequence():
 
         print("\n🎉 오늘 하루치 정규 기사 3편 발행 완료! (웹툰 자동화는 사장님 지시로 안전 보류되었습니다)")
     else:
-        target_idx = int(os.environ.get("TARGET_ARTICLE_INDEX", "4"))
-        for arg in sys.argv:
-            if arg.startswith("--article-index="):
-                try:
-                    target_idx = int(arg.split("=")[1])
-                except Exception:
-                    pass
         print("=" * 60)
-        print(f"🚀 [즉시 실행 테스트: AI 기사 #{target_idx}편 집중 발행 가동 (웹툰 안전 보류)]")
+        print("🚀 [즉시 실행: CU 리센느 딸기샌드 실물 연동 웹툰 임시저장 가동]")
         print("=" * 60)
-        run_ai_article_routine(target_idx)
-        print(f"\n🎉 AI 기사 #{target_idx}편 발행 완료!")
+        run_rescene_draft_routine()
+        print("\n🎉 네이버 블로그 임시저장함 등록 완료!")
 
 
 def start_daily_scheduler():

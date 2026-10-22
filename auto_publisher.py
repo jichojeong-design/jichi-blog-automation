@@ -94,7 +94,8 @@ def post_to_naver_blog(
     content_paragraphs: list,
     image_paths: list = None,
     category_name: str = "AI 정보",
-    tags: list = None
+    tags: list = None,
+    save_draft: bool = False
 ) -> bool:
     """
     네이버 블로그 스마트에디터 ONE 무인 자동 발행 엔진 (아르곤 High 완결판)
@@ -279,6 +280,27 @@ def post_to_naver_blog(
                         page.keyboard.type(ht)
                         page.keyboard.press("Enter")
                     time.sleep(0.5)
+
+            # 임시저장 요청인 경우: 상단 [저장] 버튼 클릭 후 즉시 종료
+            if save_draft:
+                print("💾 [임시저장 모드] 상단 [저장] 버튼 클릭 중...")
+                time.sleep(1.0)
+                try:
+                    save_btn = page.locator("button.se-save-button, button[data-name='save'], button:has-text('저장')").first
+                    if save_btn.is_visible(timeout=3000):
+                        save_btn.click()
+                        time.sleep(3.5)
+                        print(f"✅ [임시저장 성공] 사장님 검토를 위해 블로그 임시저장함에 안전 보관 완료: {title}")
+                    else:
+                        print("  - 단축키 Ctrl+S 임시저장 시도...")
+                        page.keyboard.press("Control+s")
+                        time.sleep(3.5)
+                except Exception as save_err:
+                    print(f"  ⚠️ 임시저장 클릭 예외: {save_err}")
+                context.close()
+                if browser:
+                    browser.close()
+                return True
 
             # 4. 상단 [발행] 버튼 클릭하여 발행 설정 서랍(Drawer) 열기
             print("📤 1단계 상단 [발행] 버튼 클릭 중...")
