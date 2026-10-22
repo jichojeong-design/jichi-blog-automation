@@ -102,12 +102,17 @@ def generate_dalle_image(prompt: str, output_path: str, size: str = "1024x1024",
     openai_key = (os.environ.get("OPENAI_API_KEY") or os.environ.get("GPT_API_KEY") or "").strip().strip('"').strip("'")
     gemini_key = (os.environ.get("GEMINI_API_KEY") or "").strip().strip('"').strip("'")
 
-    # 캐릭터 메모리에서 공식 시각 DNA 자동 보강
+    # 캐릭터 메모리에서 공식 시각 DNA 및 송이 얼굴 무점(NO dots on face) 절대 제약조건 자동 보강
     char_mem = load_character_memory()
     if char_mem and ("Jichi" in prompt or "지치" in prompt or "Songi" in prompt or "송이" in prompt):
-        jichi_dna = char_mem.get("characters", {}).get("jichi", {}).get("strict_visual_dna", "")
-        songi_dna = char_mem.get("characters", {}).get("songi", {}).get("strict_visual_dna", "")
-        dna_suffix = f"\n[OFFICIAL CHARACTER MEMORY LOCK]\n- Jichi: {jichi_dna}\n- Songi: {songi_dna}"
+        jichi_dna = char_mem.get("characters", {}).get("jichi", {}).get("visual_dna", "")
+        songi_dna = char_mem.get("characters", {}).get("songi", {}).get("visual_dna", "")
+        dna_suffix = (
+            f"\n[OFFICIAL CHARACTER MEMORY LOCK]\n"
+            f"- Jichi: {jichi_dna}\n"
+            f"- Songi: {songi_dna}\n"
+            f"- HARD CONSTRAINT FOR SONGI: Never draw any dots, moles, spots, or beauty marks anywhere on or around Songi's white face, nose, cheeks, mouth, or forehead."
+        )
         if "[OFFICIAL CHARACTER MEMORY LOCK]" not in prompt:
             prompt = prompt + dna_suffix
 

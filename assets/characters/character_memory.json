@@ -15,7 +15,7 @@
       "sheet_path": "assets/characters/송이_시트.jpg",
       "pure_ref_path": "assets/characters/songi_pure_ref.png",
       "height_cm": 25,
-      "visual_dna": "A cute chubby 3D Korean shorthair calico cat (25cm tall) with soft fluffy white fur, a dark-black patch on the left ear/temple (viewer's left) and a warm orange-ginger patch on the right ear/temple (viewer's right) with a wide white forehead in between, big round dark-brown/amber eyes, a pink triangle nose with ONE tiny cute beauty mole dot right next to the nose, pink paw pads, and a fluffy black-and-orange striped tail."
+      "visual_dna": "A cute chubby 3D Korean shorthair calico cat (25cm tall) with pure spotless fluffy white fur on the face, a dark-black patch ONLY on the left ear/temple (viewer's left) and a warm orange-ginger patch ONLY on the right ear/temple (viewer's right) with a wide pure white forehead in between, big round dark-brown/amber eyes, a clean pink triangle nose, pink paw pads, and a fluffy black-and-orange striped tail. STRICT CONSTRAINT: Strictly NO dots, NO moles, NO spots, and NO freckles anywhere on or around Songi's face, nose, mouth, cheeks, or forehead."
     },
     "choco": {
       "name_ko": "초코",
