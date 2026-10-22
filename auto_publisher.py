@@ -264,9 +264,20 @@ def post_to_naver_blog(
                     for l_i, line in enumerate(lines):
                         clean_line = line.strip()
                         if clean_line:
-                            page.keyboard.type(clean_line)
+                            # 1. 2. 3. 등 번호 매기기 시작 시 스마트에디터의 자동 번호목록(List) 트리거 방지
+                            # (스마트에디터 ONE은 줄 처음에 "숫자."를 타이핑하고 공백을 치면 자동으로 번호 매기기 블록을 생성하여 좌측 번호와 본문 번호가 중복 표시됨)
+                            num_match = re.match(r"^(\d+\.)\s*(.*)$", clean_line)
+                            if num_match:
+                                num_prefix, rest_text = num_match.groups()
+                                page.keyboard.type(num_prefix)
+                                # 스페이스바 대신 Zero-Width Space(또는 안전한 구분 기호)를 주입하거나 텍스트를 바로 입력하여 리스트 자동변환 차단
+                                page.keyboard.press("Shift+Space")
+                                time.sleep(0.05)
+                                page.keyboard.type(rest_text)
+                            else:
+                                page.keyboard.type(clean_line)
                         if l_i < len(lines) - 1:
-                            page.keyboard.press("Enter")
+                            page.keyboard.press("Shift+Enter")
                     page.keyboard.press("Enter")
                     page.keyboard.press("Enter")
                     time.sleep(0.1)

@@ -71,6 +71,17 @@ def inspect_latest_post_quality(expected_category: str = "AI 정보", is_article
                 if clean_banned and clean_banned in body_text:
                     report["banned_found"].append(banned)
 
+        # 6. 스마트에디터 자동 번호 리스트 중복 표시 여부 검사
+        # (스마트에디터 번호 목록 서식 .se-section-list 내부에 텍스트로도 '1.' '2.' 등이 중복 들어갔는지 감지)
+        list_items = latest_viewer.select(".se-section-list li, ol.se-ol li")
+        duplicate_num_count = 0
+        for li in list_items:
+            li_txt = li.get_text(strip=True)
+            if re.match(r"^\d+\.", li_txt):
+                duplicate_num_count += 1
+        if duplicate_num_count > 0:
+            report["issues"].append(f"❌ 스마트에디터 자동 번호 목록과 텍스트 숫자 중복 발견 ({duplicate_num_count}건)")
+
     except Exception as e:
         print(f"⚠️ 품질 검사 웹 크롤링 중 오류: {e}")
 
