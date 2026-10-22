@@ -1,0 +1,33 @@
+{
+  "source_post": "지치의 블로그를 빛내줄 개성 만점 캐릭터 4총사를 소개합니다!",
+  "characters": {
+    "jichi": {
+      "name_ko": "지치",
+      "name_en": "Jichi",
+      "sheet_path": "assets/characters/지치_시트.jpg",
+      "pure_ref_path": "assets/characters/jichi_pure_ref.png",
+      "height_cm": 28,
+      "visual_dna": "A cute chubby 3D sprout fairy (28cm tall) with a lime-green rounded body and hood, a distinct HEART-SHAPED ivory-cream face mask framing the face, big sparkling dark-brown/olive eyes, pink blushing cheeks, a tiny brown nose, TWO large fresh green leaves sprouting from the very top center of the head, a green leaf-collar around the neck with a green leaf-shaped badge on the chest reading '지치', a round ivory-cream belly patch, and a tiny stubby green tail on the back. Strictly NO fairy wings on the back."
+    },
+    "songi": {
+      "name_ko": "송이",
+      "name_en": "Songi",
+      "sheet_path": "assets/characters/송이_시트.jpg",
+      "pure_ref_path": "assets/characters/songi_pure_ref.png",
+      "height_cm": 25,
+      "visual_dna": "A cute chubby 3D Korean shorthair calico cat (25cm tall) with soft fluffy white fur, a dark-black patch on the left ear/temple (viewer's left) and a warm orange-ginger patch on the right ear/temple (viewer's right) with a wide white forehead in between, big round dark-brown/amber eyes, a pink triangle nose with ONE tiny cute beauty mole dot right next to the nose, pink paw pads, and a fluffy black-and-orange striped tail."
+    },
+    "choco": {
+      "name_ko": "초코",
+      "name_en": "Choco",
+      "sheet_path": "assets/characters/초코_시트.jpg",
+      "visual_dna": "A cute chubby 3D black-and-white tuxedo cat with bright round eyes, white muzzle, white chest and paws."
+    },
+    "ai_robot": {
+      "name_ko": "AI로봇",
+      "name_en": "AI Robot",
+      "sheet_path": "assets/characters/AI로봇_시트.jpg",
+      "visual_dna": "A cute glossy white 3D mini robot with a black digital visor screen face showing glowing cyan smiling eyes."
+    }
+  }
+}

@@ -74,9 +74,22 @@ def clean_ai_artifacts(text: str) -> str:
     return text.strip()
 
 
-def generate_dalle_image(prompt: str, output_path: str, size: str = "1024x1024") -> str:
+def load_character_memory() -> dict:
+    """블로그 공식 캐릭터 소개글 기반 영구 캐릭터 메모리(character_memory.json) 로드"""
+    mem_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "characters", "character_memory.json")
+    if os.path.exists(mem_path):
+        try:
+            with open(mem_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"  ⚠️ 캐릭터 메모리 로드 경고: {e}")
+    return {}
+
+
+def generate_dalle_image(prompt: str, output_path: str, size: str = "1024x1024", reference_images: list = None) -> str:
     """
-    3단계 무결점 AI 이미지 생성 엔진:
+    3단계 무결점 AI 이미지 생성 엔진 (공식 캐릭터 시트 & 실사 제품 레퍼런스 멀티모달 주입 지원):
+    0순위: reference_images 제공 시 OpenAI gpt-image-1 / Gemini 멀티모달 레퍼런스 잠금 생성
     1순위: OpenAI DALL-E 3 API
     2순위: Google Gemini 2.0 Flash Image Generation API
     3순위: Flux 3D Cloud AI 렌더링 폴백 (API 크레딧 소진 시에도 100% 고유 이미지 보장)
@@ -84,9 +97,81 @@ def generate_dalle_image(prompt: str, output_path: str, size: str = "1024x1024")
     import requests
     import random
     import urllib.parse
+    import base64
 
     openai_key = (os.environ.get("OPENAI_API_KEY") or os.environ.get("GPT_API_KEY") or "").strip().strip('"').strip("'")
     gemini_key = (os.environ.get("GEMINI_API_KEY") or "").strip().strip('"').strip("'")
+
+    # 캐릭터 메모리에서 공식 시각 DNA 자동 보강
+    char_mem = load_character_memory()
+    if char_mem and ("Jichi" in prompt or "지치" in prompt or "Songi" in prompt or "송이" in prompt):
+        jichi_dna = char_mem.get("characters", {}).get("jichi", {}).get("strict_visual_dna", "")
+        songi_dna = char_mem.get("characters", {}).get("songi", {}).get("strict_visual_dna", "")
+        dna_suffix = f"\n[OFFICIAL CHARACTER MEMORY LOCK]\n- Jichi: {jichi_dna}\n- Songi: {songi_dna}"
+        if "[OFFICIAL CHARACTER MEMORY LOCK]" not in prompt:
+            prompt = prompt + dna_suffix
+
+    valid_refs = [p for p in (reference_images or []) if p and os.path.exists(p)]
+
+    # [0순위] 멀티모달 레퍼런스 시트 주입 (OpenAI gpt-image-1 edits / Gemini inlineData)
+    if valid_refs and openai_key:
+        try:
+            print(f"  🎨 [0순위] OpenAI gpt-image-1 캐릭터 시트/실사 멀티모달 레퍼런스 생성 시도 ({len(valid_refs)}장 참조)...")
+            files_payload = []
+            opened_files = []
+            for ref_p in valid_refs:
+                f_obj = open(ref_p, "rb")
+                opened_files.append(f_obj)
+                files_payload.append(("image[]", (os.path.basename(ref_p), f_obj, "image/png")))
+            resp = requests.post(
+                "https://api.openai.com/v1/images/edits",
+                headers={"Authorization": f"Bearer {openai_key}"},
+                data={"model": "gpt-image-1", "prompt": prompt, "size": size if size in ["1024x1024", "1536x1024", "1024x1536"] else "1024x1024"},
+                files=files_payload,
+                timeout=90
+            )
+            for f_obj in opened_files:
+                f_obj.close()
+            if resp.status_code == 200:
+                res_data = resp.json()
+                b64_data = res_data["data"][0].get("b64_json")
+                if b64_data:
+                    with open(output_path, "wb") as f:
+                        f.write(base64.b64decode(b64_data))
+                    print(f"  ✅ [gpt-image-1 레퍼런스 잠금 성공] 저장 완료: {output_path}")
+                    return output_path
+        except Exception as e:
+            print(f"  ⚠️ gpt-image-1 멀티모달 레퍼런스 호출 예외: {e}")
+
+    if valid_refs and gemini_key:
+        try:
+            print(f"  🎨 [0-B순위] Gemini 멀티모달 캐릭터 시트/실사 레퍼런스 생성 시도 ({len(valid_refs)}장 참조)...")
+            parts = []
+            for ref_p in valid_refs:
+                with open(ref_p, "rb") as rf:
+                    b64_ref = base64.b64encode(rf.read()).decode("utf-8")
+                mime = "image/png" if ref_p.lower().endswith(".png") else "image/jpeg"
+                parts.append({"inlineData": {"mimeType": mime, "data": b64_ref}})
+            parts.append({"text": f"Strictly preserve the exact character designs and product appearance from the provided reference images. Generate a high-resolution illustration: {prompt}"})
+            gem_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key={gemini_key}"
+            gem_payload = {
+                "contents": [{"parts": parts}],
+                "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]}
+            }
+            resp = requests.post(gem_url, json=gem_payload, timeout=65)
+            if resp.status_code == 200:
+                candidates = resp.json().get("candidates", [])
+                for cand in candidates:
+                    for part in cand.get("content", {}).get("parts", []):
+                        inline = part.get("inlineData")
+                        if inline and inline.get("data"):
+                            img_bytes = base64.b64decode(inline["data"])
+                            with open(output_path, "wb") as f:
+                                f.write(img_bytes)
+                            print(f"  ✅ [Gemini 멀티모달 레퍼런스 잠금 성공] 저장 완료: {output_path}")
+                            return output_path
+        except Exception as e:
+            print(f"  ⚠️ Gemini 멀티모달 레퍼런스 호출 예외: {e}")
 
     # [1순위] OpenAI DALL-E 3
     if openai_key:
