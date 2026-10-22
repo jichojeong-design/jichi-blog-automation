@@ -170,10 +170,16 @@ def generate_dalle_image(prompt: str, output_path: str, size: str = "1024x1024")
     return ""
 
 
-def generate_article_thumbnail(topic: str, image_prompt: str = "", output_path: str = "완성_썸네일_1691x930.png") -> str:
+def generate_article_thumbnail(
+    topic: str,
+    image_prompt: str = "",
+    output_path: str = "완성_썸네일_1691x930.png",
+    summary_lines: list = None
+) -> str:
     """
     기사 주제에 맞는 1:1 3D 일러스트를 DALL-E 3로 생성한 뒤,
-    사장님의 '썸네일_원본첨부.png' 좌측 라운드 카드 영역(x:62~789, y:52~853)에 정밀 합성합니다.
+    사장님의 '썸네일_원본첨부.png' 좌측 라운드 카드에 합성하고,
+    우측 상단 '기사 중점 요약 내용:' 영역에 기사 핵심 요약 1~2줄을 동적으로 새겨넣습니다.
     """
     base_dir = os.path.dirname(os.path.abspath(__file__))
     template_path = os.path.join(base_dir, "썸네일_원본첨부.png")
@@ -194,7 +200,8 @@ def generate_article_thumbnail(topic: str, image_prompt: str = "", output_path: 
             composed = formatter.compose_thumbnail(
                 inner_image_path=generated_inner,
                 output_path=full_out_path,
-                template_path=template_path
+                template_path=template_path,
+                summary_lines=summary_lines
             )
             print(f"  🖼️ 기사 맞춤 1691x930 썸네일 합성 완료: {composed}")
             return composed
@@ -205,7 +212,12 @@ def generate_article_thumbnail(topic: str, image_prompt: str = "", output_path: 
     fallback_inner = os.path.join(base_dir, "article_1_inner.png")
     if os.path.exists(fallback_inner) and os.path.exists(template_path):
         try:
-            composed = formatter.compose_thumbnail(fallback_inner, full_out_path, template_path)
+            composed = formatter.compose_thumbnail(
+                fallback_inner,
+                full_out_path,
+                template_path,
+                summary_lines=summary_lines
+            )
             print(f"  🖼️ 기본 3D 일러스트 기반 1691x930 썸네일 합성 완료: {composed}")
             return composed
         except Exception as e:
@@ -317,6 +329,7 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
 반드시 아래 JSON 구조로만 응답하세요:
 {{
   "title": "28자 이내 완결된 고클릭률 제목",
+  "summary_lines": ["핵심 요약 첫째 줄 (14자 이내)", "핵심 요약 둘째 줄 (14자 이내)"],
   "body": "1,500~1,800자 심층 분석 본문 텍스트 (문단 사이 빈 줄 포함)",
   "tags": ["#태그1", "#태그2", "#태그3", "#태그4", "#태그5", "#태그6"],
   "image_prompt": "A high-end 3D isometric illustration of ... Strictly no text, no letters, no numbers."
@@ -332,14 +345,22 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
         if url and url not in clean_body:
             clean_body += f"\n\n출처: {url}"
         tags = parsed.get("tags") or ["#인공지능", "#AI트렌드", "#테크뉴스", "#IT분석", "#빅테크", "#지치블로그"]
+        summary_lines = parsed.get("summary_lines")
+        if not summary_lines or len(summary_lines) < 1:
+            clean_t = constants.clean_topic_title(topic)
+            summary_lines = [f"{clean_t} 전격 공개!", "글로벌 테크 판도 뒤집나"]
+            
         return {
             "title": clean_title,
+            "summary_lines": summary_lines[:2],
             "body": clean_body,
             "tags": tags[:7],
             "image_prompt": parsed.get("image_prompt", "")
         }
 
     # 비상용 고품질 1,500자 폴백 (원문 팩트 연동 + 단어 잘림 없는 치트키 제목)
+    clean_t = constants.clean_topic_title(topic)
+    default_summary = [f"{clean_t} 핵심 총정리!", "기술 격차와 시장 파장 분석"]
     fact_snippet = scraped_facts[:450] if scraped_facts else f"{topic} 관련 글로벌 테크 업계의 기술 경쟁이 새로운 국면에 접어들었습니다."
     fallback_body = f"""{topic} 소식이 공식 전해지면서 글로벌 인공지능 생태계와 엔터프라이즈 시장 전반에 적지 않은 파장이 일고 있습니다. 기존 서비스 구조를 뛰어넘는 기술적 전환점이 마련되었다는 분석과 함께, 실제 현업 도입 과정에서의 실효성을 둘러싼 논의가 동시에 급물살을 타고 있습니다. 빅테크 기업들이 주도해 온 생성형 AI 패권 경쟁이 이제는 실질적인 운영 효율성과 수익성 증명 단계로 이동했음을 보여주는 대목입니다.
 
@@ -359,6 +380,7 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
 
     return {
         "title": sample_title,
+        "summary_lines": default_summary,
         "body": clean_ai_artifacts(fallback_body),
         "tags": ["#인공지능", "#AI트렌드", "#테크뉴스", "#IT기사", "#빅테크", "#지치블로그"],
         "image_prompt": ""

@@ -71,13 +71,16 @@ def create_rounded_mask(size, radius):
     return mask
 
 
-def compose_thumbnail(inner_image_path: str, output_path: str, template_path: str = "썸네일_원본첨부.png") -> str:
+def compose_thumbnail(
+    inner_image_path: str,
+    output_path: str,
+    template_path: str = "썸네일_원본첨부.png",
+    summary_lines: list = None
+) -> str:
     """
-    사장님의 1691x930 썸네일 원본 좌측 둥근 카드 영역에 AI 이미지를 정확하게 맞춤 합성
-    좌측 카드 정확한 영역:
-    x: 62 ~ 789 (w: 728)
-    y: 52 ~ 853 (h: 802)  <-- 상단 52부터 시작하여 흰 여백 완전 제거!
-    radius: 68
+    사장님의 1691x930 썸네일 원본 템플릿에:
+    1. 좌측 둥근 카드(x:62~789, y:52~853, radius:68)에 기사 맞춤 1:1 AI 일러스트 합성
+    2. 우측 상단 '기사 중점 요약 내용:' 영역에 기사 핵심 요약 1~2줄을 동적으로 정밀 마킹
     """
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"썸네일 원본 템플릿을 찾을 수 없습니다: {template_path}")
@@ -87,21 +90,50 @@ def compose_thumbnail(inner_image_path: str, output_path: str, template_path: st
     template = Image.open(template_path).convert("RGBA")
     inner_img = Image.open(inner_image_path).convert("RGBA")
     
-    # 수정된 정확한 좌표: 상단 흰 여백 완전 밀착 커버
+    # [1] 좌측 카드 영역 맞춤 합성 (상단 52부터 여백 밀착)
     box_x = 62
     box_y = 52
     box_w = 728
     box_h = 802
     radius = 68
     
-    # 비율 유지하며 중앙 채우기 (Fit & Crop)
     inner_resized = ImageOps.fit(inner_img, (box_w, box_h), Image.Resampling.LANCZOS)
-    
-    # 둥근 모서리 마스크 적용
     mask = create_rounded_mask((box_w, box_h), radius=radius)
-    
-    # 템플릿 위에 마스크를 활용해 합성
     template.paste(inner_resized, (box_x, box_y), mask)
     
+    # [2] 우측 상단 핵심 요약 1~2줄 동적 마킹
+    if summary_lines and len(summary_lines) >= 1:
+        draw = ImageDraw.Draw(template)
+        # 상단 '기사 중점 요약 내용:' 라벨 아래부터 지치 새싹 머리 위까지 깔끔 커버
+        bg_box = (760, 155, 1560, 415)
+        draw.rounded_rectangle(bg_box, radius=24, fill=(255, 254, 245, 255), outline=(215, 225, 200, 255), width=3)
+        
+        # 폰트 로드 (동봉된 나눔고딕볼드 또는 윈도우 맑은고딕)
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        local_font = os.path.join(base_dir, "NanumGothicBold.ttf")
+        win_font = "C:/Windows/Fonts/malgunbd.ttf"
+        
+        font = None
+        for fp in [local_font, win_font]:
+            if os.path.exists(fp):
+                try:
+                    font = ImageFont.truetype(fp, 48)
+                    break
+                except Exception:
+                    pass
+        if not font:
+            font = ImageFont.load_default()
+            
+        text_color = (25, 75, 35, 255) # 고급스러운 딥 포레스트 그린
+        
+        l1 = str(summary_lines[0]).strip()
+        l2 = str(summary_lines[1]).strip() if len(summary_lines) > 1 else ""
+        
+        if l2:
+            draw.text((1160, 230), l1, fill=text_color, font=font, anchor="mm")
+            draw.text((1160, 335), l2, fill=text_color, font=font, anchor="mm")
+        else:
+            draw.text((1160, 285), l1, fill=text_color, font=font, anchor="mm")
+            
     template.save(output_path, "PNG")
     return output_path

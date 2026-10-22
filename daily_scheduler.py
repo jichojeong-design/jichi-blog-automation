@@ -47,12 +47,14 @@ def run_ai_article_routine(article_index: int):
     formatted_body = formatter.format_mobile_text(body_text)
     paragraphs = [p for p in formatted_body.split("\n\n") if p.strip()]
 
-    # 3. DALL-E 3 일러스트 생성 + 사장님 1691x930 원본 템플릿 자동 합성
+    # 3. DALL-E 3 일러스트 생성 + 사장님 1691x930 원본 템플릿 자동 합성 (우측 상단 1~2줄 요약 포함)
     thumb_filename = f"완성_썸네일_1691x930.png"
+    summary_lines = generated.get("summary_lines", [f"{target['title'][:12]} 전격 공개!", "글로벌 AI 시장 파장 분석"])
     thumb_path = content_generator.generate_article_thumbnail(
         topic=target["title"],
         image_prompt=image_prompt,
-        output_path=thumb_filename
+        output_path=thumb_filename,
+        summary_lines=summary_lines
     )
 
     # 4. 네이버 블로그 'AI 정보' 카테고리 및 검색 태그 5~8개 발행
