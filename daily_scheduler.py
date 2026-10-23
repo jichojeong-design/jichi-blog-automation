@@ -273,12 +273,19 @@ def execute_daily_sequence():
                 time.sleep(600)
 
         print("\n🎉 오늘 하루치 정규 기사 3편 발행 완료! (웹툰 자동화는 사장님 지시로 안전 보류되었습니다)")
-    else:
+    elif "--inception" in sys.argv:
         print("=" * 60)
         print("🚀 [즉시 실행: 1위 기사 '인셉션 충격 반전' 각색 웹툰 임시저장 가동]")
         print("=" * 60)
         import publish_inception_toon
         publish_inception_toon.produce_inception_adaptation_webtoon()
+        print("\n🎉 네이버 블로그 임시저장함 등록 완료!")
+    else:
+        print("=" * 60)
+        print("🚀 [즉시 실행: CU 리센느 'Runaway' 노래캔디 웹툰 임시저장 가동]")
+        print("=" * 60)
+        import publish_rescene_candy
+        publish_rescene_candy.produce_rescene_candy_webtoon()
         print("\n🎉 네이버 블로그 임시저장함 등록 완료!")
 
 
