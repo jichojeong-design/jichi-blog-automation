@@ -1,7 +1,7 @@
 {
   "system_version": "1.0.0",
-  "last_updated": "2026-10-24T00:16:00+09:00",
-  "release_officer": "코키비스트 (Co-Chivist)",
+  "last_updated": "2026-10-24T00:26:00+09:00",
+  "release_officer": "코키퍼 (Co-Keeper)",
   "rules": {
     "zero_unapproved_asset": true,
     "strict_eco_control": true,
