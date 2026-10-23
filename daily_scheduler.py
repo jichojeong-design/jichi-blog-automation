@@ -45,14 +45,24 @@ def run_ai_article_routine(article_index: int):
     title = generated.get("title", f"[AI 분석] {target['title'][:22]}")
     body_text = generated.get("body", target["title"])
     image_prompt = generated.get("image_prompt", "")
+    summary_lines = generated.get("summary_lines", [f"{target['title'][:12]} 전격 공개!", "글로벌 테크 시장 술렁"])
 
-    # 2. 25자 가독성 줄바꿈 포맷팅 적용 (URL 잘림 방지 및 소제목 앞뒤 여백 확보)
+    # 2. 1차 포맷팅 적용
     formatted_body = formatter.format_mobile_text(body_text)
     paragraphs = [p for p in formatted_body.split("\n\n") if p.strip()]
 
-    # 3. DALL-E 3 일러스트 생성 + 사장님 1691x930 원본 템플릿 자동 합성 (우측 상단 1~2줄 요약 포함)
+    # ⭐ [코부장 4대 핵심 포스팅 전 선제 품질검사 및 불량 자동 수리 게이트]
+    # (1. 제목 패턴/길이 불량 수리, 2. 썸네일 요약 판에 박힌 복제 수리, 3. 문장 끝 어색한 줄바꿈 수리, 4. 소제목 문단 간격 수리)
+    title, summary_lines, paragraphs = quality_inspector.validate_and_repair_article_pre_publish(
+        title=title,
+        summary_lines=summary_lines,
+        paragraphs=paragraphs,
+        topic=target["title"],
+        article_index=article_index
+    )
+
+    # 3. DALL-E 3 일러스트 생성 + 사장님 1691x930 원본 템플릿 자동 합성 (검증·수리 완료된 요약문구 반영)
     thumb_filename = f"완성_썸네일_1691x930.png"
-    summary_lines = generated.get("summary_lines", [f"{target['title'][:12]} 전격 공개!", "글로벌 AI 시장 파장 분석"])
     thumb_path = content_generator.generate_article_thumbnail(
         topic=target["title"],
         image_prompt=image_prompt,
