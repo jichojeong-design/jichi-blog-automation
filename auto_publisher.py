@@ -238,8 +238,8 @@ def post_to_naver_blog(
             # 본문 타이핑 시작 전 가운데 정렬 활성화
             _enable_center_alignment(page)
 
-            # 3. 문단별 정밀 타이핑 (소제목 앞뒤 2줄 공백, 일반 문단 1줄 공백, 인라인 웹툰 이미지 업로드)
-            for para in content_paragraphs:
+            # 3. 문단별 정밀 타이핑 (소제목 앞뒤 확실한 여백 분리, 인라인 웹툰 이미지 업로드)
+            for p_idx, para in enumerate(content_paragraphs):
                 p_text = str(para).strip()
                 if not p_text:
                     continue
@@ -252,10 +252,15 @@ def post_to_naver_blog(
 
                 is_subheading = bool(re.match(r"^\[\d+\.\s*[^\]]+\]$", p_text))
                 if is_subheading:
-                    page.keyboard.press("Enter")
-                    time.sleep(0.1)
+                    # [소제목 상단 확실한 여백 확보]: 앞 문단과 바짝 붙지 않도록 빈 줄 생성
+                    if p_idx > 0:
+                        page.keyboard.press("Enter")
+                        page.keyboard.press("Enter")
+                        time.sleep(0.1)
+                    
                     page.keyboard.type(p_text)
-                    page.keyboard.press("Enter")
+                    
+                    # [소제목 하단 여백 확보]: 소제목과 아래 본문 문단 사이에 시원한 간격
                     page.keyboard.press("Enter")
                     page.keyboard.press("Enter")
                     time.sleep(0.15)
@@ -265,12 +270,10 @@ def post_to_naver_blog(
                         clean_line = line.strip()
                         if clean_line:
                             # 1. 2. 3. 등 번호 매기기 시작 시 스마트에디터의 자동 번호목록(List) 트리거 방지
-                            # (스마트에디터 ONE은 줄 처음에 "숫자."를 타이핑하고 공백을 치면 자동으로 번호 매기기 블록을 생성하여 좌측 번호와 본문 번호가 중복 표시됨)
                             num_match = re.match(r"^(\d+\.)\s*(.*)$", clean_line)
                             if num_match:
                                 num_prefix, rest_text = num_match.groups()
                                 page.keyboard.type(num_prefix)
-                                # 스페이스바 대신 Zero-Width Space(또는 안전한 구분 기호)를 주입하거나 텍스트를 바로 입력하여 리스트 자동변환 차단
                                 page.keyboard.press("Shift+Space")
                                 time.sleep(0.05)
                                 page.keyboard.type(rest_text)
@@ -278,7 +281,8 @@ def post_to_naver_blog(
                                 page.keyboard.type(clean_line)
                         if l_i < len(lines) - 1:
                             page.keyboard.press("Shift+Enter")
-                    page.keyboard.press("Enter")
+                    
+                    # 일반 문단 끝난 후 기본 문단 간격 (Enter 1회로 스마트에디터 새 문단 블록 분리)
                     page.keyboard.press("Enter")
                     time.sleep(0.1)
 

@@ -4,15 +4,16 @@ import os
 
 def format_mobile_text(text: str, max_chars: int = 25) -> str:
     """
-    모바일 가독성 최적화:
-    1. 각 줄을 공백/부호 포함 max_chars(기본 25자) 이내로 줄바꿈
-    2. 소제목([1. ...], [2. ...], [3. ...]) 앞뒤에는 2줄 공백을 두어 문단 간격을 시원하게 분리!
-    3. 일반 문단 사이에는 단 1줄 빈 줄 유지
+    모바일 최적화 및 자연스러운 한국어 문맥 줄바꿈:
+    1. 온점(.), 물음표(?), 느낌표(!) 기준으로 문장을 먼저 분리하여, 문장이 끝난 후 다음 문장으로 넘어갈 때 자연스러운 호흡 부여
+       (예: '것인지가 주요 쟁점입니다. 하지만 AI' 처럼 문장 끝과 다음 접속사가 한 줄에 기형적으로 붙는 현상 완전 차단)
+    2. 쉼표(,) 및 의미 단위(절)를 존중하여 어절 단위로 부드럽게 줄바꿈
+    3. 소제목([1. ...], [2. ...], [3. ...])은 별도의 독립 블록으로 유지
     """
     if not text:
         return ""
     
-    # 소제목 태그 앞뒤에 강제로 명확한 구분자 삽입
+    # 소제목 태그 앞뒤에 명확한 문단 구분자 삽입
     text = re.sub(r'(\[\d+\.\s*[^\]]+\])', r'\n\n\1\n\n', text)
     
     paragraphs = re.split(r'\n\s*\n', text.strip())
@@ -28,36 +29,57 @@ def format_mobile_text(text: str, max_chars: int = 25) -> str:
             formatted_paragraphs.append(para_clean)
             continue
             
-        cleaned_para = " ".join(para_clean.split())
-        words = cleaned_para.split()
-        
-        lines = []
-        current_line = ""
-        
-        for word in words:
-            is_url = word.startswith(("http://", "https://", "www."))
-            if not current_line:
-                if len(word) > max_chars and not is_url:
-                    for i in range(0, len(word), max_chars):
-                        lines.append(word[i:i+max_chars])
-                else:
-                    current_line = word
-            else:
-                if len(current_line) + 1 + len(word) <= max_chars:
-                    current_line += " " + word
-                else:
-                    lines.append(current_line)
-                    if len(word) > max_chars and not is_url:
-                        for i in range(0, len(word), max_chars):
-                            if i + max_chars < len(word):
-                                lines.append(word[i:i+max_chars])
-                            else:
-                                current_line = word[i:]
-                    else:
-                        current_line = word
-        if current_line:
-            lines.append(current_line)
+        # 1. 문장 단위로 분리 (. ? !)
+        raw_sentences = re.split(r'([.?!]\s+)', para_clean)
+        sentences = []
+        for i in range(0, len(raw_sentences) - 1, 2):
+            sentences.append(raw_sentences[i] + raw_sentences[i+1].rstrip())
+        if len(raw_sentences) % 2 == 1 and raw_sentences[-1]:
+            sentences.append(raw_sentences[-1])
             
+        lines = []
+        for s in sentences:
+            s_clean = " ".join(s.split())
+            if not s_clean:
+                continue
+                
+            # 27자 이내의 짧은 문장은 줄바꿈 없이 한 호흡으로 유지
+            if len(s_clean) <= max_chars + 2:
+                lines.append(s_clean)
+                continue
+                
+            # 긴 문장은 쉼표(,) 단위 절 분리 후 어절 맞춤 줄바꿈
+            clauses = re.split(r'(,\s+)', s_clean)
+            clause_list = []
+            for j in range(0, len(clauses) - 1, 2):
+                clause_list.append(clauses[j] + clauses[j+1].rstrip())
+            if len(clauses) % 2 == 1 and clauses[-1]:
+                clause_list.append(clauses[-1])
+                
+            current_line = ""
+            for c in clause_list:
+                words = c.split()
+                for word in words:
+                    is_url = word.startswith(("http://", "https://", "www."))
+                    if not current_line:
+                        if len(word) > max_chars and not is_url:
+                            for k in range(0, len(word), max_chars):
+                                lines.append(word[k:k+max_chars])
+                        else:
+                            current_line = word
+                    else:
+                        if len(current_line) + 1 + len(word) <= max_chars:
+                            current_line += " " + word
+                        else:
+                            lines.append(current_line)
+                            current_line = word
+                # 쉼표 뒤에서 줄 길이가 15자 이상이면 자연스러운 호흡으로 줄바꿈
+                if c.endswith(",") and len(current_line) >= 15:
+                    lines.append(current_line)
+                    current_line = ""
+            if current_line:
+                lines.append(current_line)
+                
         formatted_paragraphs.append("\n".join(lines))
         
     return "\n\n".join(formatted_paragraphs)
