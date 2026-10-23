@@ -509,6 +509,12 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
         clean_body = clean_ai_artifacts(parsed["body"])
         if url and url not in clean_body:
             clean_body += f"\n\n출처: {url}"
+        
+        # 공감 & 이웃추가 전환율 극대화 CTA 마무리 문구 추가
+        cta_text = "\n\n오늘 분석이 도움 되셨다면 공감(❤️)과 이웃 추가 부탁드립니다! 지치 블로그가 매일 아침 가장 빠르고 정확한 글로벌 테크 트렌드를 배달해 드립니다."
+        if "공감(❤️)" not in clean_body:
+            clean_body += cta_text
+
         tags = parsed.get("tags") or ["#인공지능", "#AI트렌드", "#테크뉴스", "#IT분석", "#빅테크", "#지치블로그"]
         summary_lines = parsed.get("summary_lines")
         if not summary_lines or len(summary_lines) < 2 or "시장 파장 분석" in "".join(summary_lines):

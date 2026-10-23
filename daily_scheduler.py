@@ -197,7 +197,8 @@ def run_rescene_draft_routine():
         "[지치와 송이의 솔직 총평 & 맛있게 먹는 꿀팁]",
         "1. 퍽퍽함 없이 폭신한 식빵 식감에 상큼한 딸기잼과 부드러운 크림의 조화가 호불호 없이 즐길 수 있는 정석 디저트입니다.",
         "2. 시원한 흰 우유나 아이스 아메리카노를 곁들이면 달콤함이 훨씬 깔끔하게 살아납니다.",
-        "3. 리센느 팬분들의 포토카드 컬렉션은 물론, 달콤한 편의점 빵을 좋아하시는 분들께 강력 추천합니다!"
+        "3. 리센느 팬분들의 포토카드 컬렉션은 물론, 달콤한 편의점 빵을 좋아하시는 분들께 강력 추천합니다!",
+        "오늘 리뷰가 도움 되셨다면 공감(❤️)과 이웃 추가 꾹 눌러주세요! 지치와 송이가 매일 핫한 편의점 신상과 최신 AI 소식을 전해드립니다!"
     ]
 
     formatted_paragraphs = []
@@ -208,13 +209,19 @@ def run_rescene_draft_routine():
         if p_str.startswith("__IMAGE__:"):
             formatted_paragraphs.append(p_str)
         else:
-            formatted_paragraphs.append(formatter.format_mobile_text(p_str, max_chars=26))
+            formatted_paragraphs.append(formatter.format_mobile_text(p_str, max_chars=18))
+
+    # 네이버 여성/디저트/아이돌 덕질 검색 유입 1위 타겟 키워드 8종 풀배치
+    rescene_tags = [
+        "#CU신상", "#리센느", "#제나의딸기잼샌드", "#리센느빵",
+        "#리센느포토카드", "#제나포카", "#포카깡", "#편의점디저트"
+    ]
 
     success = auto_publisher.post_to_naver_blog(
-        title="[지치와 송이의 편의점 탐방] CU 리센느 '제나의 딸기잼 샌드' 실물 & 포토카드 솔직 후기!",
+        title="[지치와 송이의 편의점 탐방] CU 리센느 '제나의 딸기잼 샌드' 실물 & 제나 포카 개봉 솔직 후기!",
         content_paragraphs=formatted_paragraphs,
         category_name="웹툰",
-        tags=["#CU신상", "#리센느", "#제나의딸기잼샌드", "#리센느빵", "#리센느포토카드", "#편의점디저트", "#지치웹툰"],
+        tags=rescene_tags,
         save_draft=True
     )
     return success
