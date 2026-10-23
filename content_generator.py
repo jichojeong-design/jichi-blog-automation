@@ -327,11 +327,18 @@ def generate_article_thumbnail(
         except Exception as e:
             print(f"  ⚠️ 전용 에셋 합성 중 예외: {e}")
 
+    # 주제별 맞춤 프롬프트 테마 다양화 (고정된 큐브/서버룸 탈피)
     if not image_prompt:
+        clean_kw = constants.clean_topic_title(topic)
+        themes = [
+            f"A vibrant high-end 3D digital illustration of a futuristic robotic hand interacting with floating luminous neural network elements representing '{clean_kw}'. Clean pastel studio lighting, Blender 3D render style.",
+            f"A modern 3D conceptual workspace with floating holographic charts, dynamic digital data streams, and glowing creative light beams representing '{clean_kw}'. Warm ambient lighting, Pixar style.",
+            f"An elegant 3D futuristic tech monument and dynamic glowing energy waves symbolizing cutting-edge innovation for '{clean_kw}'. Cinematic soft lighting, minimal clean background.",
+            f"A high-tech 3D laboratory scene with sleek transparent glass interfaces, floating crystal data nodes, and vibrant ambient colors representing '{clean_kw}'. Depth of field, Blender 3D style."
+        ]
+        chosen_theme = themes[article_index % len(themes)]
         image_prompt = (
-            f"A high-end 3D isometric digital illustration representing the technology news topic: '{topic}'. "
-            "Futuristic glowing AI core, sleek modern server and holographic data streams, vibrant lighting, "
-            "Pixar and Blender 3D render style. Strictly NO text, NO letters, NO numbers, NO logos anywhere in the image."
+            f"{chosen_theme} Strictly NO text, NO letters, NO numbers, NO watermarks, NO logos anywhere in the image."
         )
 
     # 1. 기사 고유의 맞춤 1:1 일러스트 실시간 생성 시도
@@ -447,10 +454,11 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
     scraped_facts = scrape_article_facts(url)
     clean_core = constants.clean_topic_title(topic)
     cheat_titles = constants.generate_cheat_title_templates(clean_core)
-    sample_title = cheat_titles[0] if cheat_titles else f"{clean_core} 전격 공개… 숨겨진 핵심"
+    sample_title = cheat_titles[0] if cheat_titles else f"{clean_core} 전격 공개! 핵심 분석"
 
     prompt = f"""당신은 10년 차 IT·산업 전문 테크 기자입니다.
 헤드라인 주제: {topic}
+핵심 키워드: {clean_core}
 출처 링크: {url}
 원문 팩트 발췌: {scraped_facts if scraped_facts else '공식 발표 및 최신 업계 동향 기반 작성'}
 
@@ -458,8 +466,12 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
 
 [작성 기준]
 1. 제목 (title):
-   - 공백 포함 28자 이내의 완결된 문장 (절대 단어가 중간에 짤리지 말 것!)
-   - 참고 치트키 스타일 예시: {sample_title}
+   - 공백 포함 22~28자 이내의 완결되고 세련된 한국어 문장 (절대 단어가 중간에 짤리지 말 것!)
+   - 기사의 핵심 내용(신제품 출시, 시장 파장, 실무 평가, 주가 급락 등)에 맞는 자연스러운 어휘를 사용할 것
+   - 참고 가능한 제목 스타일 후보(그대로 베끼지 말고 기사 팩트에 맞게 응용):
+     * {cheat_titles[0]}
+     * {cheat_titles[1] if len(cheat_titles) > 1 else clean_core + ' 판도 바뀔까'}
+     * {cheat_titles[2] if len(cheat_titles) > 2 else clean_core + ' 논란 속 진짜 실체'}
 2. 본문 (body):
    - 10년 차 IT 기자의 냉철하고 입체적인 문체 (~합니다 체 일관 유지)
    - 분량: 공백 포함 1,500 ~ 1,800자 (최소 5~6개 문단으로 깊이 있게 분석할 것)
@@ -470,16 +482,21 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
    - 이모지(🌱, 🔥, ✨, 💡 등) 절대 사용 금지!
 3. 9대 금지 표현 엄격 배제:
    - '핵심은 ~이 아니라', '단순한 ~이 아니라', '중요한 점은', '주목할 점은', '방향은 분명합니다', '관건입니다', '시사하는 바가 큽니다', '귀추가 주목됩니다', '첫째/둘째/셋째' 절대 사용 금지!
-4. DALL-E 3 영문 프롬프트 (image_prompt):
-   - 이 기사의 핵심 주제를 상징하는 1:1 비율 3D 디지털 일러스트 영문 프롬프트 (글자, 알파벳, 숫자, 로고가 절대 들어가지 않도록 명시)
+4. 섬네일 요약 카피 (summary_lines):
+   - 첫째 줄: 기사의 핵심 팩트 1줄 (12자 이내, 예: "앤트그룹 AI 8종 공개" 또는 "메타 주가 7% 급락")
+   - 둘째 줄: 향후 파장이나 관전 포인트 1줄 (13자 이내, 예: "빅테크 판도 흔드나" 또는 "현금 적자 리스크 비상")
+   - 절대 '핵심 총정리!', '기술 격차와 시장 파장 분석' 같은 판에 박힌 멘트 금지!
+5. 3D 일러스트 프롬프트 (image_prompt):
+   - 기사 내용에 어울리는 구체적인 3D 콘셉트 영문 프롬프트 (단순한 파란색 큐브 형태 절대 금지, 다채로운 조명과 오브젝트 활용)
+   - Strictly no text, no letters, no numbers, no logos.
 
 반드시 아래 JSON 구조로만 응답하세요:
 {{
-  "title": "28자 이내 완결된 고클릭률 제목",
-  "summary_lines": ["핵심 요약 첫째 줄 (14자 이내)", "핵심 요약 둘째 줄 (14자 이내)"],
+  "title": "22~28자 완결된 기사 맞춤형 고클릭률 제목",
+  "summary_lines": ["기사 핵심 팩트 (12자 이내)", "산업 파장/전망 (13자 이내)"],
   "body": "1,500~1,800자 심층 분석 본문 텍스트 (문단 사이 빈 줄 포함)",
   "tags": ["#태그1", "#태그2", "#태그3", "#태그4", "#태그5", "#태그6"],
-  "image_prompt": "A high-end 3D isometric illustration of ... Strictly no text, no letters, no numbers."
+  "image_prompt": "A modern 3D illustration of ... Strictly no text, no letters, no numbers."
 }}
 """
 
@@ -493,7 +510,7 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
             clean_body += f"\n\n출처: {url}"
         tags = parsed.get("tags") or ["#인공지능", "#AI트렌드", "#테크뉴스", "#IT분석", "#빅테크", "#지치블로그"]
         summary_lines = parsed.get("summary_lines")
-        if not summary_lines or len(summary_lines) < 1:
+        if not summary_lines or len(summary_lines) < 2 or "시장 파장 분석" in "".join(summary_lines):
             clean_t = constants.clean_topic_title(topic)
             summary_lines = [f"{clean_t} 전격 공개!", "글로벌 테크 판도 뒤집나"]
             
@@ -507,7 +524,8 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
 
     # 비상용 고품질 1,500자 폴백 (원문 팩트 연동 + 단어 잘림 없는 치트키 제목)
     clean_t = constants.clean_topic_title(topic)
-    default_summary = [f"{clean_t} 핵심 총정리!", "기술 격차와 시장 파장 분석"]
+    fallback_title = cheat_titles[0] if cheat_titles else f"{clean_t} 전격 공개! 핵심 분석"
+    default_summary = [f"{clean_t} 전격 발표", "글로벌 테크 시장 술렁"]
     fact_snippet = scraped_facts[:450] if scraped_facts else f"{topic} 관련 글로벌 테크 업계의 기술 경쟁이 새로운 국면에 접어들었습니다."
     fallback_body = f"""{topic} 소식이 공식 전해지면서 글로벌 인공지능 생태계와 엔터프라이즈 시장 전반에 적지 않은 파장이 일고 있습니다. 기존 서비스 구조를 뛰어넘는 기술적 전환점이 마련되었다는 분석과 함께, 실제 현업 도입 과정에서의 실효성을 둘러싼 논의가 동시에 급물살을 타고 있습니다. 빅테크 기업들이 주도해 온 생성형 AI 패권 경쟁이 이제는 실질적인 운영 효율성과 수익성 증명 단계로 이동했음을 보여주는 대목입니다.
 
@@ -526,7 +544,7 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
 출처: {url}"""
 
     return {
-        "title": sample_title,
+        "title": fallback_title,
         "summary_lines": default_summary,
         "body": clean_ai_artifacts(fallback_body),
         "tags": ["#인공지능", "#AI트렌드", "#테크뉴스", "#IT기사", "#빅테크", "#지치블로그"],
