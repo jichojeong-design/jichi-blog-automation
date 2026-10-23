@@ -43,22 +43,25 @@ def clean_topic_title(topic: str) -> str:
 
 def generate_cheat_title_templates(core_topic: str) -> list:
     """
-    28자 이내로 완결된 상황별 다채로운 고클릭률 제목 5종 생성 (무작위 셔플 보장)
+    28자 이내로 완결된 상황별 다채로운 고클릭률 제목 생성 (무작위 셔플 보장)
+    - 네이버 공식 우수 블로거 선정 기준 준수: 
+      실제 사용하지 않은 기술 기사에 '직접 써보니', '충격 반전' 등 과장·허위 낚시성 문구 완전 영구 배제
+      (자료 기반 분석, 업계 동향 및 핵심 팩트 중심의 신뢰도 높은 제목 생성)
     """
     topic = clean_topic_title(core_topic)
     
     patterns = [
-        f'"{topic}" 베일 벗었다! 실제 성능 분석',      # ~24자 (신기술 발표/성능)
-        f'{topic} 결국 일냈다! 판도 바뀔까',          # ~22자 (시장 파장/혁신)
-        f'{topic} 논란 속 진짜 실체… 업계 발칵',       # ~23자 (이슈/반전)
-        f'다들 {topic} 주목하는 진짜 이유 총정리',      # ~24자 (트렌드/분석)
-        f'{topic} 아직도 모르면 손해… 핵심 팩트',       # ~23자 (정보/가이드)
-        f'조용하던 {topic} 초강수… 승부수 통할까',      # ~24자 (기업 전략)
-        f'{topic} 기대 이상일까? 솔직 심층 분석'       # ~23자 (리뷰/평가)
+        f'"{topic}" 전격 발표! 핵심 기술 분석',      # ~24자 (기술 발표/팩트 분석)
+        f'{topic} 공식 발표! 글로벌 테크 판도 변화',   # ~25자 (업계 파장/동향)
+        f'테크 업계가 {topic} 주목하는 핵심 이유',     # ~24자 (트렌드/전문 분석)
+        f'{topic} 상세 공개! 실무 도입 전 체크포인트', # ~26자 (실무자 가이드)
+        f'{topic} 공개로 보는 빅테크 차세대 전략',    # ~24자 (기업 전략 분석)
+        f'{topic} 발표의 명암! 장점과 한계 분석',     # ~23자 (객관적 팩트/비교)
+        f'{topic} 핵심 사양 총정리! 시장 영향은'      # ~23자 (사양 및 시장 분석)
     ]
     
     valid_titles = [p for p in patterns if len(p) <= 28]
     if not valid_titles:
-        valid_titles = [f'{topic} 전격 공개! 심층 분석']
+        valid_titles = [f'{topic} 공식 발표! 기술 분석']
     random.shuffle(valid_titles)
     return valid_titles

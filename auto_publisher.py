@@ -140,6 +140,15 @@ def _type_styled_line(page, line_text: str):
         time.sleep(0.04)
         clean_line = rest_text
 
+    # - 또는 * 또는 • 로 시작하는 글머리 기호 입력 시 스마트에디터 자동 점(ul 목록) 트리거 방지
+    bullet_match = re.match(r"^([-*•·])\s*(.*)$", clean_line)
+    if bullet_match:
+        b_prefix, rest_text = bullet_match.groups()
+        page.keyboard.type(b_prefix)
+        page.keyboard.press("Shift+Space")
+        time.sleep(0.04)
+        clean_line = rest_text
+
     # **볼드** 마커 분리 타이핑
     parts = re.split(r'(\*\*.*?\*\*)', clean_line)
     for p in parts:
