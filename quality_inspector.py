@@ -63,11 +63,28 @@ def validate_and_repair_article_pre_publish(
     repaired_paragraphs = list(paragraphs)
 
     # [코리티 책임 권한] 이미지 필수 검증 및 발행 중지 판정
+    # [신규 관리자 승인 원칙 (ECO Control)] asset_ledger.json에 승인되지 않은 구버전 폐기 도면(폐기 자산) 사용 절대 차단
     if thumb_path is not None:
         if not thumb_path or not os.path.exists(thumb_path) or os.path.getsize(thumb_path) < 10000:
             print(f"  🚨 [코리티 긴급 권한 발동] 이미지 검증 실패! (파일 부재 또는 용량 미달: {thumb_path})")
             print("  🛑 [발행 즉시 중지] 사장님 방침에 따라 비정상 이미지/제미니 우회는 발행을 엄격히 차단합니다.")
             return False, repaired_title, repaired_summary, repaired_paragraphs
+
+        # 승인 장부 검사 (폐기된 이미지 파일명이 인입되었는지 확인)
+        base_name = os.path.basename(thumb_path)
+        ledger_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "asset_ledger.json")
+        if os.path.exists(ledger_path):
+            try:
+                import json
+                with open(ledger_path, "r", encoding="utf-8") as f:
+                    ledger = json.load(f)
+                deprecated = ledger.get("deprecated_assets", [])
+                if base_name in deprecated:
+                    print(f"  🚨 [코리티 ECO 거부] 폐기된 구버전 도면(자산) 감지: {base_name}")
+                    print("  🛑 [신규 관리자 승인 위반] 승인된 신규 자산 또는 드롭존 파일만 투입 가능합니다.")
+                    return False, repaired_title, repaired_summary, repaired_paragraphs
+            except Exception as e:
+                print(f"  ⚠️ 자산 장부 검증 경고: {e}")
 
     clean_t = constants.clean_topic_title(topic)
     cheat_titles = constants.generate_cheat_title_templates(clean_t)
@@ -89,6 +106,12 @@ def validate_and_repair_article_pre_publish(
     full_body = "\n\n".join(repaired_paragraphs)
     has_awkward_break = bool(re.search(r'[.?!]\s+[가-힣a-zA-Z]{2,}', full_body))
     
+    # [코리티 특별 검증 1] 소제목 번호 매기기(1. 제목:\n내용) 번호 분리 버그 검사
+    # '1.\n' 처럼 번호만 단독으로 떨어져 분리된 불량이 있는지 철저히 검사
+    has_orphan_number = bool(re.search(r'^\s*\d+[\.\)]\s*$', full_body, re.MULTILINE))
+    if has_orphan_number:
+        repairs_done.append("번호 단독 분리 결함(1.\n) 감지 -> 번호+제목 결합 예외 로직으로 강제 수리")
+
     subheading_count = len(re.findall(r'\[\d+\.\s*[^\]]+\]', full_body))
     if subheading_count < 3:
         repairs_done.append(f"소제목 수량 주의 ({subheading_count}개 발견)")

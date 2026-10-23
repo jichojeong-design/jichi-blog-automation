@@ -1,0 +1,67 @@
+{
+  "system_version": "1.0.0",
+  "last_updated": "2026-10-24T00:16:00+09:00",
+  "release_officer": "코키비스트 (Co-Chivist)",
+  "rules": {
+    "zero_unapproved_asset": true,
+    "strict_eco_control": true,
+    "deprecated_isolation": true
+  },
+  "approved_assets": {
+    "characters": {
+      "jichi_reference": {
+        "file": "assets/characters/jichi_pure_ref.png",
+        "status": "APPROVED",
+        "rev": "Rev.001",
+        "note": "지치 공식 3D 픽사 스타일 레퍼런스"
+      },
+      "songi_reference": {
+        "file": "assets/characters/songi_pure_ref.png",
+        "status": "APPROVED",
+        "rev": "Rev.001",
+        "note": "송이 공식 3D 픽사 스타일 레퍼런스 (얼굴 무점 엄격 보증)"
+      },
+      "character_memory": {
+        "file": "assets/characters/character_memory.json",
+        "status": "APPROVED",
+        "rev": "Rev.002",
+        "note": "지치컴퍼니 공식 캐릭터 DNA 및 시각 제약 정의서"
+      }
+    },
+    "templates": {
+      "main_thumbnail_template": {
+        "file": "썸네일_원본첨부.png",
+        "status": "APPROVED",
+        "rev": "Rev.001",
+        "size": "1691x930",
+        "note": "AI 정보 정규 1691x930 썸네일 원본 프레임"
+      },
+      "font": {
+        "file": "NanumGothicBold.ttf",
+        "status": "APPROVED",
+        "rev": "Rev.001",
+        "note": "썸네일 요약 카피 렌더링용 공식 볼드 폰트"
+      }
+    },
+    "webtoon_drop_zone": {
+      "path": "webtoon_drop",
+      "status": "ACTIVE_DROP_ZONE",
+      "allowed_extensions": [".jpg", ".jpeg", ".png"],
+      "naming_convention": "1.jpg, 2.jpg, 3.jpg ...",
+      "note": "사장님이 ChatGPT Plus에서 직접 다운받아 승인 투입하는 고화질 컷 전용 폴더"
+    }
+  },
+  "deprecated_assets": [
+    "webtoon_cut_1.png",
+    "webtoon_cut_2.png",
+    "webtoon_scene_1.png",
+    "webtoon_scene_2.png",
+    "webtoon_scene_4.png",
+    "article_1_inner.png",
+    "article_4_inner.png",
+    "완성_썸네일_1691x930.png",
+    "rescene_detail_2.jpg",
+    "rescene_runaway_album_cover.jpg",
+    "rescene_runaway_album_cover.png"
+  ]
+}
