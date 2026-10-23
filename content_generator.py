@@ -50,7 +50,7 @@ def scrape_article_facts(url: str) -> str:
 
 
 def clean_ai_artifacts(text: str) -> str:
-    """AI 특유의 인용 태그([cite:...]), 불필요한 이모지, 금지 표현 등을 정밀 세탁"""
+    """AI 특유의 인용 태그([cite:...]), 불필요한 이모지, 과장된 느낌표(!), 금지 표현 등을 정밀 세탁"""
     if not text:
         return ""
     text = re.sub(r"\[cite:[^\]]+\]", "", text)
@@ -69,9 +69,14 @@ def clean_ai_artifacts(text: str) -> str:
     }
     for bad, good in replacements.items():
         text = text.replace(bad, good)
-    # AI 티가 나는 과도한 아이콘 제거
-    for emo in ["🌱", "🔥", "🎬", "✨", "💡", "📝", "🚀", "📌", "✅"]:
+    
+    # [대표님 엄격 지시] 제미니 티가 나는 모든 이모지/아이콘 영구 완전 박멸
+    for emo in ["🌱", "🔥", "🎬", "✨", "💡", "📝", "🚀", "📌", "✅", "☕", "🥐", "🍰", "🍭", "🎵", "❤️", "❗", "‼️"]:
         text = text.replace(emo, "")
+    
+    # 소제목([ ... ]) 내부의 AI 특유의 촌스러운 느낌표(!) 자동 제거: 예: [팩트 체크!] -> [팩트 체크]
+    text = re.sub(r'\[([^\]]*?)!+([^\]]*?)\]', r'[\1\2]', text)
+    
     return text.strip()
 
 

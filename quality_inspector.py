@@ -105,6 +105,19 @@ def validate_and_repair_article_pre_publish(
     # 3. 본문 문장 끝 줄바꿈 및 소제목 상하 여백 정밀 검사
     full_body = "\n\n".join(repaired_paragraphs)
     has_awkward_break = bool(re.search(r'[.?!]\s+[가-힣a-zA-Z]{2,}', full_body))
+
+    # [코리티 특별 검증: 제미니 티 이모지 및 소제목 내 느낌표 완전 색출 및 박멸]
+    banned_emojis = ["🌱", "🔥", "🎬", "✨", "💡", "📝", "🚀", "📌", "✅", "☕", "🥐", "🍰", "🍭", "🎵", "❤️", "❗", "‼️"]
+    found_emojis = [emo for emo in banned_emojis if emo in full_body]
+    if found_emojis:
+        repairs_done.append(f"제미니 티 이모지 색출 및 완전 제거 ({''.join(found_emojis)})")
+        for emo in banned_emojis:
+            full_body = full_body.replace(emo, "")
+
+    # 소제목 내부 느낌표(!) 강제 제거: 예: [💡 실구매 후기 팩트 체크!] -> [실구매 후기 팩트 체크]
+    if re.search(r'\[[^\]]*!+[^\]]*\]', full_body):
+        repairs_done.append("소제목 내부 촌스러운 느낌표(!) 자동 제거")
+        full_body = re.sub(r'\[([^\]]*?)!+([^\]]*?)\]', r'[\1\2]', full_body)
     
     # [코리티 특별 검증 1] 소제목 번호 매기기(1. 제목:\n내용) 번호 분리 버그 검사
     # '1.\n' 처럼 번호만 단독으로 떨어져 분리된 불량이 있는지 철저히 검사
