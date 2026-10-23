@@ -88,19 +88,18 @@ def load_character_memory() -> dict:
 
 def generate_dalle_image(prompt: str, output_path: str, size: str = "1024x1024", reference_images: list = None) -> str:
     """
-    3단계 무결점 AI 이미지 생성 엔진 (공식 캐릭터 시트 & 실사 제품 레퍼런스 멀티모달 주입 지원):
-    0순위: reference_images 제공 시 OpenAI gpt-image-1 / Gemini 멀티모달 레퍼런스 잠금 생성
-    1순위: OpenAI DALL-E 3 API
-    2순위: Google Gemini 2.0 Flash Image Generation API
-    3순위: Flux 3D Cloud AI 렌더링 폴백 (API 크레딧 소진 시에도 100% 고유 이미지 보장)
+    [지치 컴퍼니 엄격 규정] 100% OpenAI DALL-E 3 단독 잠금(Lock) 이미지 생성 엔진
+    - 사장님 특별 지시: Gemini 및 타 엔진 절대 개입 금지 (가로채기/새치기 영구 박멸)
+    - OpenAI DALL-E 3 실시간 호출 실패 시 즉시 빈 문자열("")을 반환하여 코리티(QA)가 발행을 즉시 중지할 수 있도록 보장
     """
     import requests
-    import random
-    import urllib.parse
-    import base64
 
     openai_key = (os.environ.get("OPENAI_API_KEY") or os.environ.get("GPT_API_KEY") or "").strip().strip('"').strip("'")
-    gemini_key = (os.environ.get("GEMINI_API_KEY") or "").strip().strip('"').strip("'")
+
+    if not openai_key:
+        print("  🚨 [코리티 보안 경고] OPENAI_API_KEY / GPT_API_KEY 환경변수가 누락되었습니다!")
+        print("  🛑 [발행 중지 프로토콜] 제미니 등 타사 엔진 우회는 엄격히 차단되며, 즉시 생성을 중단합니다.")
+        return ""
 
     # 캐릭터 메모리에서 공식 시각 DNA 및 송이 얼굴 무점(NO dots on face) 절대 제약조건 자동 보강
     char_mem = load_character_memory()
@@ -116,182 +115,44 @@ def generate_dalle_image(prompt: str, output_path: str, size: str = "1024x1024",
         if "[OFFICIAL CHARACTER MEMORY LOCK]" not in prompt:
             prompt = prompt + dna_suffix
 
-    valid_refs = [p for p in (reference_images or []) if p and os.path.exists(p)]
-
-    # [0순위] 멀티모달 레퍼런스 시트 주입 (OpenAI gpt-image-1 edits / Gemini inlineData)
-    if valid_refs and openai_key:
-        try:
-            print(f"  🎨 [0순위] OpenAI gpt-image-1 캐릭터 시트/실사 멀티모달 레퍼런스 생성 시도 ({len(valid_refs)}장 참조)...")
-            files_payload = []
-            opened_files = []
-            for ref_p in valid_refs:
-                f_obj = open(ref_p, "rb")
-                opened_files.append(f_obj)
-                files_payload.append(("image[]", (os.path.basename(ref_p), f_obj, "image/png")))
-            resp = requests.post(
-                "https://api.openai.com/v1/images/edits",
-                headers={"Authorization": f"Bearer {openai_key}"},
-                data={"model": "gpt-image-1", "prompt": prompt, "size": size if size in ["1024x1024", "1536x1024", "1024x1536"] else "1024x1024"},
-                files=files_payload,
-                timeout=90
-            )
-            for f_obj in opened_files:
-                f_obj.close()
-            if resp.status_code == 200:
-                res_data = resp.json()
-                b64_data = res_data["data"][0].get("b64_json")
-                if b64_data:
-                    with open(output_path, "wb") as f:
-                        f.write(base64.b64decode(b64_data))
-                    print(f"  ✅ [gpt-image-1 레퍼런스 잠금 성공] 저장 완료: {output_path}")
-                    return output_path
-        except Exception as e:
-            print(f"  ⚠️ gpt-image-1 멀티모달 레퍼런스 호출 예외: {e}")
-
-    if valid_refs and gemini_key:
-        try:
-            print(f"  🎨 [0-B순위] Gemini 멀티모달 캐릭터 시트/실사 레퍼런스 생성 시도 ({len(valid_refs)}장 참조)...")
-            parts = []
-            for ref_p in valid_refs:
-                with open(ref_p, "rb") as rf:
-                    b64_ref = base64.b64encode(rf.read()).decode("utf-8")
-                mime = "image/png" if ref_p.lower().endswith(".png") else "image/jpeg"
-                parts.append({"inlineData": {"mimeType": mime, "data": b64_ref}})
-            parts.append({"text": f"Strictly preserve the exact character designs and product appearance from the provided reference images. Generate a high-resolution illustration: {prompt}"})
-            gem_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key={gemini_key}"
-            gem_payload = {
-                "contents": [{"parts": parts}],
-                "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]}
-            }
-            resp = requests.post(gem_url, json=gem_payload, timeout=65)
-            if resp.status_code == 200:
-                candidates = resp.json().get("candidates", [])
-                for cand in candidates:
-                    for part in cand.get("content", {}).get("parts", []):
-                        inline = part.get("inlineData")
-                        if inline and inline.get("data"):
-                            img_bytes = base64.b64decode(inline["data"])
-                            with open(output_path, "wb") as f:
-                                f.write(img_bytes)
-                            print(f"  ✅ [Gemini 멀티모달 레퍼런스 잠금 성공] 저장 완료: {output_path}")
-                            return output_path
-        except Exception as e:
-            print(f"  ⚠️ Gemini 멀티모달 레퍼런스 호출 예외: {e}")
-
-    # [1순위] OpenAI DALL-E 3
-    if openai_key:
-        try:
-            print(f"  🎨 [1순위] DALL-E 3 이미지 실시간 생성 시도 ({size})...")
-            url = "https://api.openai.com/v1/images/generations"
-            payload = {
-                "model": "dall-e-3",
-                "prompt": prompt,
-                "n": 1,
-                "size": size,
-                "quality": "standard"
-            }
-            resp = requests.post(
-                url,
-                json=payload,
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {openai_key}"
-                },
-                timeout=65
-            )
-            if resp.status_code == 200:
-                res_data = resp.json()
-                img_url = res_data["data"][0]["url"]
-                img_bytes = requests.get(img_url, timeout=30).content
-                if len(img_bytes) > 10000:
-                    with open(output_path, "wb") as f:
-                        f.write(img_bytes)
-                    print(f"  ✅ DALL-E 3 이미지 저장 완료: {output_path}")
-                    return output_path
-            else:
-                print(f"  ⚠️ DALL-E 3 응답 ({resp.status_code}): {resp.text[:180]}")
-        except Exception as e:
-            print(f"  ⚠️ DALL-E 3 호출 예외: {e}")
-
-    # [2순위] Gemini Imagen 3 / 2.0 Flash Preview Image Generation
-    if gemini_key:
-        import base64
-        for gm_model in ["gemini-2.0-flash-preview-image-generation", "gemini-2.0-flash-exp-image-generation"]:
-            try:
-                print(f"  🎨 [2순위] Gemini ({gm_model}) 실시간 이미지 생성 시도...")
-                gemini_img_url = (
-                    f"https://generativelanguage.googleapis.com/v1beta/models/"
-                    f"{gm_model}:generateContent?key={gemini_key}"
-                )
-                payload = {
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]}
-                }
-                resp = requests.post(gemini_img_url, json=payload, timeout=45)
-                if resp.status_code == 200:
-                    parts = resp.json().get("candidates", [{}])[0].get("content", {}).get("parts", [])
-                    for part in parts:
-                        inline = part.get("inlineData")
-                        if inline and inline.get("data"):
-                            img_bytes = base64.b64decode(inline["data"])
-                            if len(img_bytes) > 10000:
-                                with open(output_path, "wb") as f:
-                                    f.write(img_bytes)
-                                print(f"  ✅ Gemini 이미지 저장 완료: {output_path}")
-                                return output_path
-            except Exception as e:
-                print(f"  ⚠️ Gemini ({gm_model}) 이미지 생성 예외: {e}")
-
-        # Imagen 3 predict 엔드포인트 시도
-        try:
-            imagen_url = f"https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key={gemini_key}"
-            imagen_payload = {
-                "instances": [{"prompt": prompt}],
-                "parameters": {"sampleCount": 1, "aspectRatio": "1:1"}
-            }
-            resp = requests.post(imagen_url, json=imagen_payload, timeout=45)
-            if resp.status_code == 200:
-                preds = resp.json().get("predictions", [])
-                if preds and preds[0].get("bytesBase64Encoded"):
-                    img_bytes = base64.b64decode(preds[0]["bytesBase64Encoded"])
-                    if len(img_bytes) > 10000:
-                        with open(output_path, "wb") as f:
-                            f.write(img_bytes)
-                        print(f"  ✅ Imagen 3 이미지 저장 완료: {output_path}")
-                        return output_path
-        except Exception as e:
-            print(f"  ⚠️ Imagen 3 호출 예외: {e}")
-
-    # [3순위] 무제한 클라우드 3D 일러스트 생성 폴백 (하단 워터마크 자동 크롭 제거 포함)
-    for model_type in ["flux", "turbo"]:
-        try:
-            w, h = (1024, 1536) if "1792" in size else (1024, 1024)
-            seed = random.randint(10000, 9999999)
-            short_prompt = urllib.parse.quote(prompt[:320])
-            flux_url = f"https://image.pollinations.ai/prompt/{short_prompt}?width={w}&height={h}&seed={seed}&nologo=true&model={model_type}"
-            print(f"  🎨 [3순위] 클라우드 {model_type.upper()} 3D 렌더링 생성 중 ({w}x{h}, seed={seed})...")
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"
-            }
-            resp = requests.get(flux_url, headers=headers, timeout=50)
-            if resp.status_code == 200 and len(resp.content) > 15000:
+    # [OpenAI DALL-E 3 단독 호출]
+    try:
+        print(f"  🎨 [코자이너] OpenAI DALL-E 3 고화질 렌더링 호출 중... ({size})")
+        url = "https://api.openai.com/v1/images/generations"
+        payload = {
+            "model": "dall-e-3",
+            "prompt": prompt,
+            "n": 1,
+            "size": size,
+            "quality": "standard"
+        }
+        resp = requests.post(
+            url,
+            json=payload,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {openai_key}"
+            },
+            timeout=70
+        )
+        if resp.status_code == 200:
+            res_data = resp.json()
+            img_url = res_data["data"][0]["url"]
+            img_bytes = requests.get(img_url, timeout=35).content
+            if len(img_bytes) > 10000:
                 with open(output_path, "wb") as f:
-                    f.write(resp.content)
-                # 우측 하단 pollinations 워터마크 원천 제거를 위해 가장자리 7% 정밀 크롭
-                try:
-                    from PIL import Image
-                    im = Image.open(output_path)
-                    iw, ih = im.size
-                    cropped = im.crop((int(iw * 0.04), int(ih * 0.04), int(iw * 0.96), int(ih * 0.91)))
-                    cropped.save(output_path)
-                except Exception:
-                    pass
-                print(f"  ✅ 클라우드 3D 이미지 저장 및 워터마크 크롭 완료: {output_path}")
+                    f.write(img_bytes)
+                print(f"  ✅ [ENGINE VERIFIED: OpenAI DALL-E 3] 이미지 저장 완료: {output_path}")
                 return output_path
-        except Exception as e:
-            print(f"  ⚠️ 3순위 ({model_type}) 이미지 생성 예외: {e}")
+            else:
+                print(f"  ⚠️ DALL-E 3 응답 이미지 바이트 부족 ({len(img_bytes)} bytes)")
+        else:
+            print(f"  ⚠️ DALL-E 3 API 응답 실패 ({resp.status_code}): {resp.text[:200]}")
+    except Exception as e:
+        print(f"  ⚠️ DALL-E 3 호출 중 예외 발생: {e}")
 
+    # 사장님 엄명: DALL-E 3 실패 시 타사 엔진(Gemini, Imagen, Flux 등)으로 임의 폴백하지 않고 즉시 실패 반환
+    print("  🚨 [코자이너 & 코리티] OpenAI DALL-E 3 생성 실패! 타 엔진 개입을 차단하고 생성을 중단합니다.")
     return ""
 
 

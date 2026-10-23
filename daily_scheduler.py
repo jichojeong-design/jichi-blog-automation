@@ -53,18 +53,8 @@ def run_ai_article_routine(article_index: int):
     formatted_body = formatter.format_mobile_text(body_text)
     paragraphs = [p for p in formatted_body.split("\n\n") if p.strip()]
 
-    # 3. 🕵️‍♂️ [코리티] 포스팅 전 선제 품질 검사 및 불량 자동 수리
-    print("  🕵️‍♂️ [코리티] 4대 선제 품질 검사(제목/요약/줄바꿈/소제목 여백) 가동...")
-    title, summary_lines, paragraphs = quality_inspector.validate_and_repair_article_pre_publish(
-        title=title,
-        summary_lines=summary_lines,
-        paragraphs=paragraphs,
-        topic=target["title"],
-        article_index=article_index
-    )
-
-    # 4. 🎨 [코자이너] 기사 맞춤 3D 일러스트 렌더링 & 1691x930 썸네일 합성
-    print(f"  🎨 [코자이너] 4대 테마 기반 3D 일러스트 생성 및 1691x930 썸네일 카드 정밀 합성 중...")
+    # 3. 🎨 [코자이너] 100% OpenAI DALL-E 3 전용 3D 일러스트 렌더링 & 1691x930 썸네일 합성
+    print(f"  🎨 [코자이너] OpenAI DALL-E 3 기반 3D 일러스트 생성 및 1691x930 썸네일 카드 정밀 합성 중...")
     thumb_filename = f"완성_썸네일_1691x930.png"
     thumb_path = content_generator.generate_article_thumbnail(
         topic=target["title"],
@@ -73,6 +63,25 @@ def run_ai_article_routine(article_index: int):
         summary_lines=summary_lines,
         article_index=article_index
     )
+
+    # 4. 🕵️‍♂️ [코리티] 포스팅 전 선제 품질 검사 (이미지 DALL-E 3 무결점 + 제목 + 요약 + 줄바꿈)
+    print("  🕵️‍♂️ [코리티] 5대 선제 품질 검사(DALL-E 3 이미지 무결점/제목/요약/줄바꿈/소제목 여백) 가동...")
+    is_valid, title, summary_lines, paragraphs = quality_inspector.validate_and_repair_article_pre_publish(
+        title=title,
+        summary_lines=summary_lines,
+        paragraphs=paragraphs,
+        topic=target["title"],
+        article_index=article_index,
+        thumb_path=thumb_path
+    )
+
+    if not is_valid:
+        print(f"  🛑 [코리티 책임 발행 중단] 기사 #{article_index} 이미지 품질/DALL-E 3 검증 미통과로 발행을 즉시 중단합니다!")
+        notifier.send_emergency_alert(
+            failed_task_name=f"기사 #{article_index} 발행 긴급 중단 (코리티 품질 방어선)",
+            error_detail="OpenAI DALL-E 3 이미지 생성 실패 또는 제미니 우회 차단 규정으로 인해 안전하게 발행을 취소했습니다."
+        )
+        return False
 
     # 5. 📊 [코널리스트] 17px 볼드 소제목 + 센터 정렬 + 해시태그 스마트에디터 정밀 발행
     print(f"  📊 [코널리스트] 네이버 스마트에디터 원격 발행 개시 (카테고리: AI 정보)...")
@@ -135,6 +144,18 @@ def run_ai_webtoon_routine(webtoon_index: int):
         chars=chars,
         generate_images=True
     )
+
+    # 🕵️‍♂️ [코리티 웹툰 이미지 전수 검사] DALL-E 3 이미지 정상 생성 여부 확인
+    webtoon_imgs = wt_data.get("image_paths") or []
+    valid_webtoon_imgs = [p for p in webtoon_imgs if p and os.path.exists(p) and os.path.getsize(p) > 10000]
+    if not valid_webtoon_imgs:
+        print(f"  🚨 [코리티 웹툰 긴급 권한 발동] DALL-E 3 웹툰 이미지 생성 실패/부재 감지!")
+        print("  🛑 [웹툰 발행 즉시 중지] 사장님 방침에 따라 비정상 이미지/타사 우회 상태에서는 발행하지 않습니다.")
+        notifier.send_emergency_alert(
+            failed_task_name=f"웹툰 #{webtoon_index} 발행 긴급 중단 (코리티 방어선)",
+            error_detail="OpenAI DALL-E 3 웹툰 이미지 생성에 실패하여 품질 보호를 위해 발행을 중단했습니다."
+        )
+        return False
 
     # 이미지 마커(__IMAGE__:)는 그대로 유지하고 일반 대사/문단만 26자 모바일 줄바꿈 적용
     formatted_paragraphs = []
