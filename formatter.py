@@ -24,13 +24,30 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
         if not para_clean:
             continue
             
-        # 소제목인 경우 줄바꿈 없이 깔끔하게 단독 문단으로 유지
-        if re.match(r'^\[\d+\.\s*[^\]]+\]$', para_clean):
+        # 대괄호 소제목인 경우([1. ...]) 줄바꿈 없이 깔끔하게 단독 문단으로 유지
+        if re.match(r'^\[\d+\.\s*[^\]]+\]$', para_clean) or re.match(r'^\[[^\]]+\]$', para_clean):
             formatted_paragraphs.append(para_clean)
             continue
+
+        # 번호 매기기 항목(예: "1. 맛과 재미 두 마리 토끼:", "2. 소리를 더 선명하게 듣는 법:") 예외 처리
+        # 번호+타이틀(또는 콜론/쉼표 등)을 한 줄로 온전히 보존하고, 그 아래 본문 설명은 모바일 호흡(16~18자)으로 정렬
+        numbered_match = re.match(r'^(\d+[\.\)]\s*[^:\n]+[:\n]?)(.*)$', para_clean, re.DOTALL)
+        if numbered_match and len(numbered_match.group(1).strip()) <= 30:
+            item_header = numbered_match.group(1).strip()
+            item_body = numbered_match.group(2).strip()
             
-        # 1. 문장 단위로 분리 (. ? !)
-        raw_sentences = re.split(r'([.?!]\s+)', para_clean)
+            # 본문 내용이 있으면 모바일 호흡으로 줄바꿈
+            if item_body:
+                # 본문 내 콜론이 붙어 넘어온 경우 정리
+                item_body = item_body.lstrip(":").strip()
+                formatted_body = format_mobile_text(item_body, max_chars=max_chars)
+                formatted_paragraphs.append(f"{item_header}\n{formatted_body}")
+            else:
+                formatted_paragraphs.append(item_header)
+            continue
+            
+        # 1. 문장 단위로 분리 (. ? !) - 단, 숫자 바로 뒤의 점(1. 2. 3.)은 분리하지 않도록 네거티브 룩비하인드 적용
+        raw_sentences = re.split(r'((?<!\d)[.?!]\s+)', para_clean)
         sentences = []
         for i in range(0, len(raw_sentences) - 1, 2):
             sentences.append(raw_sentences[i] + raw_sentences[i+1].rstrip())
