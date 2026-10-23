@@ -388,20 +388,26 @@ def post_to_naver_blog(
                         page.keyboard.press("Enter")
                     time.sleep(0.5)
 
-            # 임시저장 요청인 경우: 상단 [저장] 버튼 클릭 후 즉시 종료
+            # 임시저장 요청인 경우: 상단 [저장] 버튼 클릭 후 알림 팝업 및 네트워크 완료까지 확실히 대기
             if save_draft:
                 print("💾 [임시저장 모드] 상단 [저장] 버튼 클릭 중...")
-                time.sleep(1.0)
+                time.sleep(1.5)
                 try:
-                    save_btn = page.locator("button.se-save-button, button[data-name='save'], button:has-text('저장')").first
-                    if save_btn.is_visible(timeout=3000):
+                    # 스마트에디터 ONE의 [저장] 버튼 정확한 셀렉터 클릭
+                    save_btn = page.locator(
+                        "button.se-save-button, button[data-name='save'], "
+                        ".se-toolbar-item-save button, button:has-text('저장')"
+                    ).first
+                    if save_btn.is_visible(timeout=4000):
                         save_btn.click()
-                        time.sleep(3.5)
-                        print(f"✅ [임시저장 성공] 사장님 검토를 위해 블로그 임시저장함에 안전 보관 완료: {title}")
+                        print("  - [저장] 버튼 클릭 완료, 서버 동기화 대기 중...")
                     else:
                         print("  - 단축키 Ctrl+S 임시저장 시도...")
                         page.keyboard.press("Control+s")
-                        time.sleep(3.5)
+                    
+                    # 네이버 저장 API 통신 완료 및 카운트 반영 대기
+                    time.sleep(6.0)
+                    print(f"✅ [임시저장 성공] 사장님 검토를 위해 블로그 임시저장함에 안전 보관 완료: {title}")
                 except Exception as save_err:
                     print(f"  ⚠️ 임시저장 클릭 예외: {save_err}")
                 context.close()
