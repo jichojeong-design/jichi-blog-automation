@@ -16,18 +16,18 @@ import history_checker
 
 def run_ai_article_routine(article_index: int):
     """
-    AI 트렌드 기사 풀버전 고품질 발행 루틴
-    - 원문 팩트 크롤링 + 10년 차 테크 기자 어조 (1,500~1,800자)
-    - DALL-E 3 1:1 일러스트 생성 후 1691x930 썸네일 자동 합성
-    - 'AI 정보' 카테고리(categoryNo=6) + 가운데 정렬 + 25자 서식 + 태그 자동 입력
+    [지치 컴퍼니 AI 드림팀 협업 파이프라인]
+    - 코치(소재 발굴) -> 코포터(기사 집필) -> 코자이너(썸네일 디자인) -> 코리티(품질 검사 및 수리) -> 코널리스트(발행 및 통계)
     """
-    print(f"\n[{datetime.datetime.now()}] 📰 [AI 트렌드 기사 #{article_index}] 고품질 자동 생성 & 발행 시작!")
+    print(f"\n[{datetime.datetime.now()}] 🏢 [지치 컴퍼니] AI 정규 기사 #{article_index} 협업 파이프라인 가동!")
+    
+    # 1. 🔎 [코치] 실시간 트렌드 및 빅테크 킬러 소재 탐색
+    print("  🔎 [코치] 전 세계 빅테크 이슈 및 검색량 1위 킬러 소재 발굴 중...")
     all_articles = collector.get_all_sources()
     if not all_articles:
-        print("❌ 수집된 최신 기사가 없습니다.")
+        print("  ❌ [코치] 수집된 최신 기사가 없습니다.")
         return False
 
-    # 사장님 지정 순위(예: 4위 실시간 테스트) 또는 미발행 최신 기사 타겟팅
     if 1 <= article_index <= len(all_articles):
         target = all_articles[article_index - 1]
     else:
@@ -38,8 +38,10 @@ def run_ai_article_routine(article_index: int):
         pool = fresh_articles if fresh_articles else all_articles
         target = pool[0]
 
-    # 1. 원문 크롤링 기반 10년 차 IT 테크 기자의 심층 분석 원고 생성 (Gemini 2.5 / GPT-4o)
-    print(f"🤖 AI 기사 심층 분석 원고 생성 중... ({target['title'][:25]}...)")
+    print(f"  🎯 [코치] 오늘의 1등 타겟 소재 확정: '{target['title'][:30]}...'")
+
+    # 2. ✍️ [코포터] 10년 차 IT 테크 기자 심층 원고 집필
+    print(f"  ✍️ [코포터] 1,500자 심층 분석 원고 및 가독성 볼드 하이라이트 작성 중...")
     generated = content_generator.generate_article_with_ai(target["title"], target["url"])
 
     title = generated.get("title", f"[AI 분석] {target['title'][:22]}")
@@ -47,12 +49,12 @@ def run_ai_article_routine(article_index: int):
     image_prompt = generated.get("image_prompt", "")
     summary_lines = generated.get("summary_lines", [f"{target['title'][:12]} 전격 공개!", "글로벌 테크 시장 술렁"])
 
-    # 2. 1차 포맷팅 적용
+    # 16~18자 모바일 가독성 줄바꿈 적용
     formatted_body = formatter.format_mobile_text(body_text)
     paragraphs = [p for p in formatted_body.split("\n\n") if p.strip()]
 
-    # ⭐ [코부장 4대 핵심 포스팅 전 선제 품질검사 및 불량 자동 수리 게이트]
-    # (1. 제목 패턴/길이 불량 수리, 2. 썸네일 요약 판에 박힌 복제 수리, 3. 문장 끝 어색한 줄바꿈 수리, 4. 소제목 문단 간격 수리)
+    # 3. 🕵️‍♂️ [코리티] 포스팅 전 선제 품질 검사 및 불량 자동 수리
+    print("  🕵️‍♂️ [코리티] 4대 선제 품질 검사(제목/요약/줄바꿈/소제목 여백) 가동...")
     title, summary_lines, paragraphs = quality_inspector.validate_and_repair_article_pre_publish(
         title=title,
         summary_lines=summary_lines,
@@ -61,7 +63,8 @@ def run_ai_article_routine(article_index: int):
         article_index=article_index
     )
 
-    # 3. DALL-E 3 일러스트 생성 + 사장님 1691x930 원본 템플릿 자동 합성 (검증·수리 완료된 요약문구 반영)
+    # 4. 🎨 [코자이너] 기사 맞춤 3D 일러스트 렌더링 & 1691x930 썸네일 합성
+    print(f"  🎨 [코자이너] 4대 테마 기반 3D 일러스트 생성 및 1691x930 썸네일 카드 정밀 합성 중...")
     thumb_filename = f"완성_썸네일_1691x930.png"
     thumb_path = content_generator.generate_article_thumbnail(
         topic=target["title"],
@@ -71,7 +74,8 @@ def run_ai_article_routine(article_index: int):
         article_index=article_index
     )
 
-    # 4. 네이버 블로그 'AI 정보' 카테고리 및 검색 태그 5~8개 발행
+    # 5. 📊 [코널리스트] 17px 볼드 소제목 + 센터 정렬 + 해시태그 스마트에디터 정밀 발행
+    print(f"  📊 [코널리스트] 네이버 스마트에디터 원격 발행 개시 (카테고리: AI 정보)...")
     tags = generated.get(
         "tags",
         ["#인공지능", "#AI트렌드", "#테크뉴스", "#IT기사", "#지치블로그", "#신기술", "#AI정보"]
@@ -85,16 +89,18 @@ def run_ai_article_routine(article_index: int):
     )
 
     if not success:
-        print(f"🚨 [긴급] 기사 #{article_index} 포스팅 실패 감지! 사장님께 비상 알림 메일 발송 중...")
+        print(f"  🚨 [비상] 기사 #{article_index} 포스팅 실패 감지! 대표님께 비상 알림 발송 중...")
         notifier.send_emergency_alert(
             failed_task_name=f"AI 트렌드 기사 #{article_index}",
             error_detail="네이버 스마트에디터 발행 단계 중 지연 또는 일시적 오류 발생"
         )
         return False
 
-    # 5. 코부장 전수 품질 검사 실시
+    # 6. 🕵️‍♂️ [코리티] 최종 발행 후 독자 모드 실시간 품질 검증
     time.sleep(5)
+    print("  🕵️‍♂️ [코리티] 블로그 라이브 발행물 최종 무결점 검증...")
     quality_inspector.inspect_latest_post_quality(expected_category="AI 정보", is_article=True)
+    print(f"  🎉 [지치 컴퍼니] 기사 #{article_index} 미션 성공 완료!\n")
     return True
 
 
