@@ -17,6 +17,10 @@
 4. **🕵️‍♂️ 코리티 (Quality Gate Inspector)**:
    - 무결점 품질 검사 및 선제 수리 담당 (`quality_inspector.py`)
    - 포스팅 전 4대 핵심 결함(제목 패턴, 줄바꿈, 썸네일 카피, 소제목 여백) 사전 검사 및 자동 수리, 발행 후 라이브 검증
+   - **[대표님 특별 지시] 이미지 품질 검사 강화**:
+     * 캐릭터가 들고 있는 태블릿/스마트폰 화면, 모니터, 배경 등에 생성되는 **AI 특유의 기괴한 글자 깨짐(Gibberish text) 현상 절대 감시 및 원천 차단**
+     * 프롬프트 단에서 `Strictly no readable text, no letters, no fake words inside screens, display glowing clean abstract icons or charts only` 강력 강제
+     * 품질 저하가 발생했을 때는 **즉시 코부장에게 보고하고 명확한 원인 분석 및 해결 방안(재렌더링/크롭 등)을 제시할 것**!
 5. **📊 코널리스트 (Publish & Growth Analyst)**:
    - 스마트에디터 퍼블리싱 및 블로그 데이터 분석 담당 (`auto_publisher.py`, 통계 분석)
    - 네이버 블로그 스마트에디터 정밀 발행, 17px 서식 적용, 조회수/방문자 통계 추적

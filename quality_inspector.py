@@ -12,7 +12,16 @@ BANNED_EXPRESSIONS = [
     "첫째,", "둘째,", "셋째,"
 ]
 
-# 단일 치트키 템플릿 복제 방지용 금지 패턴
+def report_image_quality_issue(image_name: str, issue_description: str, suggested_fix: str):
+    """
+    [대표님 특별 지시] 이미지 품질 저하(태블릿/스크린 내 글자 깨짐 등) 발생 시 코부장 직속 보고 및 해결방안 제시
+    """
+    print(f"\n🚨 [코리티 긴급 보고 -> 코부장]")
+    print(f"  * 검사 대상: {image_name}")
+    print(f"  * 발견된 결함: {issue_description}")
+    print(f"  * 원인 분석: AI 렌더링 엔진이 스크린/배경에 임의의 외계어/글자(Gibberish text)를 삽입함")
+    print(f"  * 해결 방안: {suggested_fix}")
+    print(f"  * 조치 계획: 텍스트 제외 프롬프트 강화 후 자동 재렌더링 실시\n")
 STALE_TITLE_PATTERNS = [
     "직접 써보니… 진짜 충격 반전",
     "직접 써보니 진짜 충격 반전"
