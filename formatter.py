@@ -2,13 +2,13 @@ import re
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import os
 
-def format_mobile_text(text: str, max_chars: int = 25) -> str:
+def format_mobile_text(text: str, max_chars: int = 18) -> str:
     """
-    모바일 최적화 및 자연스러운 한국어 문맥 줄바꿈:
-    1. 온점(.), 물음표(?), 느낌표(!) 기준으로 문장을 먼저 분리하여, 문장이 끝난 후 다음 문장으로 넘어갈 때 자연스러운 호흡 부여
-       (예: '것인지가 주요 쟁점입니다. 하지만 AI' 처럼 문장 끝과 다음 접속사가 한 줄에 기형적으로 붙는 현상 완전 차단)
-    2. 쉼표(,) 및 의미 단위(절)를 존중하여 어절 단위로 부드럽게 줄바꿈
+    모바일 최적화 및 자연스러운 한국어 문맥 줄바꿈 (파워블로그 16~18자 가독성 규격):
+    1. 온점(.), 물음표(?), 느낌표(!) 기준으로 문장을 분리하여 문장 끝에서 자연스러운 호흡 부여
+    2. 한 줄당 16~18자 내외의 시원한 호흡으로 모바일 시선 피로도 제로화
     3. 소제목([1. ...], [2. ...], [3. ...])은 별도의 독립 블록으로 유지
+    4. 중요 강조 구문(**...**)의 마크다운 서식을 그대로 보존하여 퍼블리셔가 볼드 처리할 수 있도록 지원
     """
     if not text:
         return ""
@@ -43,8 +43,9 @@ def format_mobile_text(text: str, max_chars: int = 25) -> str:
             if not s_clean:
                 continue
                 
-            # 27자 이내의 짧은 문장은 줄바꿈 없이 한 호흡으로 유지
-            if len(s_clean) <= max_chars + 2:
+            # 18자 이내의 짧은 문장은 줄바꿈 없이 한 호흡으로 유지
+            clean_len = len(re.sub(r'\*\*', '', s_clean))
+            if clean_len <= max_chars + 2:
                 lines.append(s_clean)
                 continue
                 
@@ -61,20 +62,23 @@ def format_mobile_text(text: str, max_chars: int = 25) -> str:
                 words = c.split()
                 for word in words:
                     is_url = word.startswith(("http://", "https://", "www."))
+                    word_len = len(re.sub(r'\*\*', '', word))
+                    cur_clean_len = len(re.sub(r'\*\*', '', current_line))
                     if not current_line:
-                        if len(word) > max_chars and not is_url:
+                        if word_len > max_chars and not is_url:
                             for k in range(0, len(word), max_chars):
                                 lines.append(word[k:k+max_chars])
                         else:
                             current_line = word
                     else:
-                        if len(current_line) + 1 + len(word) <= max_chars:
+                        if cur_clean_len + 1 + word_len <= max_chars:
                             current_line += " " + word
                         else:
                             lines.append(current_line)
                             current_line = word
-                # 쉼표 뒤에서 줄 길이가 15자 이상이면 자연스러운 호흡으로 줄바꿈
-                if c.endswith(",") and len(current_line) >= 15:
+                # 쉼표 뒤에서 줄 길이가 12자 이상이면 자연스러운 호흡으로 줄바꿈
+                cur_clean_len = len(re.sub(r'\*\*', '', current_line))
+                if c.endswith(",") and cur_clean_len >= 12:
                     lines.append(current_line)
                     current_line = ""
             if current_line:

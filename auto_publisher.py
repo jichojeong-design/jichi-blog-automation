@@ -62,10 +62,98 @@ def _upload_single_image(page, img_path: str) -> bool:
     return uploaded
 
 
-def _enable_center_alignment(page):
+def _set_font_size_17px(page):
     """
-    스마트에디터 ONE의 정렬 툴바 드롭다운을 실제 마우스 클릭으로 열어 '가운데 정렬'을 활성화합니다.
+    스마트에디터 ONE의 글자 크기 툴바를 제어하여 소제목 전용 17px로 변경합니다.
+    (기본 15px -> 17px로 1포인트 확대)
     """
+    try:
+        size_btn = page.locator(
+            "button.se-font-size-toolbar-button, "
+            "button[data-name='font-size'], "
+            ".se-toolbar-item-font-size button"
+        ).first
+        if size_btn.is_visible(timeout=1500):
+            size_btn.click()
+            time.sleep(0.3)
+            # 17px 옵션 클릭
+            opt_17 = page.locator(
+                "button[data-value='fs17'], "
+                "button[data-name='17'], "
+                ".se-toolbar-option-font-size-17-button, "
+                "li[data-value='17'] button, "
+                "button:has-text('17')"
+            ).first
+            if opt_17.is_visible(timeout=1500):
+                opt_17.click()
+                time.sleep(0.2)
+                return True
+    except Exception as e:
+        pass
+    return False
+
+
+def _set_font_size_15px(page):
+    """
+    본문 입력을 위해 글자 크기를 다시 기본 15px로 복귀합니다.
+    """
+    try:
+        size_btn = page.locator(
+            "button.se-font-size-toolbar-button, "
+            "button[data-name='font-size'], "
+            ".se-toolbar-item-font-size button"
+        ).first
+        if size_btn.is_visible(timeout=1500):
+            size_btn.click()
+            time.sleep(0.3)
+            opt_15 = page.locator(
+                "button[data-value='fs15'], "
+                "button[data-name='15'], "
+                ".se-toolbar-option-font-size-15-button, "
+                "li[data-value='15'] button, "
+                "button:has-text('15')"
+            ).first
+            if opt_15.is_visible(timeout=1500):
+                opt_15.click()
+                time.sleep(0.2)
+                return True
+    except Exception as e:
+        pass
+    return False
+
+
+def _type_styled_line(page, line_text: str):
+    """
+    **볼드** 마크다운 서식을 파싱하여 중요한 부분만 스마트에디터에서 실제 굵은 글씨(Bold, Ctrl+B)로 타이핑합니다.
+    또한 '1. ' '2. ' 등 자동 번호목록 변환을 원천 방지합니다.
+    """
+    clean_line = line_text.strip()
+    if not clean_line:
+        return
+
+    # 1. 2. 3. 등 번호 매기기 시작 시 스마트에디터의 자동 번호목록(List) 트리거 방지
+    num_match = re.match(r"^(\d+\.)\s*(.*)$", clean_line)
+    if num_match:
+        num_prefix, rest_text = num_match.groups()
+        page.keyboard.type(num_prefix)
+        page.keyboard.press("Shift+Space")
+        time.sleep(0.04)
+        clean_line = rest_text
+
+    # **볼드** 마커 분리 타이핑
+    parts = re.split(r'(\*\*.*?\*\*)', clean_line)
+    for p in parts:
+        if not p:
+            continue
+        if p.startswith('**') and p.endswith('**') and len(p) >= 4:
+            bold_text = p[2:-2]
+            page.keyboard.press("Control+b")
+            time.sleep(0.02)
+            page.keyboard.type(bold_text)
+            page.keyboard.press("Control+b")
+            time.sleep(0.02)
+        else:
+            page.keyboard.type(p)
     try:
         align_btn = page.locator(
             "button.se-alignment-toolbar-button, "
@@ -258,7 +346,21 @@ def post_to_naver_blog(
                         page.keyboard.press("Enter")
                         time.sleep(0.1)
                     
-                    page.keyboard.type(p_text)
+                    # ⭐ 소제목 17px + 볼드(Bold) 서식 적용
+                    _set_font_size_17px(page)
+                    page.keyboard.press("Control+b")
+                    time.sleep(0.05)
+
+                    clean_sub = p_text
+                    # [1. ...] 형태를 예시처럼 깔끔한 '1. ...' 로 변환 (대괄호 제거)
+                    if clean_sub.startswith("[") and clean_sub.endswith("]"):
+                        clean_sub = clean_sub[1:-1].strip()
+
+                    page.keyboard.type(clean_sub)
+
+                    page.keyboard.press("Control+b")
+                    _set_font_size_15px(page)
+                    time.sleep(0.05)
                     
                     # [소제목 하단 여백 확보]: 소제목과 아래 본문 문단 사이에 시원한 간격
                     page.keyboard.press("Enter")
@@ -267,18 +369,8 @@ def post_to_naver_blog(
                 else:
                     lines = p_text.split("\n")
                     for l_i, line in enumerate(lines):
-                        clean_line = line.strip()
-                        if clean_line:
-                            # 1. 2. 3. 등 번호 매기기 시작 시 스마트에디터의 자동 번호목록(List) 트리거 방지
-                            num_match = re.match(r"^(\d+\.)\s*(.*)$", clean_line)
-                            if num_match:
-                                num_prefix, rest_text = num_match.groups()
-                                page.keyboard.type(num_prefix)
-                                page.keyboard.press("Shift+Space")
-                                time.sleep(0.05)
-                                page.keyboard.type(rest_text)
-                            else:
-                                page.keyboard.type(clean_line)
+                        if line.strip():
+                            _type_styled_line(page, line)
                         if l_i < len(lines) - 1:
                             page.keyboard.press("Shift+Enter")
                     
