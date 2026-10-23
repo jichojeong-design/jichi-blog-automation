@@ -144,7 +144,8 @@ def produce_rescene_candy_webtoon():
         print(f"  * 제목: {title}")
         print("  * 사장님께서 네이버 블로그 임시저장함에서 언제든 검토 후 수동 발행 가능합니다!")
     else:
-        print("\n⚠️ [코널리스트] 임시저장 중 일시적 지연 발생, 로컬 초안 완벽 보존.")
+        print("\n❌ [코널리스트 긴급 보고] 네이버 블로그 임시저장 실패! (로그인 세션 만료 또는 에디터 오류)")
+        sys.exit(1)
 
     return success
 

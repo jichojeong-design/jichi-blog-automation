@@ -154,6 +154,12 @@ def _type_styled_line(page, line_text: str):
             time.sleep(0.02)
         else:
             page.keyboard.type(p)
+
+
+def _enable_center_alignment(page):
+    """
+    스마트에디터 ONE의 정렬 툴바 드롭다운을 실제 마우스 클릭으로 열어 '가운데 정렬'을 활성화합니다.
+    """
     try:
         align_btn = page.locator(
             "button.se-alignment-toolbar-button, "
@@ -257,7 +263,29 @@ def post_to_naver_blog(
             time.sleep(5)
 
             if "nidlogin" in page.url or "login" in page.url:
-                print("❌ 네이버 로그인 인증이 필요합니다! (세션 만료 또는 로그인 페이지로 리다이렉트됨)")
+                if naver_id and naver_pw:
+                    print("🔄 쿠키 세션 만료 감지 -> NAVER_ID / NAVER_PW 자동 로그인 폴백 시도 중...")
+                    try:
+                        page.evaluate(f"""
+                            var idEl = document.getElementById('id');
+                            var pwEl = document.getElementById('pw');
+                            if (idEl && pwEl) {{
+                                idEl.value = '{naver_id}';
+                                pwEl.value = '{naver_pw}';
+                            }}
+                        """)
+                        time.sleep(1)
+                        login_btn = page.locator("#log\\.login, button[type='submit']").first
+                        if login_btn.is_visible(timeout=3000):
+                            login_btn.click()
+                            time.sleep(4)
+                            page.goto(write_url, wait_until="domcontentloaded", timeout=60000)
+                            time.sleep(5)
+                    except Exception as login_err:
+                        print(f"  ⚠️ ID/PW 자동 로그인 폴백 중 예외: {login_err}")
+
+            if "nidlogin" in page.url or "login" in page.url:
+                print("❌ 네이버 로그인 인증이 필요합니다! (세션 쿠키 만료 — 로그아웃 후 재로그인 시 새 쿠키 갱신 필요)")
                 context.close()
                 if browser:
                     browser.close()
@@ -390,23 +418,26 @@ def post_to_naver_blog(
 
             # 임시저장 요청인 경우: 상단 [저장] 버튼 클릭 후 알림 팝업 및 네트워크 완료까지 확실히 대기
             if save_draft:
-                print("💾 [임시저장 모드] 상단 [저장] 버튼 클릭 중...")
+                print("💾 [임시저장 모드] 상단 [저장] 버튼 클릭 및 단축키 이중 동기화 중...")
                 time.sleep(1.5)
                 try:
-                    # 스마트에디터 ONE의 [저장] 버튼 정확한 셀렉터 클릭
+                    # 스마트에디터 ONE 상단 헤더의 [저장] 버튼 (save_btn__...) 최우선 타겟팅
                     save_btn = page.locator(
-                        "button.se-save-button, button[data-name='save'], "
-                        ".se-toolbar-item-save button, button:has-text('저장')"
+                        "button[class*='save_btn'], button.se-save-button, "
+                        "button[data-name='save'], .se-toolbar-item-save button"
                     ).first
                     if save_btn.is_visible(timeout=4000):
                         save_btn.click()
-                        print("  - [저장] 버튼 클릭 완료, 서버 동기화 대기 중...")
+                        print("  - 상단 [저장] 버튼(save_btn) 클릭 완료!")
+                        time.sleep(2.5)
                     else:
-                        print("  - 단축키 Ctrl+S 임시저장 시도...")
+                        print("  - 단축키 Ctrl+S 임시저장 실행...")
                         page.keyboard.press("Control+s")
+                        time.sleep(2.5)
                     
-                    # 네이버 저장 API 통신 완료 및 카운트 반영 대기
-                    time.sleep(6.0)
+                    # 확실한 서버 저장을 위해 Ctrl+S 이중 확인 및 API 응답 대기
+                    page.keyboard.press("Control+s")
+                    time.sleep(5.0)
                     print(f"✅ [임시저장 성공] 사장님 검토를 위해 블로그 임시저장함에 안전 보관 완료: {title}")
                 except Exception as save_err:
                     print(f"  ⚠️ 임시저장 클릭 예외: {save_err}")

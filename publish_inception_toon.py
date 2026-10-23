@@ -128,7 +128,8 @@ def produce_inception_adaptation_webtoon():
         print(f"  * 연동된 기사 원문: {article_link}")
         print("  * 사장님께서 언제든 블로그 임시저장함에서 검토 및 수동 발행 가능합니다!")
     else:
-        print("\n* [코널리스트] 임시저장 중 일시적 오류 발생, 로컬 초안 보존 완료.")
+        print("\n❌ [코널리스트 긴급 보고] 네이버 블로그 임시저장 실패! (로그인 세션 만료 또는 에디터 오류)")
+        sys.exit(1)
 
     return success
 
