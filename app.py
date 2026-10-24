@@ -65,6 +65,41 @@ st.markdown("""
     .rule-card b {
         color: #34D399 !important;
     }
+
+    /* Aside 및 안내 배너 고대비 다크 스타일 */
+    .aside-box {
+        background-color: #261B3D !important;
+        border: 2px solid #9C27B0 !important;
+        padding: 18px !important;
+        border-radius: 12px !important;
+        color: #F3E5F5 !important;
+        margin-bottom: 15px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
+    }
+    .aside-box h4 {
+        color: #CE93D8 !important;
+        font-weight: bold !important;
+        margin-top: 0 !important;
+    }
+    .aside-box ol {
+        color: #FFFFFF !important;
+        padding-left: 20px !important;
+    }
+    .aside-box li {
+        color: #F5F5F5 !important;
+        margin-bottom: 8px !important;
+        line-height: 1.6 !important;
+    }
+    .aside-box b {
+        color: #FFD54F !important;
+    }
+    .aside-box code {
+        background-color: #6A1B9A !important;
+        color: #FFFFFF !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+        font-weight: bold !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -258,8 +293,8 @@ with tab_aside:
     st.markdown("브라우저 탭 간의 불필요한 왕복을 완전히 없앤 최신 자동화 시나리오입니다.")
 
     st.markdown("""
-    <div style="background-color: #EDE7F6; border: 2px solid #7E57C2; padding: 15px; border-radius: 10px;">
-        <h4 style="color: #4A148C; margin-top: 0;">🚀 Aside 3단 원스톱(Batch) 실행 플로우</h4>
+    <div class="aside-box">
+        <h4>🚀 Aside 3단 원스톱(Batch) 실행 플로우</h4>
         <ol>
             <li><b>Phase 1 (블로그)</b>: 임시저장함 진입 ➜ 최신 웹툰 글 로드 ➜ <code>PROMPT_1</code>과 <code>PROMPT_2</code> 일괄 추출!</li>
             <li><b>Phase 2 (ChatGPT)</b>: 'AI웹툰' 스레드 접속 ➜ 프롬프트 1·2 연속 전송 및 <b>[다운로드(↓)] 클릭으로 PC 저장</b>!</li>
