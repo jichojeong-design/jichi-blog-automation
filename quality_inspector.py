@@ -70,7 +70,7 @@ def validate_and_repair_article_pre_publish(
             print("  🛑 [발행 즉시 중지] 사장님 방침에 따라 비정상 이미지/제미니 우회는 발행을 엄격히 차단합니다.")
             return False, repaired_title, repaired_summary, repaired_paragraphs
 
-        # 승인 장부 검사 (폐기된 이미지 파일명이 인입되었는지 확인)
+        # 승인 장부 검사 (웹툰의 폐기된 구버전 만화 컷 파일명이 인입되었는지 확인)
         base_name = os.path.basename(thumb_path)
         ledger_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "asset_ledger.json")
         if os.path.exists(ledger_path):
