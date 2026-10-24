@@ -43,7 +43,7 @@ def generate_ai_news_prompt(topic: str, url: str, key_facts: str = "") -> str:
 """
 
 def generate_webtoon_script_prompt(snack_name: str, reviews: str, prop_twist: str, selected_chars: list) -> str:
-    """사장님의 정확한 네이버 블로그 웹툰 포스팅 레이아웃에 100% 맞춘 통합 프롬프트"""
+    """사장님의 네이버 블로그 공인 황금 표준 규격 (이미지+4컷 대사 x 2회 교차) 100% 반영 프롬프트"""
     chars_str = ", ".join(selected_chars)
     
     char_desc_list = []
@@ -57,48 +57,80 @@ def generate_webtoon_script_prompt(snack_name: str, reviews: str, prop_twist: st
         elif "로봇" in c:
             char_desc_list.append("'AI Robot' (cute white and cyan mini assistant robot)")
     if not char_desc_list:
-        char_desc_list = ["'Jichi' (sprout fairy)", "'Songi' (calico cat, clean face)"]
+        char_desc_list = ["'Jichi' (sprout fairy)", "'Choco' (tuxedo cat)", "'AI Robot' (mini robot)"]
     chars_joined_en = " and ".join(char_desc_list)
 
-    return f"""[지치 블로그: AI 웹툰 자동화 포스팅 완벽 패키지]
+    return f"""[지치 블로그: 웹툰 황금 표준 패키지 작성 요청]
 대상 제품: {snack_name}
 실구매 후기 정보: {reviews}
-소품 반전 아이템: {prop_twist}
-등장 캐릭터: {chars_str} (주인공 '지치' 중심의 활기찬 대화)
+핵심 반전 및 먹방 꿀팁: {prop_twist}
+등장 캐릭터: {chars_str}
 
-[블로그 작성 구조 및 규칙 - 반드시 아래 양식 그대로 작성해 주세요!]
+[필수 블로그 작성 구조 - 사장님 공인 10단계 황금 레이아웃 철저 준수]
 
-1. [추천 제목 3종]
-   - 25자 내외 완결된 문장, 호기심 유발형 제목 3개 추천
+1. [추천 제목 3종] (24~28자 이내 완결된 호기심+팩트형 문장)
 
 2. [네이버 블로그 본문 레이아웃]
-   [이미지 1 삽입 위치 (3~4컷 상반부 만화)]
+   [이미지 1 삽입 위치 (1, 2, 3, 4번 4컷 분할 만화)]
    
-   [이미지 1 상세 대화 내용]
-   - 컷 1~3의 생생한 캐릭터별 대화 텍스트 작성 (티키타카 대화)
-   - 소품 반전({prop_twist})이 등장하는 위트 있는 내용
+   1컷 · [상황 묘사]
+   캐릭터: “[대사]”
    
-   ---
-   [이미지 2 삽입 위치 (3~4컷 하반부 만화)]
+   2컷 · [상황 묘사]
+   캐릭터: “[대사]”
    
-   [이미지 2 상세 대화 내용]
-   - 컷 4~6의 캐릭터별 대화 텍스트 작성 (실제 후기 비교 및 솔직한 반응)
+   3컷 · [상황 묘사]
+   캐릭터: “[대사]”
    
-   ---
-   [마무리: 실구매 후기 기반 맛있게 먹는 꿀팁 & 장단점 요약]
-   - 후기에서 확인된 가장 맛있게 먹는 추천 방법 (예: 시럽 1펌프 줄이기, 얼먹, 에어프라이어 굽기 등)
-   - 실제 구매자들이 느낀 솔직한 장점과 단점 요약 정리
+   4컷 · [상황 묘사]
+   캐릭터: “[대사]”
    
-   ---
-   [해시태그 (5~8개)]
-   - #{snack_name.replace(' ', '')} 포함 정확히 5~8개 해시태그
+   ----------------------------------------
+   [이미지 2 삽입 위치 (5, 6, 7, 8번 4컷 분할 만화)]
+   
+   5컷 · [상황 묘사]
+   캐릭터: “[대사]”
+   
+   6컷 · [상황 묘사]
+   캐릭터: “[대사]”
+   
+   7컷 · [상황 묘사]
+   캐릭터: “[대사]”
+   
+   8컷 · [상황 묘사]
+   캐릭터: “[대사]”
+   
+   ----------------------------------------
+   [지치와 친구들의 실구매 후기 팩트 체크]
+   1. 크기와 가격 대비 만족도:
+   [모바일 16~18자 호흡 설명]
+   
+   2. 반전의 식감과 퀄리티:
+   [모바일 16~18자 호흡 설명]
+   
+   3. 200% 맛있게 먹는 특급 조합:
+   [모바일 16~18자 호흡 설명]
+   
+   ----------------------------------------
+   [안내 및 제작 정보]
+   본 포스팅은 공식 보도와 독립 구매 후기를 바탕으로 재구성한 지치컴퍼니의 순수 창작 웹툰입니다.
+   등장인물의 행동과 대사는 각색된 연출이며, 직접 구매·시식한 후기가 아닙니다.
+   게시된 이미지는 AI로 생성한 3D 연출 이미지이며 실제 제품 사진이 아니므로, 개인에 따라 맛과 식감의 차이가 있을 수 있습니다.
+   
+   ----------------------------------------
+   [참고 출처]
+   공식 기사 및 블로그 실구매 후기 URL
+   
+   ----------------------------------------
+   [해시태그]
+   #{snack_name.replace(' ', '')} 포함 8~10개
+   
+   ----------------------------------------
+   [엔딩 공감/소통 문구]
+   포스팅이 재미있고 유익하셨다면 하단의 공감(좋아요)과 따뜻한 댓글 부탁드립니다... (이웃 추가 유도)
 
-3. [DALL-E 3 전용 영문 이미지 프롬프트 2장]
-   ⭐ 한글 깨짐 방지 철칙: 말풍선 안에는 절대 긴 문장을 넣지 말고, "우와!", "대박!", "진짜?!", "꿀맛!" 등 딱 2~3글자의 짧고 단순한 감탄 단어 또는 이모티콘만 들어가도록 영문 지정할 것!
-   
-   - 이미지 1 (컷 1~3): 3-panel vertical webtoon comic strip, 3D Pixar animation style. Characters strictly follow reference: {chars_joined_en}. Scene accurately depicts discovery of '{snack_name}' and '{prop_twist}' at a store. Speech bubbles contain ONLY very short 2-3 letter Korean words like '우와!', '대박!', '진짜?!' with emotion icons. Vibrant cozy lighting, clean 3D render --ar 2:3
-   - 이미지 2 (컷 4~6): 3-panel vertical webtoon comic strip, 3D Pixar animation style. Same characters: {chars_joined_en}. Scene accurately depicts reviewing and tasting '{snack_name}' around a cozy wooden table. Speech bubbles contain ONLY short Korean exclamations like '꿀맛!', '대박!' with hearts/stars. High detail, warm atmosphere --ar 2:3
-
-4. [발행 전 필수 검증 체크리스트]
-   - 이미지 내 말풍선 한글 글자가 깨지거나 뭉개지지 않았는지 육안 확인 필수 (깨짐 발생 시 짧은 단어로 1회 재생성 또는 본문 텍스트로 보완 후 안전 발행할 것!)
+3. [DALL-E 3 전용 4분할 영문 이미지 프롬프트 2장]
+   - 이미지 1: 4-panel vertical 2x2 grid comic strip, numbered ①, ②, ③, ④. 3D Pixar style. Characters: {chars_joined_en}. Scene 1~4.
+   - 이미지 2: 4-panel vertical 2x2 grid comic strip, numbered ⑤, ⑥, ⑦, ⑧. 3D Pixar style. Same characters. Scene 5~8.
+   - STRICT CONSTRAINT: NO speech bubbles, NO letters inside images.
 """
