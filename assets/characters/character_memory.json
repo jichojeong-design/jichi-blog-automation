@@ -29,5 +29,95 @@
       "sheet_path": "assets/characters/AI로봇_시트.jpg",
       "visual_dna": "A cute glossy white 3D mini robot with a black digital visor screen face showing glowing cyan smiling eyes."
     }
+  },
+  "official_webtoon_golden_layout": {
+    "version": "2026-10-24 사장님 최종 공인 레이아웃",
+    "structure_sequence": [
+      "1. 친근한 오프닝 인사 및 신상 화제성 소개 (안녕하세요, 지치 블로그를 찾아주신 여러분!...)",
+      "2. [사진 1] 코서치의 단면 반갈 실사 컷 (또는 상반부 대표 컷)",
+      "3. [상반부 스토리 대본] 1컷 ~ 4컷 (상황 묘사 및 지치·송이 대화)",
+      "4. [사진 2] 코서치의 패키지 및 매대 실사 컷 (또는 하반부 대표 컷)",
+      "5. [하반부 스토리 대본] 5컷 ~ 8컷 (시식 티키타카 및 8컷 반전 마무리)",
+      "6. [지치와 송이의 솔직 총평 & 200% 맛있게 먹는 꿀팁] (먹는 꿀팁, 음료 페어링, 구매 팁)",
+      "7. 출처 (블로거명 · 구매 후기 · 날짜 및 링크 2건)",
+      "8. 엔딩 공감(좋아요) 붉은색 강조 및 이웃 추가 유도 CTA",
+      "9. 해시태그 5~7개"
+    ],
+    "formatting_rules": [
+      "소제목 번호매김(1. 2. 3.) 완전 금지",
+      "스마트에디터 dot(•) 및 번호 리스트 유발 기호(-, *, 1. 2.) 완전 금지 (순수 텍스트 줄바꿈)",
+      "모바일 가독성 18~22자 정밀 줄바꿈 준수",
+      "사진 1은 1컷 앞(도입부 직후)에 배치, 사진 2는 4컷과 5컷 사이에 배치"
+    ]
+  },
+  "webtoon_writing_rules": {
+    "tone_and_manner": [
+      "문장 끝은 '~했어요', '~더라고요', '~같아요', '~인 것 같아요'처럼 부드러운 구어체로 작성할 것",
+      "'~확인됐습니다', '~평가했습니다', '~판단됩니다' 같은 딱딱한 보고서체/신문기사체 영구 금지",
+      "한 문장은 짧게 쓰고, 접속사나 쉼표로 길게 이어붙이지 말고 두 문장으로 나눌 것",
+      "숫자나 가격은 느낌을 같이 말해줄 것 ('하나에 5,900원이라 솔직히 좀 비싸죠')",
+      "가끔 독자에게 말을 걸 것 ('궁금하시죠?', '저라면 한 번쯤은 사 먹어볼 것 같아요')",
+      "감탄이나 솔직한 한마디를 한두 군데 넣되, 이모티콘이나 느낌표(!)는 남발하지 말 것",
+      "장점만 늘어놓지 말고 아쉬운 점도 솔직하게 편하게 한마디 해줄 것"
+    ],
+    "banned_ai_expressions": [
+      "공통으로 확인됐다",
+      "극찬했다",
+      "높은 가격대",
+      "다소 부담스럽다",
+      "~에 대해 알아보겠습니다",
+      "결론적으로",
+      "종합하면",
+      "~라고 할 수 있습니다"
+    ],
+    "recommended_conversational_replacements": {
+      "공통으로 확인됐다": "둘 다 이 얘기는 똑같이 하더라고요",
+      "극찬했다": "진짜 맛있다고 난리였어요",
+      "높은 가격대 / 다소 부담스럽다": "가격이 좀 세긴 해요"
+    },
+    "disclaimer_rule": {
+      "style": "딱딱한 고지문이 아니라 블로거가 덧붙이는 친근한 한마디 스타일",
+      "required_points": [
+        "이 웹툰은 구매 후기를 보고 상상해서 그린 창작물이라는 것",
+        "제가 직접 먹어본 후기는 아니라는 것",
+        "맛과 식감은 사람마다 다를 수 있다는 점 감안해달라는 것"
+      ],
+      "golden_example": "참고로 이 웹툰은 구매 후기를 보고 상상해서 그린 창작이에요. 제가 직접 먹어본 건 아니니까, 맛은 사람마다 다를 수 있다는 점 감안해주세요."
+    }
+  },
+  "character_consistency_rules": {
+    "version": "2026-10-24 사장님 검증 확정 규칙 (캐릭터 붕괴 방지)",
+    "core_finding": "ChatGPT/DALL-E 3에 캐릭터 시트(사진)를 첨부할 때, 프롬프트 텍스트에 상세한 캐릭터 외형 설명(DNA 텍스트)을 중복해서 넣으면 텍스트 해석과 사진 해석이 충돌하여 심각한 캐릭터 붕괴 발생! 반면 텍스트의 캐릭터 외형 설명을 완전히 제거하고 캐릭터 시트 사진만 첨부했을 때 100% 원본 디자인 일치 성공.",
+    "koditer_rule": "코디터는 프롬프트나 원고 내에 캐릭터의 외형 묘사/설명 텍스트(예: 키 몇 cm, 무슨 색 옷, 얼굴 무늬 등)를 일체 작성하지 말 것.",
+    "kodesigner_rule": "코자이너는 만화 프롬프트 작성 시 CHARACTERS 외형 묘사 문단을 완전히 삭제할 것. 오직 PANEL LAYOUT(컷별 구도 및 행동)과 STYLE & CONSTRAINTS(3D Pixar 스타일, 텍스트 금지, 번호 뱃지)만 작성하고, 캐릭터 외형은 사장님이 첨부하는 캐릭터 시트 사진(지치, 송이, 초코, AI로봇)에 100% 위임할 것. 또한 사장님께서 1~4컷과 5~8컷을 명확히 구분하여 복사하실 수 있도록 반드시 '[CHATGPT 컷 1~4 복사 시작]', '[CHATGPT 컷 1~4 복사 끝]' 및 '[CHATGPT 컷 5~8 복사 시작]', '[CHATGPT 컷 5~8 복사 끝]' 태그를 명시할 것.",
+    "copy_tag_rule": {
+      "cut1_4_start": "[CHATGPT 컷 1~4 복사 시작]",
+      "cut1_4_end": "[CHATGPT 컷 1~4 복사 끝]",
+      "cut5_8_start": "[CHATGPT 컷 5~8 복사 시작]",
+      "cut5_8_end": "[CHATGPT 컷 5~8 복사 끝]",
+      "instruction": "사장님이 ChatGPT에 손쉽게 복사-붙여넣기 할 수 있도록 각 세트별로 컷 범위를 명확히 적은 시작/끝 태그를 명시할 것."
+    },
+    "chatgpt_prompt_golden_template": {
+      "header": "A charming 4-panel vertical 2x2 grid comic strip in high-end 3D Pixar Disney animation style, warm soft vibrant lighting, crisp detail.\nMaintain the exact character designs from the attached reference images throughout all panels.",
+      "panel_layout": "PANEL LAYOUT (2x2 Grid with subtle circular badge numbers ①, ②, ③, ④ on top-left of each panel):\n- Panel ① (Top-Left): ...\n- Panel ② (Top-Right): ...\n- Panel ③ (Bottom-Left): ...\n- Panel ④ (Bottom-Right): ...",
+      "style_and_constraints": "STYLE & CONSTRAINTS: Pixar 3D CGI animation, colorful, cute cinematic atmosphere. Strictly NO messy random text or fake letters. Speech bubbles contain ONLY short Korean keywords or simple emoticons. Panel badges clearly marked."
+    },
+    "ending_panel_cta_rule": {
+      "description": "8컷 엔딩 패널에는 캐릭터들이 손을 흔들며 아늑한 분위기에서 나무 팻말이나 말풍선으로 '좋아요 & 구독 ❤️' 또는 '파이팅!' 한국어 문구를 명시하여 시각적 CTA를 완성할 것.",
+      "panel_8_prompt_example": "Panel ⑧ (Bottom-Right): Cozy warm room ending scene. Jichi and Choco waving happily side-by-side with AI Robot blinking a cute heart '<3' on its visor screen. In front of them, a cute rustic wooden sign clearly reads '좋아요 & 구독 ❤️'. A cheerful speech bubble above says '파이팅!'. Warm golden sunlight streaming in, inviting viewers to like and subscribe."
+    },
+    "source_article_link_rule": {
+      "description": "AI 테크웹툰 및 신상 리뷰 웹툰 하단 안내 및 정보 출처 섹션에는 반드시 사장님의 블로그 원문 기사 링크(원문 보러가기)를 카드 링크 형태로 함께 첨부할 것.",
+      "format_template": "테슬라·스페이스X 합병 논의와 통합 AI 기업의 쟁점 원문 보러가기:\nhttps://blog.naver.com/jcjung1401/[원문글번호]"
+    },
+    "concise_dialogue_rule": {
+      "version": "2026-10-24 사장님 지침 (웹툰 텍스트 슬림화)",
+      "description": "이미지가 만화 컷으로 이미 많은 비주얼 정보를 전달하므로, 웹툰 본문의 대화 텍스트는 길고 장황하게 쓰지 말고 1~2문장 이내로 핵심만 위트 있게 쏙쏙 뽑아 간결하게 작성할 것.",
+      "guideline": [
+        "상황 묘사는 1줄로 극도로 짧게 요약",
+        "캐릭터 대사는 군더더기 없이 1줄(최대 2줄)로 경쾌한 핑퐁 티키타카 유지",
+        "만화 컷을 보면서 빠르게 읽고 내려갈 수 있도록 모바일 스크롤 호흡을 가볍게 최적화"
+      ]
+    }
   }
 }
