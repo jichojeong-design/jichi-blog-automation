@@ -2,6 +2,14 @@ import sys
 import time
 import datetime
 import os
+
+# Windows 콘솔 인코딩 안전화
+if sys.platform.startswith('win'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 import schedule
 import collector
 import formatter

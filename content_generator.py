@@ -1,10 +1,18 @@
 import os
+import sys
 import json
 import urllib.request
 import re
 from bs4 import BeautifulSoup
 import constants
 import formatter
+
+# Windows 콘솔 인코딩 안전화
+if sys.platform.startswith('win'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 
 BANNED_PHRASES = [
     "직접 써보니", "충격 반전", "진짜 충격",
