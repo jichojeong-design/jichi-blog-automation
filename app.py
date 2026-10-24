@@ -13,12 +13,58 @@ st.set_page_config(page_title="지치 컴퍼니 올인원 통합 관제 센터",
 
 st.markdown("""
 <style>
-    .main-header { font-size: 28px; font-weight: bold; color: #1B5E20; margin-bottom: 5px; }
-    .sub-header { font-size: 15px; color: #555; margin-bottom: 20px; }
+    .main-header { font-size: 28px; font-weight: bold; color: #2E7D32; margin-bottom: 5px; }
+    .sub-header { font-size: 15px; color: #888888; margin-bottom: 20px; }
     .stTabs [data-baseweb="tab-list"] { gap: 10px; }
     .stTabs [data-baseweb="tab"] { height: 52px; white-space: pre-wrap; font-size: 15px; font-weight: bold; }
-    .dept-card { background-color: #F9FBE7; padding: 16px; border-radius: 12px; border-left: 6px solid #8BC34A; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .rule-card { background-color: #E8F5E9; border: 2px solid #4CAF50; padding: 12px; border-radius: 10px; }
+    
+    /* 다크모드/라이트모드 공용 고대비 카드 */
+    .dept-card {
+        background-color: #212529 !important;
+        color: #F8F9FA !important;
+        padding: 18px !important;
+        border-radius: 12px !important;
+        border-left: 6px solid #4CAF50 !important;
+        border-top: 1px solid #343A40 !important;
+        border-right: 1px solid #343A40 !important;
+        border-bottom: 1px solid #343A40 !important;
+        margin-bottom: 15px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
+    }
+    .dept-card h4, .dept-card h5 {
+        color: #FFFFFF !important;
+        font-weight: bold !important;
+        margin-bottom: 8px !important;
+    }
+    .dept-card b, .dept-card strong {
+        color: #A5D6A7 !important;
+    }
+    .dept-card ul {
+        margin-left: -15px !important;
+        color: #E0E0E0 !important;
+    }
+    .dept-card li {
+        color: #E0E0E0 !important;
+        margin-bottom: 4px !important;
+    }
+    .dept-card code {
+        background-color: #2E7D32 !important;
+        color: #FFFFFF !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+        font-weight: bold !important;
+    }
+    
+    .rule-card {
+        background-color: #1E293B !important;
+        color: #F1F5F9 !important;
+        border: 2px solid #10B981 !important;
+        padding: 16px !important;
+        border-radius: 10px !important;
+    }
+    .rule-card b {
+        color: #34D399 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
