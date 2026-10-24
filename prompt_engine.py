@@ -42,6 +42,29 @@ def generate_ai_news_prompt(topic: str, url: str, key_facts: str = "") -> str:
    [DALL-E 3 영문 이미지 프롬프트] (글자/숫자/로고 절대 없는 1:1 고품질 3D 일러스트 프롬프트 1문장)
 """
 
+def select_webtoon_characters(series_type: str = "snack") -> list:
+    """
+    [지치컴퍼니 캐릭터 편성 3대 황금 원칙]
+    1. 리센느 시리즈: 지치 + 송이 고정
+    2. AI 테크 연동 기사: 지치 + 초코 + AI로봇 고정
+    3. 일반 편의점 신상: 지치 무조건 필수 포함 + (송이, 초코, AI로봇 중 자유/랜덤)
+    """
+    if series_type == "rescene":
+        return ["지치 (새싹 요정)", "송이 (삼색 고양이)"]
+    elif series_type == "ai_tech":
+        return ["지치 (새싹 요정)", "초코 (턱시도 고양이)", "AI로봇 (미니 어시스턴트)"]
+    else:
+        # 일반 편의점 스낵: 지치 무조건 포함 + 1~2명 랜덤 편성
+        possible_partners = [
+            ["송이 (삼색 고양이)"],
+            ["초코 (턱시도 고양이)"],
+            ["초코 (턱시도 고양이)", "AI로봇 (미니 어시스턴트)"],
+            ["송이 (삼색 고양이)", "AI로봇 (미니 어시스턴트)"]
+        ]
+        chosen = random.choice(possible_partners)
+        return ["지치 (새싹 요정)"] + chosen
+
+
 def generate_webtoon_script_prompt(snack_name: str, reviews: str, prop_twist: str, selected_chars: list) -> str:
     """사장님의 네이버 블로그 공인 황금 표준 규격 (이미지+4컷 대사 x 2회 교차) 100% 반영 프롬프트"""
     chars_str = ", ".join(selected_chars)
