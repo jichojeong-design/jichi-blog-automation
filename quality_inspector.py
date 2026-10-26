@@ -46,7 +46,7 @@ def validate_and_repair_article_pre_publish(
     발행 버튼을 누르기 전에 코부장과 코리티가 5대 핵심 품질 기준을 전수 검사합니다.
     
     검사 항목:
-    1. 썸네일/이미지 무결점 검사 (OpenAI DALL-E 3 미통과 or 누락 시 즉시 발행 중단)
+    1. 썸네일/이미지 무결점 검사 (이미지 미통과 or 누락 시 즉시 발행 중단)
     2. 제목 단일 템플릿 복제 및 글자수 오버플로우 검사 -> 다양하고 매력적인 상황별 제목으로 자동 치환
     3. 썸네일 요약 카피 복제(기술 격차와 시장 파장 분석 등) 검사 -> 기사 맞춤 실질 요약으로 자동 수리
     4. 마침표 뒤 어색한 줄바꿈 검사 -> 자연스러운 어절/문장 호흡으로 즉각 재포맷팅
@@ -67,7 +67,7 @@ def validate_and_repair_article_pre_publish(
     if thumb_path is not None:
         if not thumb_path or not os.path.exists(thumb_path) or os.path.getsize(thumb_path) < 10000:
             print(f"  🚨 [코리티 긴급 권한 발동] 이미지 검증 실패! (파일 부재 또는 용량 미달: {thumb_path})")
-            print("  🛑 [발행 즉시 중지] 사장님 방침에 따라 비정상 이미지/제미니 우회는 발행을 엄격히 차단합니다.")
+            print("  🛑 [발행 즉시 중지] 사장님 방침에 따라 비정상 이미지는 발행을 엄격히 차단합니다.")
             return False, repaired_title, repaired_summary, repaired_paragraphs
 
         # 승인 장부 검사 (웹툰의 폐기된 구버전 만화 컷 파일명이 인입되었는지 확인)
@@ -119,13 +119,43 @@ def validate_and_repair_article_pre_publish(
         repairs_done.append("소제목 내부 촌스러운 느낌표(!) 자동 제거")
         full_body = re.sub(r'\[([^\]]*?)!+([^\]]*?)\]', r'[\1\2]', full_body)
     
-    # [코리티 특별 검증 1] 소제목 번호 매기기(1. 제목:\n내용) 번호 분리 버그 검사
+    # [코부장 & 코리티 중복 검사 예외 설정 준수]
+    # 사장님 특별 지침: 중복 파일 정리 및 검사 시, 코리티와 코부장의 검사 항목이 겹치더라도
+    # 크로스 체크(교차 검증)를 위해 절대 한쪽을 생략하지 않고 예외적으로 이중 검사를 완벽히 수행함!
+    # - 코부장: 프로세스 흐름, 파일 무결성, 네트워크 및 에디터 렌더링 검사
+    # - 코리티: 문장 서식, 불릿/점 기호 박멸, 소제목 번호 배제, 톤앤매너 전수 검사
+    
+    # [코리티 특별 검증 1] 소제목 번호 매기기(1. 2. 3. 4.) 일괄 제거 검사
+    # 사장님 특명: "1. 2. 3. 4. 다 빼고 깔끔하게 작성할 것"
+    if re.search(r'\[\d+\.\s*', full_body):
+        repairs_done.append("소제목 내 1. 2. 3. 번호 발견 -> 깔끔한 명사형 소제목으로 일괄 제거 수리")
+        full_body = re.sub(r'\[\d+\.\s*', '[', full_body)
+
+    # [코리티 특별 검증 2] 스마트에디터 dot(•) 및 번호 리스트 트리거 기호(-, *, 1. 2.) 완전 박멸
+    # 사장님 특명: "스마트 에디터 dot 표시 금지!"
+    has_list_triggers = bool(re.search(r'^\s*[\-\*•·\d+\.]\s+', full_body, re.MULTILINE))
+    if has_list_triggers:
+        repairs_done.append("스마트에디터 dot(•) 및 번호 리스트 유발 기호(-, *, 1. 2.) 완전 제거")
+        full_body = re.sub(r'^\s*[\-\*•·]\s*', '', full_body, flags=re.MULTILINE)
+        full_body = re.sub(r'^\s*\d+[\.\)]\s*', '', full_body, flags=re.MULTILINE)
+
+    # [코리티 특별 검증 3] 공감(좋아요) 엔딩 멘트 누락 여부 검사 및 출처 URL - 인사말 분리 검사
+    # 사장님 특명: "주소 끝나고 / 소중한 시간 글자부터 띄워쓰기(독립 문단) 작성 후 검사할 것"
+    if re.search(r'https?://[^\s\n]+[^\n\s]', full_body) or re.search(r'https?://[^\s\n]+\n[^\n]', full_body):
+        repairs_done.append("출처 URL과 '소중한 시간' 인사말 간격 밀착 감지 -> 빈 줄 2개 독립 문단으로 강제 분리 수리")
+        full_body = re.sub(r'(https?://[^\s\n]+)\s*(소중한\s*시간|[^\s\n])', r'\1\n\n\2', full_body)
+
+    if "공감(좋아요)" not in full_body:
+        repairs_done.append("엔딩 공감(좋아요) 독자 참여 CTA 추가 수리")
+        cta_suffix = "\n\n소중한 시간 내어 읽어주셔서 진심으로 감사드립니다.\n오늘 전해드린 테크 분석이 유익하셨다면 **공감(좋아요)** 꾹 눌러주시고 이웃 추가 부탁드립니다. 지치 블로그가 매일 가장 빠르고 정확한 글로벌 테크 동향을 전달해 드리겠습니다."
+        full_body += cta_suffix
+
     # '1.\n' 처럼 번호만 단독으로 떨어져 분리된 불량이 있는지 철저히 검사
     has_orphan_number = bool(re.search(r'^\s*\d+[\.\)]\s*$', full_body, re.MULTILINE))
     if has_orphan_number:
         repairs_done.append("번호 단독 분리 결함(1.\n) 감지 -> 번호+제목 결합 예외 로직으로 강제 수리")
 
-    subheading_count = len(re.findall(r'\[\d+\.\s*[^\]]+\]', full_body))
+    subheading_count = len(re.findall(r'\[[^\]]+\]', full_body))
     if subheading_count < 3:
         repairs_done.append(f"소제목 수량 주의 ({subheading_count}개 발견)")
 

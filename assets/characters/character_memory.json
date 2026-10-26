@@ -135,5 +135,17 @@
     "target_selector": "#publish-option-sympathy, label[for='publish-option-sympathy'], label:has-text('공감허용')",
     "enforced": true,
     "updated_at": "2026-10-26"
+  },
+  "url_and_closing_spacing_rule": {
+    "enforced": true,
+    "description": "기사 및 웹툰 본문 작성 시 출처 URL 주소 종료 후, 소중한 시간 독자 감사 인사말 블록 앞뒤는 무조건 빈 줄 2개(\\n\\n)로 확실한 독립 문단 분리 엄수",
+    "writers": [
+      "코디터",
+      "코포터",
+      "코리티",
+      "코부장"
+    ],
+    "inspection_rule": "코리티 5대 품질 검사 시 URL과 인사말 밀착 여부를 자동 감지하여 빈 줄 2개로 강제 분리 수리",
+    "updated_at": "2026-10-26"
   }
 }

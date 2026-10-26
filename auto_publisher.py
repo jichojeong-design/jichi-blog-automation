@@ -453,11 +453,17 @@ def post_to_naver_blog(
                 else:
                     lines = p_text.split("\n")
                     for l_i, line in enumerate(lines):
-                        if line.strip():
-                            _type_styled_line(page, line)
+                        line_str = line.strip()
+                        if line_str:
+                            _type_styled_line(page, line_str)
                         if l_i < len(lines) - 1:
-                            page.keyboard.press("Shift+Enter")
-                            time.sleep(0.03)
+                            # 만약 현재 줄이 웹 URL 주소라면, Shift+Enter 대신 확실한 문단 분리 Enter를 적용하여 다음 문장과 붙지 않도록 보호
+                            if line_str.startswith(("http://", "https://", "www.")):
+                                page.keyboard.press("Enter")
+                                time.sleep(0.08)
+                            else:
+                                page.keyboard.press("Shift+Enter")
+                                time.sleep(0.03)
                     
                     # 일반 문단 끝난 후 기본 문단 간격 (Enter 1회로 스마트에디터 새 문단 블록 분리)
                     page.keyboard.press("Enter")

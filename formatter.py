@@ -5,16 +5,30 @@ import os
 def format_mobile_text(text: str, max_chars: int = 18) -> str:
     """
     모바일 최적화 및 자연스러운 한국어 문맥 줄바꿈 (파워블로그 16~18자 가독성 규격):
-    1. 온점(.), 물음표(?), 느낌표(!) 기준으로 문장을 분리하여 문장 끝에서 자연스러운 호흡 부여
-    2. 한 줄당 16~18자 내외의 시원한 호흡으로 모바일 시선 피로도 제로화
-    3. 소제목([1. ...], [2. ...], [3. ...])은 별도의 독립 블록으로 유지
-    4. 중요 강조 구문(**...**)의 마크다운 서식을 그대로 보존하여 퍼블리셔가 볼드 처리할 수 있도록 지원
+    [사장님 엄격 규정 3대 원칙]
+    1. 소제목 번호매김 절대 금지! ([1. 소제목] -> [소제목]으로 자동 정제)
+    2. 스마트에디터 dot(•) 및 번호 리스트 트리거 문자(-, *, 1. 2.) 원천 차단!
+    3. 온점(.), 물음표(?), 느낌표(!) 기준으로 자연스러운 호흡 부여
     """
     if not text:
         return ""
     
+    # 1. 소제목 내 번호 매김 완전 제거 ([1. ...] -> [...])
+    text = re.sub(r'\[\s*\d+[\.\)]\s*', '[', text)
     # 소제목 태그 앞뒤에 명확한 문단 구분자 삽입
-    text = re.sub(r'(\[\d+\.\s*[^\]]+\])', r'\n\n\1\n\n', text)
+    text = re.sub(r'(\[[^\]]+\])', r'\n\n\1\n\n', text)
+
+    # [사장님 특명: 주소 끝난 후 및 '소중한 시간' 앞뒤 확실한 독립 문단/빈 줄 분리]
+    # 출처 레이블 앞뒤 분리
+    text = re.sub(r'([^\n])\s*(공식\s*출처:|출처:)', r'\1\n\n\2', text)
+    # 출처 콜론과 URL 사이 줄바꿈 분리
+    text = re.sub(r'(공식\s*출처:|출처:)\s*(https?://[^\s]+)', r'\1\n\2', text)
+    # 단독 URL 앞 문단 분리
+    text = re.sub(r'([^\n])\s*(https?://[^\s\n]+)', r'\1\n\n\2', text)
+    # URL 주소가 끝난 직후 어떤 텍스트가 오든 반드시 빈 줄 2개(\n\n)로 완전히 분리
+    text = re.sub(r'(https?://[^\s\n]+)\s*([^\s\n])', r'\1\n\n\2', text)
+    # '소중한 시간' 독자 감사 인사말 블록 앞뒤 무조건 빈 줄 2개(\n\n)로 확실한 독립 문단 보장
+    text = re.sub(r'([^\n])\s*(소중한\s*시간)', r'\1\n\n\2', text)
     
     paragraphs = re.split(r'\n\s*\n', text.strip())
     formatted_paragraphs = []
@@ -24,29 +38,31 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
         if not para_clean:
             continue
             
-        # 대괄호 소제목인 경우([1. ...]) 줄바꿈 없이 깔끔하게 단독 문단으로 유지
-        if re.match(r'^\[\d+\.\s*[^\]]+\]$', para_clean) or re.match(r'^\[[^\]]+\]$', para_clean):
-            formatted_paragraphs.append(para_clean)
+        # 대괄호 소제목인 경우 줄바꿈 없이 깔끔하게 단독 문단으로 유지 (내부 번호 완전 제거)
+        if re.match(r'^\[[^\]]+\]$', para_clean):
+            clean_sub = re.sub(r'\[\s*\d+[\.\)]\s*', '[', para_clean)
+            formatted_paragraphs.append(clean_sub)
             continue
 
-        # 번호 매기기 항목(예: "1. 맛과 재미 두 마리 토끼:", "2. 소리를 더 선명하게 듣는 법:") 예외 처리
-        # 번호+타이틀(또는 콜론/쉼표 등)을 한 줄로 온전히 보존하고, 그 아래 본문 설명은 모바일 호흡(16~18자)으로 정렬
-        numbered_match = re.match(r'^(\d+[\.\)]\s*[^:\n]+[:\n]?)(.*)$', para_clean, re.DOTALL)
-        if numbered_match and len(numbered_match.group(1).strip()) <= 30:
-            item_header = numbered_match.group(1).strip()
-            item_body = numbered_match.group(2).strip()
-            
-            # 본문 내용이 있으면 모바일 호흡으로 줄바꿈
-            if item_body:
-                # 본문 내 콜론이 붙어 넘어온 경우 정리
-                item_body = item_body.lstrip(":").strip()
-                formatted_body = format_mobile_text(item_body, max_chars=max_chars)
-                formatted_paragraphs.append(f"{item_header}\n{formatted_body}")
-            else:
-                formatted_paragraphs.append(item_header)
+        # [스마트에디터 dot 및 번호 리스트 원천 차단]
+        # 문단 내부의 각 줄마다 대시(-), 불릿(*, •, ·), 숫자(1. 2. 3.) 완전 박멸
+        cleaned_lines = []
+        for raw_line in para_clean.split('\n'):
+            line_s = raw_line.strip()
+            if not line_s:
+                continue
+            line_s = re.sub(r'^[\-\*•·]\s*', '', line_s)
+            line_s = re.sub(r'^\d+[\.\)]\s*', '', line_s)
+            line_s = line_s.strip()
+            if line_s:
+                cleaned_lines.append(line_s)
+        
+        if not cleaned_lines:
             continue
             
-        # 1. 문장 단위로 분리 (. ? !) - 단, 숫자 바로 뒤의 점(1. 2. 3.)은 분리하지 않도록 네거티브 룩비하인드 적용
+        para_clean = " ".join(cleaned_lines)
+            
+        # 1. 문장 단위로 분리 (. ? !)
         raw_sentences = re.split(r'((?<!\d)[.?!]\s+)', para_clean)
         sentences = []
         for i in range(0, len(raw_sentences) - 1, 2):
