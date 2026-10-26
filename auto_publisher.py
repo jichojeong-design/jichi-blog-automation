@@ -414,6 +414,7 @@ def post_to_naver_blog(
 
                 if p_text.startswith("__IMAGE__:"):
                     inline_img = p_text.split("__IMAGE__:", 1)[1].strip()
+                    inline_img = re.sub(r'[\r\n]+', '', inline_img).strip()
                     _upload_single_image(page, inline_img)
                     _enable_center_alignment(page)
                     continue
