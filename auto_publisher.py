@@ -472,7 +472,7 @@ def post_to_naver_blog(
 
             # 본문 하단 해시태그 텍스트 추가 (네이버 본문 검색 인덱싱 보장)
             if tags:
-                clean_hashtags = [f"#{t.replace('#', '').strip()}" for t in tags[:7] if t.strip()]
+                clean_hashtags = [f"#{t.replace('#', '').strip()}" for t in tags[:12] if t.strip()]
                 if clean_hashtags:
                     page.keyboard.press("Enter")
                     for ht in clean_hashtags:
@@ -548,7 +548,8 @@ def post_to_naver_blog(
                     ).first
                     if tag_input.is_visible(timeout=3000):
                         tag_input.click()
-                        for t in tags[:7]:
+                        # 대표님 지침: 리센느 및 주요 키워드 태그 최대 12개까지 적극 반영
+                        for t in tags[:12]:
                             clean_t = t.replace("#", "").strip()
                             if clean_t:
                                 page.keyboard.type(clean_t)
