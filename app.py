@@ -13,92 +13,95 @@ st.set_page_config(page_title="지치 컴퍼니 올인원 통합 관제 센터",
 
 st.markdown("""
 <style>
-    .main-header { font-size: 28px; font-weight: bold; color: #2E7D32; margin-bottom: 5px; }
-    .sub-header { font-size: 15px; color: #888888; margin-bottom: 20px; }
-    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
-    .stTabs [data-baseweb="tab"] { height: 52px; white-space: pre-wrap; font-size: 15px; font-weight: bold; }
+    /* JICHI COMPANY — Midnight Neon Tech UI Theme */
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;600;700&display=swap');
     
-    /* 다크모드/라이트모드 공용 고대비 카드 */
+    html, body, [class*="css"] {
+        font-family: 'Plus Jakarta Sans', 'Noto Sans KR', sans-serif;
+    }
+    .stApp {
+        background-color: #080a0d !important;
+        color: #f1f5f9 !important;
+    }
+    .main-header { 
+        font-size: 28px; 
+        font-weight: 800; 
+        color: #ffffff; 
+        letter-spacing: -0.5px;
+        margin-bottom: 4px; 
+    }
+    .main-header span {
+        color: #a3e635;
+    }
+    .sub-header { 
+        font-size: 14px; 
+        color: #94a3b8; 
+        margin-bottom: 24px; 
+    }
+    .stTabs [data-baseweb="tab-list"] { 
+        gap: 8px; 
+        background-color: #12161f;
+        padding: 6px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+    .stTabs [data-baseweb="tab"] { 
+        height: 48px; 
+        white-space: pre-wrap; 
+        font-size: 14px; 
+        font-weight: 700; 
+        color: #94a3b8 !important;
+        border-radius: 8px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #1c222d !important;
+        color: #a3e635 !important;
+        border-bottom: 2px solid #a3e635 !important;
+    }
+    
+    /* 부서/에이전트 다크 네온 카드 */
     .dept-card {
-        background-color: #212529 !important;
-        color: #F8F9FA !important;
-        padding: 18px !important;
-        border-radius: 12px !important;
-        border-left: 6px solid #4CAF50 !important;
-        border-top: 1px solid #343A40 !important;
-        border-right: 1px solid #343A40 !important;
-        border-bottom: 1px solid #343A40 !important;
-        margin-bottom: 15px !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
+        background: linear-gradient(145deg, #12161f, #0d1117) !important;
+        color: #f1f5f9 !important;
+        padding: 20px !important;
+        border-radius: 16px !important;
+        border-left: 5px solid #a3e635 !important;
+        border-top: 1px solid rgba(255,255,255,0.08) !important;
+        border-right: 1px solid rgba(255,255,255,0.08) !important;
+        border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+        margin-bottom: 16px !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
     }
     .dept-card h4, .dept-card h5 {
-        color: #FFFFFF !important;
-        font-weight: bold !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
         margin-bottom: 8px !important;
     }
     .dept-card b, .dept-card strong {
-        color: #A5D6A7 !important;
+        color: #a3e635 !important;
     }
-    .dept-card ul {
-        margin-left: -15px !important;
-        color: #E0E0E0 !important;
-    }
-    .dept-card li {
-        color: #E0E0E0 !important;
-        margin-bottom: 4px !important;
-    }
-    .dept-card code {
-        background-color: #2E7D32 !important;
-        color: #FFFFFF !important;
-        padding: 2px 6px !important;
-        border-radius: 4px !important;
-        font-weight: bold !important;
-    }
-    
-    .rule-card {
-        background-color: #1E293B !important;
-        color: #F1F5F9 !important;
-        border: 2px solid #10B981 !important;
-        padding: 16px !important;
-        border-radius: 10px !important;
-    }
-    .rule-card b {
-        color: #34D399 !important;
-    }
-
-    /* Aside 및 안내 배너 고대비 다크 스타일 */
-    .aside-box {
-        background-color: #261B3D !important;
-        border: 2px solid #9C27B0 !important;
-        padding: 18px !important;
-        border-radius: 12px !important;
-        color: #F3E5F5 !important;
-        margin-bottom: 15px !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
-    }
-    .aside-box h4 {
-        color: #CE93D8 !important;
-        font-weight: bold !important;
-        margin-top: 0 !important;
-    }
-    .aside-box ol {
-        color: #FFFFFF !important;
-        padding-left: 20px !important;
-    }
-    .aside-box li {
-        color: #F5F5F5 !important;
-        margin-bottom: 8px !important;
+    .dept-card p, .dept-card span, .dept-card li {
+        color: #cbd5e1 !important;
         line-height: 1.6 !important;
     }
-    .aside-box b {
-        color: #FFD54F !important;
+    
+    /* Aside 탭 박스 */
+    .aside-box {
+        background: #12161f !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        border-radius: 12px !important;
+        padding: 18px !important;
+        margin-bottom: 16px !important;
     }
-    .aside-box code {
-        background-color: #6A1B9A !important;
-        color: #FFFFFF !important;
-        padding: 2px 6px !important;
-        border-radius: 4px !important;
-        font-weight: bold !important;
+    .aside-box h5 {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+    .aside-box b, .aside-box strong {
+        color: #38bdf8 !important;
+    }
+    .aside-box span, .aside-box p, .aside-box li {
+        color: #e2e8f0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -110,9 +113,9 @@ st.markdown('<div class="sub-header">👑 사장님의 비전 아래, 전 부서
 col_alert1, col_alert2 = st.columns([3, 1])
 with col_alert1:
     st.markdown("""
-    <div style="background-color: #FFF3E0; border: 2px solid #FF9800; padding: 12px 18px; border-radius: 10px; margin-bottom: 15px;">
-        <span style="font-size: 15px; font-weight: bold; color: #E65100;">🚨 [아침 9시 무인 발행 안전 관제 시스템 가동 중]</span><br/>
-        <span style="font-size: 13px; color: #5D4037;">
+    <div style="background: linear-gradient(135deg, #1a0f12, #241419); border: 2px solid #e32652; padding: 14px 20px; border-radius: 14px; margin-bottom: 16px; box-shadow: 0 0 25px rgba(227,38,82,0.25);">
+        <span style="font-size: 15px; font-weight: 800; color: #ff4d6d;">🚨 [아침 9시 무인 발행 안전 관제 시스템 가동 중 — Fail-Safe]</span><br/>
+        <span style="font-size: 13px; color: #fecdd3; line-height: 1.5;">
             AI 기사 3편 및 웹툰이 09:03까지 발행되지 않으면 <b>네이버 메일로 긴급 알림</b>이 즉시 발송됩니다. 출근길 이상 감지 시 오른쪽 비상 버튼을 눌러주세요!
         </span>
     </div>

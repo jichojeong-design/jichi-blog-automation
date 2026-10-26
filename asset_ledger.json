@@ -46,7 +46,11 @@
     "webtoon_drop_zone": {
       "path": "webtoon_drop",
       "status": "ACTIVE_DROP_ZONE",
-      "allowed_extensions": [".jpg", ".jpeg", ".png"],
+      "allowed_extensions": [
+        ".jpg",
+        ".jpeg",
+        ".png"
+      ],
       "naming_convention": "1.jpg, 2.jpg, 3.jpg ...",
       "note": "사장님이 ChatGPT Plus에서 직접 다운받아 승인 투입하는 고화질 컷 전용 폴더"
     }
@@ -60,5 +64,55 @@
     "rescene_detail_2.jpg",
     "rescene_runaway_album_cover.jpg",
     "rescene_runaway_album_cover.png"
+  ],
+  "revision_history": [
+    {
+      "timestamp": "2026-10-26 22:25:03",
+      "action": "DEPRECATE_AND_ISOLATE",
+      "file": "webtoon_cut_1.png",
+      "reason": "대표님 승인 신규 에셋 도입으로 구도면 폐기"
+    },
+    {
+      "timestamp": "2026-10-26 22:25:03",
+      "action": "DEPRECATE_AND_ISOLATE",
+      "file": "webtoon_cut_2.png",
+      "reason": "대표님 승인 신규 에셋 도입으로 구도면 폐기"
+    },
+    {
+      "timestamp": "2026-10-26 22:25:03",
+      "action": "DEPRECATE_AND_ISOLATE",
+      "file": "webtoon_scene_1.png",
+      "reason": "대표님 승인 신규 에셋 도입으로 구도면 폐기"
+    },
+    {
+      "timestamp": "2026-10-26 22:25:03",
+      "action": "DEPRECATE_AND_ISOLATE",
+      "file": "webtoon_scene_2.png",
+      "reason": "대표님 승인 신규 에셋 도입으로 구도면 폐기"
+    },
+    {
+      "timestamp": "2026-10-26 22:25:03",
+      "action": "DEPRECATE_AND_ISOLATE",
+      "file": "webtoon_scene_4.png",
+      "reason": "대표님 승인 신규 에셋 도입으로 구도면 폐기"
+    },
+    {
+      "timestamp": "2026-10-26 22:25:03",
+      "action": "DEPRECATE_AND_ISOLATE",
+      "file": "rescene_detail_2.jpg",
+      "reason": "대표님 승인 신규 에셋 도입으로 구도면 폐기"
+    },
+    {
+      "timestamp": "2026-10-26 22:25:03",
+      "action": "DEPRECATE_AND_ISOLATE",
+      "file": "rescene_runaway_album_cover.jpg",
+      "reason": "대표님 승인 신규 에셋 도입으로 구도면 폐기"
+    },
+    {
+      "timestamp": "2026-10-26 22:25:03",
+      "action": "DEPRECATE_AND_ISOLATE",
+      "file": "rescene_runaway_album_cover.png",
+      "reason": "대표님 승인 신규 에셋 도입으로 구도면 폐기"
+    }
   ]
 }

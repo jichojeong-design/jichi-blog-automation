@@ -152,8 +152,12 @@ def generate_webtoon_script_prompt(snack_name: str, reviews: str, prop_twist: st
    [엔딩 공감/소통 문구]
    포스팅이 재미있고 유익하셨다면 하단의 공감(좋아요)과 따뜻한 댓글 부탁드립니다... (이웃 추가 유도)
 
-3. [DALL-E 3 전용 4분할 영문 이미지 프롬프트 2장]
-   - 이미지 1: 4-panel vertical 2x2 grid comic strip, numbered ①, ②, ③, ④. 3D Pixar style. Characters: {chars_joined_en}. Scene 1~4.
-   - 이미지 2: 4-panel vertical 2x2 grid comic strip, numbered ⑤, ⑥, ⑦, ⑧. 3D Pixar style. Same characters. Scene 5~8.
-   - STRICT CONSTRAINT: NO speech bubbles, NO letters inside images.
+3. [ChatGPT/DALL-E 3 전용 4분할 영문 만화 프롬프트 2장 작성 철칙]
+   - ⭐ [사장님 검증 절대 규칙 - 캐릭터 붕괴 원천 방지]:
+     * 프롬프트 텍스트 내에 캐릭터 외형 설명(키 몇 cm, 털 색, 옷 모양 등)을 일체 넣지 말 것!
+     * 캐릭터 외형은 사장님이 직접 첨부하는 캐릭터 시트 사진에 100% 위임함.
+     * 오직 'PANEL LAYOUT'(컷별 구도 및 행동 연출)과 'STYLE & CONSTRAINTS'(3D Pixar 애니메이션 스타일, 말풍선 글자 최소화, 패널 번호 ①~④ / ⑤~⑧)만 작성할 것.
+   - 이미지 1 (1~4컷): 4-panel vertical 2x2 grid comic strip, numbered ①, ②, ③, ④. 3D Pixar style. Panel 1~4 layout.
+   - 이미지 2 (5~8컷): 4-panel vertical 2x2 grid comic strip, numbered ⑤, ⑥, ⑦, ⑧. 3D Pixar style. Panel 5~8 layout.
+   - STRICT CONSTRAINT: Strictly NO messy random text or fake letters.
 """
