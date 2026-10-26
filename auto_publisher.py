@@ -2,6 +2,9 @@ import os
 import re
 import time
 from playwright.sync_api import sync_playwright
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def _upload_single_image(page, img_path: str) -> bool:
@@ -62,13 +65,14 @@ def _upload_single_image(page, img_path: str) -> bool:
     return uploaded
 
 
-def _set_font_size_17px(page):
+def _set_font_size_subheading(page):
     """
-    스마트에디터 ONE의 글자 크기 툴바를 제어하여 소제목 전용 17px로 변경합니다.
-    (기본 15px -> 17px로 1포인트 확대)
+    스마트에디터 ONE의 글자 크기 툴바를 제어하여 소제목 전용 16px로 변경합니다.
+    (기본 15px -> 16px로 정확히 1단계/1pt 확대 + 볼드 서식)
     """
     try:
         size_btn = page.locator(
+            "button.se-font-size-code-toolbar-button, "
             "button.se-font-size-toolbar-button, "
             "button[data-name='font-size'], "
             ".se-toolbar-item-font-size button"
@@ -76,16 +80,14 @@ def _set_font_size_17px(page):
         if size_btn.is_visible(timeout=1500):
             size_btn.click()
             time.sleep(0.3)
-            # 17px 옵션 클릭
-            opt_17 = page.locator(
-                "button[data-value='fs17'], "
-                "button[data-name='17'], "
-                ".se-toolbar-option-font-size-17-button, "
-                "li[data-value='17'] button, "
-                "button:has-text('17')"
+            # 16px (fs16) 옵션 클릭
+            opt_16 = page.locator(
+                "button[data-value='fs16'], "
+                "button.se-toolbar-option-font-size-code-fs16-button, "
+                "button:has-text('16')"
             ).first
-            if opt_17.is_visible(timeout=1500):
-                opt_17.click()
+            if opt_16.is_visible(timeout=1500):
+                opt_16.click()
                 time.sleep(0.2)
                 return True
     except Exception as e:
@@ -99,6 +101,7 @@ def _set_font_size_15px(page):
     """
     try:
         size_btn = page.locator(
+            "button.se-font-size-code-toolbar-button, "
             "button.se-font-size-toolbar-button, "
             "button[data-name='font-size'], "
             ".se-toolbar-item-font-size button"
@@ -108,9 +111,8 @@ def _set_font_size_15px(page):
             time.sleep(0.3)
             opt_15 = page.locator(
                 "button[data-value='fs15'], "
+                "button.se-toolbar-option-font-size-code-fs15-button, "
                 "button[data-name='15'], "
-                ".se-toolbar-option-font-size-15-button, "
-                "li[data-value='15'] button, "
                 "button:has-text('15')"
             ).first
             if opt_15.is_visible(timeout=1500):
@@ -122,32 +124,65 @@ def _set_font_size_15px(page):
     return False
 
 
+def _set_text_color_red(page):
+    """
+    스마트에디터 ONE의 글자 색상 팔레트에서 네이버 공식 선명한 빨간색(#ff0010)을 선택합니다.
+    """
+    try:
+        color_btn = page.locator("button.se-font-color-toolbar-button").first
+        if color_btn.is_visible(timeout=1500):
+            color_btn.click()
+            time.sleep(0.25)
+            # 네이버 스마트에디터 ONE의 공식 빨간색 팔레트 셀렉터 (data-color="#ff0010")
+            red_opt = page.locator('button.se-color-palette[data-color="#ff0010"]').first
+            if red_opt.is_visible(timeout=1500):
+                red_opt.click()
+                time.sleep(0.2)
+                print("  🎨 빨간색(#ff0010) 폰트 색상 적용 완료!")
+                return True
+    except Exception as e:
+        print(f"  ⚠️ 빨간색 색상 지정 실패: {e}")
+    return False
+
+
+def _reset_text_color(page):
+    """
+    글자 색상을 기본 검정/기본색(se-color-palette-no-color)으로 복귀합니다.
+    """
+    try:
+        color_btn = page.locator("button.se-font-color-toolbar-button").first
+        if color_btn.is_visible(timeout=1500):
+            color_btn.click()
+            time.sleep(0.25)
+            reset_btn = page.locator('button.se-color-palette-no-color').first
+            if reset_btn.is_visible(timeout=1500):
+                reset_btn.click()
+                time.sleep(0.2)
+                print("  🎨 폰트 색상 기본색으로 복귀 완료!")
+                return True
+    except Exception as e:
+        print(f"  ⚠️ 색상 초기화 실패: {e}")
+    return False
+
+
 def _type_styled_line(page, line_text: str):
     """
     **볼드** 마크다운 서식을 파싱하여 중요한 부분만 스마트에디터에서 실제 굵은 글씨(Bold, Ctrl+B)로 타이핑합니다.
-    또한 '1. ' '2. ' 등 자동 번호목록 변환을 원천 방지합니다.
+    [사장님 특명 엄격 준수]
+    1. 스마트 에디터 dot(•) 표시 원천 금지! (-, *, • 등 불릿 기호 완전 삭제)
+    2. 소제목 및 본문 1. 2. 번호매김 원천 금지! (숫자+점 리스트 트리거 완전 삭제)
     """
     clean_line = line_text.strip()
     if not clean_line:
         return
 
-    # 1. 2. 3. 등 번호 매기기 시작 시 스마트에디터의 자동 번호목록(List) 트리거 방지
-    num_match = re.match(r"^(\d+\.)\s*(.*)$", clean_line)
-    if num_match:
-        num_prefix, rest_text = num_match.groups()
-        page.keyboard.type(num_prefix)
-        page.keyboard.press("Shift+Space")
-        time.sleep(0.04)
-        clean_line = rest_text
-
-    # - 또는 * 또는 • 로 시작하는 글머리 기호 입력 시 스마트에디터 자동 점(ul 목록) 트리거 방지
-    bullet_match = re.match(r"^([-*•·])\s*(.*)$", clean_line)
-    if bullet_match:
-        b_prefix, rest_text = bullet_match.groups()
-        page.keyboard.type(b_prefix)
-        page.keyboard.press("Shift+Space")
-        time.sleep(0.04)
-        clean_line = rest_text
+    # [스마트에디터 dot 및 번호 리스트 원천 차단]
+    # 줄 시작 부분의 대시(-), 별(*), 점(•, ·) 및 숫자 번호(1. 2. 등)를 아예 타이핑하지 않고 제거
+    clean_line = re.sub(r"^[\-\*•·]\s*", "", clean_line)
+    clean_line = re.sub(r"^\d+[\.\)]\s*", "", clean_line)
+    clean_line = clean_line.strip()
+    if not clean_line:
+        return
 
     # **볼드** 마커 분리 타이핑
     parts = re.split(r'(\*\*.*?\*\*)', clean_line)
@@ -156,13 +191,19 @@ def _type_styled_line(page, line_text: str):
             continue
         if p.startswith('**') and p.endswith('**') and len(p) >= 4:
             bold_text = p[2:-2]
+            # '공감(좋아요)' 등 특수 키워드는 네이버 빨간색(#FF0000)으로 스타일링 강조
+            is_red = any(rk in bold_text for rk in ["공감", "좋아요", "공감(좋아요)"])
+            if is_red:
+                _set_text_color_red(page)
             page.keyboard.press("Control+b")
-            time.sleep(0.02)
-            page.keyboard.type(bold_text)
+            time.sleep(0.04)
+            page.keyboard.type(bold_text, delay=20)
             page.keyboard.press("Control+b")
-            time.sleep(0.02)
+            time.sleep(0.04)
+            if is_red:
+                _reset_text_color(page)
         else:
-            page.keyboard.type(p)
+            page.keyboard.type(p, delay=15)
 
 
 def _enable_center_alignment(page):
@@ -219,16 +260,18 @@ def post_to_naver_blog(
         if not is_cloud:
             chrome_user_data = os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\User Data")
             try:
+                # launch_persistent_context times out if Chrome is already open
                 context = p.chromium.launch_persistent_context(
                     user_data_dir=chrome_user_data,
                     channel="chrome",
                     headless=False,
+                    timeout=5000,
                     viewport={"width": 1400, "height": 950},
                     args=["--disable-blink-features=AutomationControlled"]
                 )
             except Exception as e:
-                print(f"⚠️ 로컬 크롬 프로필 사용 중, 독립 브라우저로 실행합니다: {e}")
-                browser = p.chromium.launch(headless=False)
+                print(f"⚠️ 로컬 크롬 프로필 사용 중 또는 잠김 감지 -> 독립 크롬 브라우저로 안전 전환: {e}")
+                browser = p.chromium.launch(channel="chrome", headless=False)
                 context = browser.new_context(viewport={"width": 1400, "height": 950})
                 if nid_aut and nid_ses:
                     context.add_cookies([
@@ -375,32 +418,36 @@ def post_to_naver_blog(
                     _enable_center_alignment(page)
                     continue
 
-                is_subheading = bool(re.match(r"^\[\d+\.\s*[^\]]+\]$", p_text))
+                # 소제목 판별: [제목] 형태 또는 숫자 없는 [소제목] 모두 지원
+                is_subheading = bool(re.match(r"^\[(?:\d+\.\s*)?[^\]]+\]$", p_text))
                 if is_subheading:
-                    # [소제목 상단 확실한 여백 확보]: 앞 문단과 바짝 붙지 않도록 빈 줄 생성
+                    # [소제목 상단 확실한 여백 확보]: 앞 문단과 넉넉한 간격을 두기 위해 빈 줄 2개 삽입
                     if p_idx > 0:
                         page.keyboard.press("Enter")
+                        time.sleep(0.05)
                         page.keyboard.press("Enter")
                         time.sleep(0.1)
                     
-                    # ⭐ 소제목 17px + 볼드(Bold) 서식 적용
-                    _set_font_size_17px(page)
+                    # ⭐ 사장님 특명: 소제목 1pt 확대(16px) + 두꺼운 글씨(Bold) 서식 정밀 적용
+                    _set_font_size_subheading(page)
                     page.keyboard.press("Control+b")
-                    time.sleep(0.05)
+                    time.sleep(0.08)
 
                     clean_sub = p_text
-                    # [1. ...] 형태를 예시처럼 깔끔한 '1. ...' 로 변환 (대괄호 제거)
+                    # 대괄호 및 앞단의 1. 2. 3. 번호 완전히 제거
                     if clean_sub.startswith("[") and clean_sub.endswith("]"):
                         clean_sub = clean_sub[1:-1].strip()
+                    clean_sub = re.sub(r"^\d+\.\s*", "", clean_sub).strip()
 
-                    page.keyboard.type(clean_sub)
+                    page.keyboard.type(clean_sub, delay=25)
 
                     page.keyboard.press("Control+b")
                     _set_font_size_15px(page)
-                    time.sleep(0.05)
+                    time.sleep(0.08)
                     
-                    # [소제목 하단 여백 확보]: 소제목과 아래 본문 문단 사이에 시원한 간격
+                    # [소제목 하단 여백 확보]: 소제목과 아래 본문 문단 사이에 확실한 공백 줄 생성
                     page.keyboard.press("Enter")
+                    time.sleep(0.05)
                     page.keyboard.press("Enter")
                     time.sleep(0.15)
                 else:
@@ -410,6 +457,7 @@ def post_to_naver_blog(
                             _type_styled_line(page, line)
                         if l_i < len(lines) - 1:
                             page.keyboard.press("Shift+Enter")
+                            time.sleep(0.03)
                     
                     # 일반 문단 끝난 후 기본 문단 간격 (Enter 1회로 스마트에디터 새 문단 블록 분리)
                     page.keyboard.press("Enter")
@@ -425,46 +473,38 @@ def post_to_naver_blog(
                         page.keyboard.press("Enter")
                     time.sleep(0.5)
 
-            # 임시저장 요청인 경우: 상단 [저장] 버튼 클릭 후 알림 팝업 및 네트워크 완료까지 확실히 대기
-            if save_draft:
-                print("💾 [임시저장 모드] 상단 [저장] 버튼 클릭 및 단축키 이중 동기화 중...")
-                time.sleep(1.5)
-                try:
-                    # 스마트에디터 ONE 상단 헤더의 [저장] 버튼 (save_btn__...) 최우선 타겟팅
-                    save_btn = page.locator(
-                        "button[class*='save_btn'], button.se-save-button, "
-                        "button[data-name='save'], .se-toolbar-item-save button"
-                    ).first
-                    if save_btn.is_visible(timeout=4000):
-                        save_btn.click()
-                        print("  - 상단 [저장] 버튼(save_btn) 클릭 완료!")
-                        time.sleep(2.5)
-                    else:
-                        print("  - 단축키 Ctrl+S 임시저장 실행...")
-                        page.keyboard.press("Control+s")
-                        time.sleep(2.5)
-                    
-                    # 확실한 서버 저장을 위해 Ctrl+S 이중 확인 및 API 응답 대기
-                    page.keyboard.press("Control+s")
-                    time.sleep(5.0)
-                    print(f"✅ [임시저장 성공] 사장님 검토를 위해 블로그 임시저장함에 안전 보관 완료: {title}")
-                except Exception as save_err:
-                    print(f"  ⚠️ 임시저장 클릭 예외: {save_err}")
-                context.close()
-                if browser:
-                    browser.close()
-                return True
-
-            # 4. 상단 [발행] 버튼 클릭하여 발행 설정 서랍(Drawer) 열기
-            print("📤 1단계 상단 [발행] 버튼 클릭 중...")
+            # 공통: 발행 설정 서랍(Drawer)을 열어 공감허용 체크 및 카테고리/태그 설정
+            print("📤 1단계 상단 [발행] 버튼 클릭하여 발행 설정창(Drawer) 열기 중...")
             pub_trigger = page.locator("button[class*='publish_btn'], .se-publish-button").first
             if pub_trigger.is_visible(timeout=3000):
-                pub_trigger.click()
+                pub_trigger.click(force=True)
             else:
-                page.locator("button", has_text="발행").first.click()
-            time.sleep(2.5)
+                page.locator("button", has_text="발행").first.click(force=True)
+            time.sleep(2.0)
 
-            # 5. 발행 설정 서랍 내 카테고리 2단계 드롭다운 정밀 선택 (Playwright Native Click)
+            # [공감허용] 체크박스 확인 및 활성화 (대표님 특명)
+            print("❤️ [발행 설정] '공감허용' 체크박스 상태 검증 및 설정 중...")
+            try:
+                sympathy_chk = page.locator("#publish-option-sympathy, input[data-click-area*='heart'], input[name*='sympathy']").first
+                sympathy_lbl = page.locator("label[for='publish-option-sympathy'], label:has-text('공감허용')").first
+                if sympathy_chk.count() > 0:
+                    if not sympathy_chk.is_checked():
+                        if sympathy_lbl.is_visible(timeout=2000):
+                            sympathy_lbl.click()
+                        else:
+                            sympathy_chk.click(force=True)
+                        time.sleep(0.5)
+                        print("  ✅ [발행 설정] '공감허용' 체크박스 활성화 완료!")
+                    else:
+                        print("  ℹ️ [발행 설정] '공감허용' 이미 활성화되어 있습니다.")
+                elif sympathy_lbl.is_visible(timeout=2000):
+                    sympathy_lbl.click()
+                    time.sleep(0.5)
+                    print("  ✅ [발행 설정] '공감허용' 라벨 클릭 완료!")
+            except Exception as sym_err:
+                print(f"  ⚠️ '공감허용' 설정 중 예외 (무시 후 계속 진행): {sym_err}")
+
+            # 발행 설정 서랍 내 카테고리 2단계 드롭다운 정밀 선택 (Playwright Native Click)
             print(f"📁 카테고리 [{target_cat_no}] ('{category_name}') 2단계 드롭다운 검증 및 선택 중...")
             try:
                 cat_btn = page.locator(
@@ -491,7 +531,7 @@ def post_to_naver_blog(
             except Exception as cat_err:
                 print(f"  ⚠️ 카테고리 드롭다운 제어 중 예외: {cat_err}")
 
-            # 6. 발행 설정 서랍 내 태그 입력칸(Tag Input) 입력
+            # 발행 설정 서랍 내 태그 입력칸(Tag Input) 입력
             if tags:
                 print(f"🏷️ 발행창 태그 입력 중... ({', '.join(tags[:5])})")
                 try:
@@ -511,6 +551,42 @@ def post_to_naver_blog(
                 except Exception as tag_err:
                     print(f"  ⚠️ 발행창 태그 입력 중 예외: {tag_err}")
             time.sleep(1.0)
+
+            # 임시저장 요청인 경우: Drawer 닫은 후 상단 [저장] 버튼 클릭
+            if save_draft:
+                print("💾 [임시저장 모드] 설정 저장 후 상단 [저장] 버튼 클릭 및 동기화 중...")
+                try:
+                    # 발행 설정창(Drawer) 닫기
+                    if pub_trigger.is_visible(timeout=2000):
+                        pub_trigger.click(force=True)
+                        time.sleep(1.5)
+                except Exception as close_err:
+                    print(f"  ⚠️ Drawer 닫기 예외 (무시): {close_err}")
+
+                try:
+                    save_btn = page.locator(
+                        "button[class*='save_btn'], button.se-save-button, "
+                        "button[data-name='save'], .se-toolbar-item-save button"
+                    ).first
+                    if save_btn.is_visible(timeout=4000):
+                        save_btn.click()
+                        print("  - 상단 [저장] 버튼(save_btn) 클릭 완료!")
+                        time.sleep(2.5)
+                    else:
+                        print("  - 단축키 Ctrl+S 임시저장 실행...")
+                        page.keyboard.press("Control+s")
+                        time.sleep(2.5)
+                    
+                    # 확실한 서버 저장을 위해 Ctrl+S 이중 확인 및 API 응답 대기
+                    page.keyboard.press("Control+s")
+                    time.sleep(5.0)
+                    print(f"✅ [임시저장 성공] 공감허용/카테고리/태그 설정 완료 후 임시저장 보관 완료: {title}")
+                except Exception as save_err:
+                    print(f"  ⚠️ 임시저장 클릭 예외: {save_err}")
+                context.close()
+                if browser:
+                    browser.close()
+                return True
 
             # 7. 최종 [발행] 확인 버튼 클릭 (Playwright Native Click)
             print("📤 2단계 최종 [발행] 확인 버튼 클릭 중...")
