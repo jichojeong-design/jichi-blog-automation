@@ -61,8 +61,8 @@ def run_ai_article_routine(article_index: int):
     formatted_body = formatter.format_mobile_text(body_text)
     paragraphs = [p for p in formatted_body.split("\n\n") if p.strip()]
 
-    # 3. 🎨 [코자이너] 100% OpenAI DALL-E 3 전용 3D 일러스트 렌더링 & 1691x930 썸네일 합성
-    print(f"  🎨 [코자이너] OpenAI DALL-E 3 기반 3D 일러스트 생성 및 1691x930 썸네일 카드 정밀 합성 중...")
+    # 3. 🎨 [코자이너] Google Gemini Image 기본 엔진 기반 3D 일러스트 렌더링 & 1691x930 썸네일 합성
+    print(f"  🎨 [코자이너] Google Gemini Image 기반 3D 일러스트 생성 및 1691x930 썸네일 카드 정밀 합성 중...")
     thumb_filename = f"완성_썸네일_1691x930.png"
     thumb_path = content_generator.generate_article_thumbnail(
         topic=target["title"],
@@ -72,8 +72,8 @@ def run_ai_article_routine(article_index: int):
         article_index=article_index
     )
 
-    # 4. 🕵️‍♂️ [코리티] 포스팅 전 선제 품질 검사 (이미지 DALL-E 3 무결점 + 제목 + 요약 + 줄바꿈)
-    print("  🕵️‍♂️ [코리티] 5대 선제 품질 검사(DALL-E 3 이미지 무결점/제목/요약/줄바꿈/소제목 여백) 가동...")
+    # 4. 🕵️‍♂️ [코리티] 포스팅 전 선제 품질 검사 (이미지 무결점 + 제목 + 요약 + 줄바꿈)
+    print("  🕵️‍♂️ [코리티] 5대 선제 품질 검사(썸네일 이미지 무결점/제목/요약/줄바꿈/소제목 여백) 가동...")
     is_valid, title, summary_lines, paragraphs = quality_inspector.validate_and_repair_article_pre_publish(
         title=title,
         summary_lines=summary_lines,
@@ -84,10 +84,10 @@ def run_ai_article_routine(article_index: int):
     )
 
     if not is_valid:
-        print(f"  🛑 [코리티 책임 발행 중단] 기사 #{article_index} 이미지 품질/DALL-E 3 검증 미통과로 발행을 즉시 중단합니다!")
+        print(f"  🛑 [코리티 책임 발행 중단] 기사 #{article_index} 이미지 품질 검증 미통과로 발행을 즉시 중단합니다!")
         notifier.send_emergency_alert(
             failed_task_name=f"기사 #{article_index} 발행 긴급 중단 (코리티 품질 방어선)",
-            error_detail="OpenAI DALL-E 3 이미지 생성 실패 또는 제미니 우회 차단 규정으로 인해 안전하게 발행을 취소했습니다."
+            error_detail="썸네일 이미지 생성 실패 및 대체 에셋 검증 미달로 인해 안전하게 발행을 취소했습니다."
         )
         return False
 
@@ -149,19 +149,18 @@ def run_ai_webtoon_routine(webtoon_index: int):
         tag=target["tag"],
         youtube=target["youtube"],
         naver=target["naver"],
-        chars=chars,
-        generate_images=True
+        chars=chars
     )
 
-    # 🕵️‍♂️ [코리티 웹툰 이미지 전수 검사] DALL-E 3 이미지 정상 생성 여부 확인
+    # 🕵️‍♂️ [코리티 웹툰 실사 이미지 검사] 코서치 발굴 실물 사진 정상 유무 확인
     webtoon_imgs = wt_data.get("image_paths") or []
-    valid_webtoon_imgs = [p for p in webtoon_imgs if p and os.path.exists(p) and os.path.getsize(p) > 10000]
+    valid_webtoon_imgs = [p for p in webtoon_imgs if p and os.path.exists(p) and os.path.getsize(p) > 5000]
     if not valid_webtoon_imgs:
-        print(f"  🚨 [코리티 웹툰 긴급 권한 발동] DALL-E 3 웹툰 이미지 생성 실패/부재 감지!")
-        print("  🛑 [웹툰 발행 즉시 중지] 사장님 방침에 따라 비정상 이미지/타사 우회 상태에서는 발행하지 않습니다.")
+        print(f"  🚨 [코리티 웹툰 긴급 권한 발동] 코서치 실물 사진 부재 감지!")
+        print("  🛑 [웹툰 발행 즉시 중지] 사장님 방침에 따라 실물 사진이 없을 때는 발행하지 않습니다.")
         notifier.send_emergency_alert(
             failed_task_name=f"웹툰 #{webtoon_index} 발행 긴급 중단 (코리티 방어선)",
-            error_detail="OpenAI DALL-E 3 웹툰 이미지 생성에 실패하여 품질 보호를 위해 발행을 중단했습니다."
+            error_detail="코서치 실물 사진이 누락되어 품질 보호를 위해 발행을 중단했습니다."
         )
         return False
 
@@ -270,14 +269,16 @@ def execute_daily_sequence():
     """
     event_name = os.environ.get("GITHUB_EVENT_NAME", "workflow_dispatch")
 
-    if event_name == "schedule" or "--full-daily" in sys.argv:
+    # 수동 비상 버튼(workflow_dispatch) 또는 스케줄(schedule) 또는 --full-daily 플래그 실행 시:
+    # 사장님 지침에 따라 AI 기사 3편 연속 안전 발행
+    if event_name in ["schedule", "workflow_dispatch"] or "--full-daily" in sys.argv:
         print("=" * 60)
-        print("🚀 [09:00 KST 정규 무인 스케줄러: AI 기사 3편 연속 발행 가동 (웹툰은 사장님 지시로 일시 보류)]")
+        print("🚀 [지치 컴퍼니 정규 스케줄러: AI 기사 3편 연속 발행 가동]")
         print("=" * 60)
         for i in range(1, 4):
             run_ai_article_routine(i)
             if i < 3:
-                print(f"\n⏳ 네이버 봇 필터링 우회를 위해 10분 대기 후 기사 #{i+1} 발행을 시작합니다...")
+                print(f"\n⏳ 네이버 봇 필터링 우회를 위해 5~10분 안전 대기 후 기사 #{i+1} 발행을 시작합니다...")
                 time.sleep(600)
 
         print("\n🎉 오늘 하루치 정규 기사 3편 발행 완료! (웹툰 자동화는 사장님 지시로 안전 보류되었습니다)")
