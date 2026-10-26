@@ -17,46 +17,46 @@ if sys.platform.startswith('win'):
 
 def publish_rescene_narangd_toon():
     """
-    [지치 컴퍼니 정규 편의점 음료/웹툰 프로젝트 - 포토카드 대란 업그레이드 완결판]
-    주제: 공원 러닝 후 갈증 폭발! 리센느 찐팬 초코의 나랑드 사이다 맛 추천 & 한정판 포토카드 득템 작전!
+    [지치 컴퍼니 정규 편의점 음료/웹툰 프로젝트 - 대표님 실사 포토카드 직결 에디션]
+    주제: 공원 러닝 후 갈증 폭발! 리센느 찐팬 초코의 나랑드 사이다 맛 추천 & 한정판 포토카드 득템기!
     등장인물: 지치(새싹 요정) + 초코(턱시도 고양이 - 리센느 열혈 팬)
     형식: 네이버 블로그 임시저장 (save_draft=True, category="웹툰")
     """
     title = "[지치와 초코의 편의점 탐방 웹툰] 러닝 후 갈증 폭발?! 리센느의 나랑드 사이다 제로와 한정판 포토카드 득템기!"
 
-    # 1~4컷 ChatGPT용 4분할 프롬프트 (포토카드 키포인트 반영)
+    # 1~4컷 ChatGPT용 4분할 프롬프트 (캔 사진 배제, 편의점에서 지치가 우연히 나랑드 사이다 선택 -> 초코의 찐팬 입덕 영업)
     prompt_cut1_4 = (
         "[CHATGPT 컷 1~4 복사 시작]\n"
         "PANEL LAYOUT (2x2 Grid with subtle circular badge numbers ①, ②, ③, ④ on top-left of each panel):\n"
-        "- Panel ① (Top-Left): In a sunlit city park, Jichi and Choco are finishing a vigorous running workout. Jichi is panting heavily with cute sweat drops flying, hands on knees. Choco is wiping brow, looking spirited.\n"
-        "- Panel ② (Top-Right): Inside a cool, brightly lit convenience store. Exhausted Jichi stumbles toward the drink refrigerator with tongue out, looking for any cold beverage to quench extreme thirst.\n"
-        "- Panel ③ (Bottom-Left): In the drink cooler, Jichi randomly picks up a cold blue Narangd Cider can. Behind Jichi, Choco's eyes suddenly turn into giant shining stars, pointing at the can in shock and sheer excitement.\n"
-        "- Panel ④ (Bottom-Right): Choco passionately grabs Jichi's shoulders with fiery fan enthusiasm, squealing: 'Jichi! That's Narangd Cider with my ultimate favorite idol group RESCENE as official models!' Jichi blinks in surprised awe.\n\n"
+        "- Panel ① (Top-Left): In a sunlit city park trail, Jichi and Choco are finishing an intense running workout. Jichi is panting heavily with hands on knees, lots of cute flying sweat droplets. Choco is wiping brow with a cheerful energetic grin.\n"
+        "- Panel ② (Top-Right): Inside a brightly lit, air-conditioned convenience store beverage aisle. Jichi stumbles in exhaustion toward the drink refrigerator, tongue out from extreme thirst, desperate for any cold refreshing drink.\n"
+        "- Panel ③ (Bottom-Left): In the drink refrigerator cooler, Jichi randomly picks up a cold blue Narangd Cider can. Standing right beside Jichi, Choco's eyes suddenly turn into giant shining stars, gasping in shock and pure excitement!\n"
+        "- Panel ④ (Bottom-Right): Choco passionately grabs Jichi's shoulders with fiery idol-fan enthusiasm, shouting: 'Jichi! That's Narangd Cider with my ultimate favorite girl group RESCENE as official models!' Jichi blinks with surprised, curious round eyes.\n\n"
         "STYLE & CONSTRAINTS: Pixar 3D CGI animation, colorful, cute cinematic atmosphere. Maintain the exact character designs of Jichi (sprout fairy) and Choco (black-and-white tuxedo cat) from reference sheets. Strictly NO messy random text or fake letters. Speech bubbles contain ONLY short Korean keywords or simple emoticons ('?!', '헉!', '리센느!'). Panel badges ① ② ③ ④ clearly marked.\n"
         "[CHATGPT 컷 1~4 복사 끝]"
     )
 
-    # 5~8컷 ChatGPT용 4분할 프롬프트 (맛 추천 + 포토카드 필수 구매 강조 + 지치도 입덕)
+    # 5~8컷 ChatGPT용 4분할 프롬프트 (대표님이 올려주신 실사 포토카드를 그대로 장착하는 장면에 초점)
     prompt_cut5_8 = (
         "[CHATGPT 컷 5~8 복사 시작]\n"
         "PANEL LAYOUT (2x2 Grid with subtle circular badge numbers ⑤, ⑥, ⑦, ⑧ on top-left of each panel):\n"
-        "- Panel ⑤ (Top-Left): Choco dramatically explains the deliciousness, pointing at Pineapple and Green Apple Narangd cans. Choco insists: 'The fizzy sweet Pineapple and tart Green Apple are unbeatable zero-calorie kings!'\n"
-        "- Panel ⑥ (Top-Right): Choco proudly pulls out an official RESCENE photo card from pocket, showing it to Jichi with sparkling eyes: 'And the absolute best part? You can get rare limited-edition RESCENE photo cards! We MUST buy it!'\n"
-        "- Panel ⑦ (Bottom-Left): Jichi's eyes instantly widen with huge hearts, jumping up with both paws raised: 'Wait, I'm a huge RESCENE fan too! We are definitely getting both flavors and the photo cards!'\n"
-        "- Panel ⑧ (Bottom-Right): Cozy warm room ending scene. Jichi and Choco happily holding ice-cold Narangd Cider cans and shiny RESCENE photo cards together, smiling joyfully. In front of them, a cute rustic wooden sign clearly reads '좋아요 & 구독 ❤️'. A cheerful speech bubble above says '파이팅!'. Warm golden sunlight streaming in, inviting viewers to like and subscribe.\n\n"
+        "- Panel ⑤ (Top-Left): Choco passionately explains the flavors with vibrant hand gestures, recommending the fizzy sweet Pineapple and tart Green Apple as ultimate zero-calorie champions. Jichi listens with sparkling curiosity.\n"
+        "- Panel ⑥ (Top-Right): Choco dramatically presents a real sparkling RESCENE photo card held upright straight toward viewer: 'And the absolute best part? You get rare official RESCENE photo cards! We MUST buy it!' Jichi gasps in total awe!\n"
+        "- Panel ⑦ (Bottom-Left): Jichi's eyes instantly turn into huge glowing hearts, jumping up excitedly: 'Wait, I'm a huge RESCENE fan too! I definitely want the photo card and Narangd Cider!' Both characters celebrate with high-five.\n"
+        "- Panel ⑧ (Bottom-Right): Cozy warm ending scene. Jichi and Choco proudly holding their shiny RESCENE photo cards straight up together side-by-side, beaming happily. In front of them, a cute rustic wooden sign clearly reads '좋아요 & 구독 ❤️'. A cheerful speech bubble above says '파이팅!'. Warm golden sunlight streaming in, inviting viewers to like and subscribe.\n\n"
         "STYLE & CONSTRAINTS: Pixar 3D CGI animation, warm vibrant cinematic feel. Strictly NO garbled text. Only short Korean keywords or emoticons ('좋아요 & 구독 ❤️', '파이팅!'). Panel badges ⑤ ⑥ ⑦ ⑧ clearly marked.\n"
         "[CHATGPT 컷 5~8 복사 끝]"
     )
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     poster_img = os.path.join(project_root, "02_코서치_자료", "narangd_rescene_poster.png")
-    flavor_img = os.path.join(project_root, "02_코서치_자료", "narangd_flavor_1.jpg")
-    photocard_img = os.path.join(project_root, "02_코서치_자료", "narangd_photocard_1.jpg")
+    photocard_woni = os.path.join(project_root, "02_코서치_자료", "narangd_photocard_woni.jpg")
+    photocard_holo = os.path.join(project_root, "02_코서치_자료", "narangd_photocard_holo.jpg")
 
     paragraphs = [
-        "안녕하세요, 지치 블로그를 찾아주신 여러분! 푸른 가을 날씨에 공원 러닝을 신나게 뛰고 온 귀여운 새싹 요정 지치와 열정 넘치는 턱시도 고양이 초코입니다!",
-        "오늘 초코와 공원에서 파워 러닝을 마치고 났더니 온몸에 땀이 쏟아지고 목이 바짝 말라 시원한 음료를 마시러 편의점으로 직행했는데요. 냉장 매대에서 우연히 나랑드 사이다를 집어 들자마자, 갑자기 초코의 눈빛이 180도 돌변했습니다!",
-        "바로 대세 걸그룹 **리센느(RESCENE)**의 열렬한 찐팬이었던 초코의 폭풍 영업이 시작된 건데요! 갈증을 싹 날려주는 상큼한 맛 추천은 물론, 팬들의 심장을 뛰게 만드는 **한정판 리센느 포토카드** 득템 꿀팁까지! 지치와 초코의 리얼 덕질 8컷 웹툰으로 만나보세요!",
+        "안녕하세요, 지치 블로그를 찾아주신 여러분! 맑고 푸른 가을 날씨에 공원 러닝을 신나게 뛰고 온 귀여운 새싹 요정 지치와 열정 넘치는 턱시도 고양이 초코입니다!",
+        "오늘 초코와 함께 공원에서 파워 러닝을 마치고 났더니 온몸에 땀이 쏟아지고 목이 타들어갈 것 같더라고요! 그래서 갈증을 단숨에 날려버리기 위해 곧장 편의점 음료수 코너로 직행했습니다.",
+        "냉장고 매대에서 우연히 나랑드 사이다를 쏙 집어 들자마자, 갑자기 초코의 눈빛이 180도 돌변하며 폭풍 영업이 시작되었는데요! 대세 걸그룹 **리센느(RESCENE)**의 찐팬인 초코의 취향 저격 맛 추천과, 팬들의 심장을 뛰게 만드는 **실물 한정판 리센느 포토카드** 득템 작전! 지치와 초코의 유쾌한 8컷 웹툰으로 만나보세요!",
 
         f"__IMAGE__:{poster_img}",
 
@@ -79,7 +79,7 @@ def publish_rescene_narangd_toon():
         "초코: \"지치야! 대박 사건이다냥! 그거 내가 제일 사랑하는 걸그룹 리센느가 전속 모델이다냥!\"",
         "지치: \"으응?! 초코 너 리센느 팬이었어?! 나랑드 사이다 모델이 리센느였어?!\"",
 
-        f"__IMAGE__:{flavor_img}",
+        f"__IMAGE__:{photocard_woni}",
 
         "코자이너 5컷~8컷 이미지 프롬프트 (ChatGPT용)",
         prompt_cut5_8,
@@ -92,7 +92,7 @@ def publish_rescene_narangd_toon():
         "초코: \"하지만 진짜 핵심은 따로 있다냥! 나랑드 사이다 패키지를 사면 한정판 리센느 포토카드를 준다냥! 이건 무조건 사먹어야 한다냥!\"",
         "지치: \"(눈이 하트로 변하며) 헉! 포토카드까지 준다고?! 대박!\"",
 
-        f"__IMAGE__:{photocard_img}",
+        f"__IMAGE__:{photocard_holo}",
 
         "7컷 · 지치도 팬심이 폭발하여 양손에 캔을 들고 활짝 웃는다.",
         "지치: \"사실 나도 리센느 완전 좋아하잖아! 맛있는 파인애플맛도 마시고 포카도 모아야지! 나도 살래!\"",
@@ -105,7 +105,8 @@ def publish_rescene_narangd_toon():
         "[지치와 초코의 리센느 x 나랑드 사이다 제로 & 포토카드 완전 정복 팁]",
         "동아오츠카 나랑드 사이다는 제로 칼로리, 제로 슈거로 운동 후 칼로리 부담 없이 청량감을 만끽할 수 있는 대표 탄산음료입니다.",
         "오리지널 플레인의 깔끔한 탄산감도 훌륭하지만, 러닝 후 당길 때는 달콤한 파인애플과 상큼한 그린애플 향이 피로를 날려주는 최고의 선택이 됩니다.",
-        "특히 팬들의 뜨거운 반응을 얻고 있는 한정판 리센느 포토카드 증정 이벤트는 온라인 기획전 및 굿즈 패키지를 통해 한정 수량으로 진행되니, 최애 멤버 포카를 노리시는 분들은 재고 소진 전에 서두르시는 것을 추천드립니다.",
+        "특히 팬들의 폭발적인 반응을 얻고 있는 한정판 리센느 포토카드 증정 이벤트는 멤버들의 독보적인 비주얼과 홀로그램 감성이 담겨 소장 가치가 매우 높습니다.",
+        "한정 수량으로 진행되는 만큼 리센느의 팬이라면 나랑드 사이다 패키지 굿즈 재고가 소진되기 전에 꼭 득템해 보시는 것을 강력 추천드립니다.",
 
         "[지치와 초코의 미각 톡]",
         "지치와 초코가 공원 러닝 후 직접 편의점에서 내돈내산으로 상큼하게 즐긴 솔직 음료 리뷰예요!\n입맛에 따라 선호하는 과일 향이 다를 수 있으니 취향에 맞게 골라보세요."
@@ -125,7 +126,6 @@ def publish_rescene_narangd_toon():
         else:
             formatted_paragraphs.append(formatter.format_mobile_text(p_str, max_chars=22))
 
-    # 대표님 특명: 리센느 및 나랑드 관련 태그 10~12개 풍성하게 세팅
     tags = [
         "#나랑드사이다",
         "#나랑드사이다제로",
@@ -142,12 +142,12 @@ def publish_rescene_narangd_toon():
     ]
 
     print("\n" + "=" * 65)
-    print("🥤 [지치 컴퍼니] 리센느 x 나랑드 사이다 (포토카드 에디션) 웹툰 임시저장 개시!")
+    print("🥤 [지치 컴퍼니] 리센느 x 나랑드 사이다 (대표님 실사 포토카드 직결 에디션) 등록!")
     print(f"  - 제목: {title}")
     print(f"  - 카테고리: 웹툰")
     print(f"  - 포스터 실사: {poster_img} (존재: {os.path.exists(poster_img)})")
-    print(f"  - 3종 실사: {flavor_img} (존재: {os.path.exists(flavor_img)})")
-    print(f"  - 포토카드 실사: {photocard_img} (존재: {os.path.exists(photocard_img)})")
+    print(f"  - 포토카드 1(원이): {photocard_woni} (존재: {os.path.exists(photocard_woni)})")
+    print(f"  - 포토카드 2(홀로): {photocard_holo} (존재: {os.path.exists(photocard_holo)})")
     print(f"  - 총 태그 수: {len(tags)}개 ({', '.join(tags[:6])}...)")
     print(f"  - 총 단락 수: {len(formatted_paragraphs)}")
     print("=" * 65)
@@ -162,7 +162,7 @@ def publish_rescene_narangd_toon():
     )
 
     if success:
-        print("\n🎉 [성공] 포토카드 키포인트 반영 리센느 x 나랑드 사이다 웹툰이 네이버 블로그 임시저장함에 완벽히 등록되었습니다!")
+        print("\n🎉 [성공] 대표님 실사 포토카드 직결 리센느 x 나랑드 사이다 웹툰이 네이버 블로그 임시저장함에 완벽히 등록되었습니다!")
     else:
         print("\n⚠️ [확인 필요] 임시저장 중 문제가 발생했습니다.")
 
