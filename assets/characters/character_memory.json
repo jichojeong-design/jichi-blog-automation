@@ -128,5 +128,12 @@
     "emergency_policy": "비상시, 긴급 복구, 재가동 시에도 예외 없이 편당 발행 간격은 무조건 최소 10분(600초) 엄수",
     "reason": "네이버 블로그 어뷰징/스팸 필터 회피 및 C-Rank 지수 보호를 위한 절대 불변의 안전 수칙",
     "updated_at": "2026-10-26"
+  },
+  "naver_publishing_option_rules": {
+    "allow_sympathy": true,
+    "description": "네이버 블로그 기사 발행 및 웹툰 임시저장 시 발행 설정 서랍(Drawer) 내 공감허용 체크박스를 무조건 확인 및 활성화하여 저장/발행할 것",
+    "target_selector": "#publish-option-sympathy, label[for='publish-option-sympathy'], label:has-text('공감허용')",
+    "enforced": true,
+    "updated_at": "2026-10-26"
   }
 }
