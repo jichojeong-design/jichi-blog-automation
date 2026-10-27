@@ -196,16 +196,16 @@ def _type_styled_line(page, line_text: str):
             if is_red:
                 _set_text_color_red(page)
             page.keyboard.press("Control+b")
-            time.sleep(0.04)
-            page.keyboard.type(bold_text, delay=20)
+            time.sleep(0.02)
+            page.keyboard.insert_text(bold_text)
             page.keyboard.press("Control+b")
-            time.sleep(0.04)
+            time.sleep(0.02)
             if is_red:
                 _reset_text_color(page)
         else:
             clean_p = p.replace('*', '')
             if clean_p:
-                page.keyboard.type(clean_p, delay=15)
+                page.keyboard.insert_text(clean_p)
 
 
 def _enable_center_alignment(page):
@@ -418,6 +418,8 @@ def post_to_naver_blog(
                 p_text = str(para).strip()
                 if not p_text:
                     continue
+                if p_idx % 5 == 0 or p_idx == len(content_paragraphs) - 1:
+                    print(f"  - 원고 타이핑 진행 중: {p_idx+1}/{len(content_paragraphs)}")
 
                 if p_text.startswith("__IMAGE__:"):
                     inline_img = p_text.split("__IMAGE__:", 1)[1].strip()
