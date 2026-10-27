@@ -259,7 +259,7 @@ def _call_llm_json(prompt: str) -> dict:
     openai_key = (os.environ.get("OPENAI_API_KEY") or os.environ.get("GPT_API_KEY") or "").strip().strip('"').strip("'")
 
     if gemini_key:
-        for model_name in ["gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-3-flash-preview"]:
+        for model_name in ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3-flash-preview"]:
             try:
                 gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
                 payload = {

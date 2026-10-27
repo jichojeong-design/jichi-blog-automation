@@ -79,16 +79,37 @@ def is_already_published_live(target_keyword: str, blog_id: str = "jcjung1401") 
     return False, ""
 
 
+def _normalize_korean_token(tok: str) -> str:
+    """조사(은/는/이/가/을/를/의/에/와/과/로/도/서/만) 제거로 제목 변형 시에도 핵심 키워드 매칭률 향상"""
+    if len(tok) >= 3 and tok[-1] in "은는이가을를의에와과로도서만":
+        return tok[:-1]
+    return tok
+
+
 def is_article_already_published_live(headline: str, blog_id: str = "jcjung1401") -> bool:
     """
     AI 정보 카테고리(categoryNo=6) 및 전체 글(categoryNo=0)을 실시간 조회하여
     이미 발행된 뉴스 기사인지 중복 여부를 판별합니다.
     """
-    live_posts = get_live_published_titles(blog_id=blog_id, category_no=0)
-    tokens = [
-        tok for tok in re.split(r"[\s,\(\)\[\]\"'‘’“”…·:]+", headline)
-        if len(tok) >= 2 and tok not in ["AI", "인공지능", "공개", "출시", "발표", "개발", "기술"]
+    live_posts = get_live_published_titles(blog_id=blog_id, category_no=6)
+    all_posts = get_live_published_titles(blog_id=blog_id, category_no=0)
+    seen_titles = {p["title"] for p in live_posts}
+    for p in all_posts:
+        if p["title"] not in seen_titles:
+            live_posts.append(p)
+            seen_titles.add(p["title"])
+
+    stopwords = {"AI", "인공지능", "공개", "출시", "발표", "개발", "기술", "기능", "시장", "분석", "전략"}
+    raw_tokens = [
+        tok for tok in re.split(r"[\s,\.\(\)\[\]\"'‘’“”…·:\-/~!?]+", headline)
+        if len(tok) >= 2 and tok not in stopwords
     ]
+    tokens = []
+    for t in raw_tokens:
+        norm = _normalize_korean_token(t)
+        if len(norm) >= 2 and norm not in stopwords and norm not in tokens:
+            tokens.append(norm)
+
     if not tokens:
         return False
 
@@ -96,8 +117,50 @@ def is_article_already_published_live(headline: str, blog_id: str = "jcjung1401"
         title = p["title"]
         if "인셉션, 최고 성능 믿었는데" in title:
             continue
-        matched = [tok for tok in tokens[:5] if tok in title]
+        matched = [tok for tok in tokens[:8] if tok.lower() in title.lower()]
         if len(matched) >= 2:
             return True
     return False
+
+
+def get_today_published_ai_articles(blog_id: str = "jcjung1401") -> list:
+    """
+    오늘(한국 시간 KST 00:00 이후) 'AI 정보'(categoryNo=6) 카테고리에 실제 발행된 게시글 목록을 반환합니다.
+    """
+    import datetime
+    kst = datetime.timezone(datetime.timedelta(hours=9))
+    now_kst = datetime.datetime.now(kst)
+    today_date = now_kst.date()
+
+    live_posts = get_live_published_titles(blog_id=blog_id, category_no=6)
+    today_posts = []
+    for p in live_posts:
+        d_str = p.get("date", "").strip()
+        if not d_str:
+            continue
+        is_today = False
+        if "방금" in d_str or "초 전" in d_str:
+            is_today = True
+        elif "분 전" in d_str:
+            m = re.search(r"(\d+)\s*분\s*전", d_str)
+            if m:
+                mins = int(m.group(1))
+                if (now_kst - datetime.timedelta(minutes=mins)).date() == today_date:
+                    is_today = True
+        elif "시간 전" in d_str:
+            m = re.search(r"(\d+)\s*시간\s*전", d_str)
+            if m:
+                hrs = int(m.group(1))
+                if (now_kst - datetime.timedelta(hours=hrs)).date() == today_date:
+                    is_today = True
+        else:
+            m = re.search(r"(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})", d_str)
+            if m:
+                y, mo, da = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                if datetime.date(y, mo, da) == today_date:
+                    is_today = True
+        if is_today:
+            today_posts.append(p)
+    return today_posts
+
 

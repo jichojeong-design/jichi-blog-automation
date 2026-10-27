@@ -245,10 +245,10 @@ def post_to_naver_blog(
     네이버 블로그 스마트에디터 ONE 무인 자동 발행 엔진 (아르곤 High 완결판)
     """
     is_cloud = os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("CLOUD_MODE") == "true"
-    naver_id = os.environ.get("NAVER_ID", "jcjung1401")
-    naver_pw = os.environ.get("NAVER_PW", "")
-    nid_aut = os.environ.get("NAVER_NID_AUT", "")
-    nid_ses = os.environ.get("NAVER_NID_SES", "")
+    naver_id = (os.environ.get("NAVER_ID") or "jcjung1401").strip().strip('"').strip("'")
+    naver_pw = (os.environ.get("NAVER_PW") or "").strip().strip('"').strip("'")
+    nid_aut = (os.environ.get("NAVER_NID_AUT") or "").strip().strip('"').strip("'")
+    nid_ses = (os.environ.get("NAVER_NID_SES") or "").strip().strip('"').strip("'")
 
     target_cat_no = "7" if "웹툰" in category_name else "6"
     target_cat_keyword = "웹툰" if target_cat_no == "7" else "AI정보"
@@ -269,6 +269,11 @@ def post_to_naver_blog(
                     viewport={"width": 1400, "height": 950},
                     args=["--disable-blink-features=AutomationControlled"]
                 )
+                if nid_aut and nid_ses:
+                    context.add_cookies([
+                        {"name": "NID_AUT", "value": nid_aut, "domain": ".naver.com", "path": "/"},
+                        {"name": "NID_SES", "value": nid_ses, "domain": ".naver.com", "path": "/"}
+                    ])
             except Exception as e:
                 print(f"⚠️ 로컬 크롬 프로필 사용 중 또는 잠김 감지 -> 독립 크롬 브라우저로 안전 전환: {e}")
                 browser = p.chromium.launch(channel="chrome", headless=False)

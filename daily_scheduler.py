@@ -2,6 +2,9 @@ import sys
 import time
 import datetime
 import os
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 
 # Windows 콘솔 인코딩 안전화
 if sys.platform.startswith('win'):
@@ -21,6 +24,9 @@ import content_generator
 import quality_inspector
 import history_checker
 
+# 동일 프로세스 실행 중 이미 발행한 기사 원문 제목 캐시 (연속 발행 시 중복 원천 차단)
+_SESSION_PUBLISHED_TITLES = set()
+
 
 def run_ai_article_routine(article_index: int):
     """
@@ -28,25 +34,34 @@ def run_ai_article_routine(article_index: int):
     - 코치(소재 발굴) -> 코포터(기사 집필) -> 코자이너(썸네일 디자인) -> 코리티(품질 검사 및 수리) -> 코널리스트(발행 및 통계)
     """
     print(f"\n[{datetime.datetime.now()}] 🏢 [지치 컴퍼니] AI 정규 기사 #{article_index} 협업 파이프라인 가동!")
-    
-    # 1. 🔎 [코치] 실시간 트렌드 및 빅테크 킬러 소재 탐색
+
+    # 오늘 이미 3편 이상 발행되었는지 실시간 라이브 체크 (--force 옵션이 없을 때만 방어)
+    if "--force" not in sys.argv:
+        today_live = history_checker.get_today_published_ai_articles("jcjung1401")
+        if len(today_live) >= 3:
+            print(f"  ✅ [중복 발행 방어선] 오늘(KST) 이미 AI 정규 기사 {len(today_live)}편이 발행되어 있습니다. 추가 발행을 건너뜁니다.")
+            return True
+
+    # 1. 🔎 [코치] 실시간 트렌드 및 빅테크 킬러 소재 탐색 (기발행 기사 100% 필터링)
     print("  🔎 [코치] 전 세계 빅테크 이슈 및 검색량 1위 킬러 소재 발굴 중...")
     all_articles = collector.get_all_sources()
     if not all_articles:
         print("  ❌ [코치] 수집된 최신 기사가 없습니다.")
         return False
 
-    if 1 <= article_index <= len(all_articles):
-        target = all_articles[article_index - 1]
-    else:
-        fresh_articles = [
-            a for a in all_articles
-            if not history_checker.is_article_already_published_live(a["title"])
-        ]
-        pool = fresh_articles if fresh_articles else all_articles
-        target = pool[0]
+    fresh_articles = [
+        a for a in all_articles
+        if a["title"] not in _SESSION_PUBLISHED_TITLES
+        and not history_checker.is_article_already_published_live(a["title"])
+    ]
+    pool = fresh_articles if fresh_articles else [
+        a for a in all_articles if a["title"] not in _SESSION_PUBLISHED_TITLES
+    ]
+    if not pool:
+        pool = all_articles
 
-    print(f"  🎯 [코치] 오늘의 1등 타겟 소재 확정: '{target['title'][:30]}...'")
+    target = pool[0]
+    print(f"  🎯 [코치] 오늘의 타겟 소재 확정 (미발행 신선 풀 {len(fresh_articles)}건 중 1위): '{target['title'][:35]}...'")
 
     # 2. ✍️ [코포터] 10년 차 IT 테크 기자 심층 원고 집필
     print(f"  ✍️ [코포터] 1,500자 심층 분석 원고 및 가독성 볼드 하이라이트 작성 중...")
@@ -109,9 +124,12 @@ def run_ai_article_routine(article_index: int):
         print(f"  🚨 [비상] 기사 #{article_index} 포스팅 실패 감지! 대표님께 비상 알림 발송 중...")
         notifier.send_emergency_alert(
             failed_task_name=f"AI 트렌드 기사 #{article_index}",
-            error_detail="네이버 스마트에디터 발행 단계 중 지연 또는 일시적 오류 발생"
+            error_detail="네이버 스마트에디터 발행 단계 중 지연 또는 로그인 세션 오류 발생"
         )
         return False
+
+    # 발행 성공한 원문 제목을 세션 캐시에 등록하여 다음 회차 중복 선택 원천 차단
+    _SESSION_PUBLISHED_TITLES.add(target["title"])
 
     # 6. 🕵️‍♂️ [코리티] 최종 발행 후 독자 모드 실시간 품질 검증
     time.sleep(5)
@@ -196,11 +214,6 @@ def run_ai_webtoon_routine(webtoon_index: int):
 def run_rescene_draft_routine():
     """
     [사장님 특별 지시] CU 리센느 '제나의 딸기잼 샌드' 실물 사진 + 공식 캐릭터 시트 메모리 잠금 웹툰 임시저장 루틴
-    - 1번 사진(webtoon_scene_1.png): 실제 CU 편의점 매장 내부 배경 + 공식 지치 & 송이 캐릭터 ("우와!")
-    - 2번 사진(webtoon_scene_2.png): 3번 실사 사진의 실제 '제나의 딸기잼 샌드' 핑크 패키지를 들고 있는 지치 & 송이 ("대박!")
-    - 3번 사진(rescene_detail_2.jpg): 실제 '제나의 딸기잼 샌드' 패키지 + 제나 포토카드 + 빵 단면 실사 사진
-    - 4번 사진(webtoon_scene_4.png): 실제 리센느(RESCENE) 제나 포토카드를 앞에 두고 우유 건배하는 지치 & 송이
-    - 임시저장(save_draft=True)으로 진행하여 사장님께서 블로그 임시저장함에서 직접 검토/수정 가능
     """
     print(f"\n[{datetime.datetime.now()}] 🍓 [CU 리센느 딸기샌드 실물 연동 + 캐릭터 시트 메모리 잠금 웹툰] 임시저장 생성 시작!")
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -245,7 +258,6 @@ def run_rescene_draft_routine():
         else:
             formatted_paragraphs.append(formatter.format_mobile_text(p_str, max_chars=18))
 
-    # 네이버 여성/디저트/아이돌 덕질 검색 유입 1위 타겟 키워드 8종 풀배치
     rescene_tags = [
         "#CU신상", "#리센느", "#제나의딸기잼샌드", "#리센느빵",
         "#리센느포토카드", "#제나포카", "#포카깡", "#편의점디저트"
@@ -263,25 +275,49 @@ def run_rescene_draft_routine():
 
 def execute_daily_sequence():
     """
-    클라우드(GitHub Actions) 실행 시퀀스:
-    - 매일 아침 09:00 KST 정기 스케줄(schedule) 실행 시: 기사 3편(10분 간격) + 웹툰 2편(20분 간격) 풀코스 발행
-    - 수동 즉시 실행(workflow_dispatch) 시: 핵심 기사 1편 + (2분 후) 리센느 웹툰 1편 고속 검증 발행
+    클라우드(GitHub Actions) 및 로컬 스케줄러 통합 실행 시퀀스:
+    - 매일 아침 09:00 KST 정기 실행 시: 오늘 미발행된 기사 수만큼(최대 3편) 10분(600초) 간격으로 안전 발행
+    - 모든 기사 발행 실패 시 Exit Code 1을 반환하여 가짜 성공(False Positive) 원천 차단
     """
+    # 로컬 PC에서 실행될 때 GitHub Secrets 자동 동기화 수행
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        try:
+            import sync_github_secrets
+            sync_github_secrets.sync_env_to_github_secrets()
+        except Exception:
+            pass
+
     event_name = os.environ.get("GITHUB_EVENT_NAME", "workflow_dispatch")
 
-    # 수동 비상 버튼(workflow_dispatch) 또는 스케줄(schedule) 또는 --full-daily 플래그 실행 시:
-    # 사장님 지침에 따라 AI 기사 3편 연속 안전 발행
     if event_name in ["schedule", "workflow_dispatch"] or "--full-daily" in sys.argv:
         print("=" * 60)
         print("🚀 [지치 컴퍼니 정규 스케줄러: AI 기사 3편 연속 발행 가동]")
         print("=" * 60)
-        for i in range(1, 4):
-            run_ai_article_routine(i)
-            if i < 3:
-                print(f"\n⏳ 네이버 봇 필터링 우회를 위해 5~10분 안전 대기 후 기사 #{i+1} 발행을 시작합니다...")
+
+        today_live = history_checker.get_today_published_ai_articles("jcjung1401")
+        already_count = len(today_live) if "--force" not in sys.argv else 0
+        if already_count >= 3:
+            print(f"✅ 오늘(KST) 이미 AI 정규 기사 {already_count}편이 정상 발행되어 있습니다. (중복 발행 방어 완료)")
+            return
+
+        needed = 3 - already_count
+        print(f"📊 오늘 발행 현황: {already_count}/3편 완료 -> 남은 {needed}편 연속 발행 시작 (10분 안전 간격)")
+
+        success_count = 0
+        start_idx = already_count + 1
+        for idx, i in enumerate(range(start_idx, 4)):
+            ok = run_ai_article_routine(i)
+            if ok:
+                success_count += 1
+            if idx < needed - 1:
+                print(f"\n⏳ 네이버 봇 필터링 우회를 위해 10분(600초) 안전 대기 후 기사 #{i+1} 발행을 시작합니다...")
                 time.sleep(600)
 
-        print("\n🎉 오늘 하루치 정규 기사 3편 발행 완료! (웹툰 자동화는 사장님 지시로 안전 보류되었습니다)")
+        if success_count == 0:
+            print("\n❌ [치명적 오류] 오늘 하루치 정규 기사 발행이 모두 실패했습니다! (Exit Code 1 반환)")
+            sys.exit(1)
+
+        print(f"\n🎉 오늘 하루치 정규 기사 발행 완료! (신규 성공: {success_count}편 / 누적: {already_count + success_count}편)")
     elif "--inception" in sys.argv:
         print("=" * 60)
         print("🚀 [즉시 실행: 1위 기사 '인셉션 충격 반전' 각색 웹툰 임시저장 가동]")
@@ -303,12 +339,14 @@ def start_daily_scheduler():
     print("=" * 60)
     print("⏰ [로컬 데스크탑 무인 자동화 엔진] 스케줄러 가동 중...")
     print("=" * 60)
+    try:
+        import sync_github_secrets
+        sync_github_secrets.sync_env_to_github_secrets()
+    except Exception:
+        pass
     schedule.every().day.at("09:00").do(run_ai_article_routine, article_index=1)
     schedule.every().day.at("09:10").do(run_ai_article_routine, article_index=2)
     schedule.every().day.at("09:20").do(run_ai_article_routine, article_index=3)
-    # [사장님 특별 지시] 웹툰은 수동 검토를 거쳐 발행하므로 자동발행 스케줄(09:40, 10:00)은 안전 비활성화 (AI 기사만 자동발행)
-    # schedule.every().day.at("09:40").do(run_ai_webtoon_routine, webtoon_index=1)
-    # schedule.every().day.at("10:00").do(run_ai_webtoon_routine, webtoon_index=2)
 
     while True:
         schedule.run_pending()
