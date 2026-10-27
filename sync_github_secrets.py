@@ -12,7 +12,7 @@ if sys.platform.startswith('win'):
         pass
 
 
-def sync_env_to_github_secrets(repo: str = "jichi-god/naver-blog-automation") -> bool:
+def sync_env_to_github_secrets(repo: str = "jichojeong-design/jichi-blog-automation") -> bool:
     """
     로컬 .env의 최신 네이버 세션 쿠키(NAVER_NID_AUT, NAVER_NID_SES) 및 API 키를
     GitHub Actions Repository Secrets에 자동 암호화 업로드하여 로컬-클라우드 불일치를 원천 차단합니다.
