@@ -132,18 +132,22 @@ def validate_and_repair_article_pre_publish(
         full_body = re.sub(r'\[\d+\.\s*', '[', full_body)
 
     # [코리티 특별 검증 2] 스마트에디터 dot(•) 및 번호 리스트 트리거 기호(-, *, 1. 2.) 완전 박멸
-    # 사장님 특명: "스마트 에디터 dot 표시 금지!"
-    has_list_triggers = bool(re.search(r'^\s*[\-\*•·\d+\.]\s+', full_body, re.MULTILINE))
+    # 사장님 특명: "스마트 에디터 dot 표시 금지!" (단, **볼드** 마크다운 별표 2개는 절대 훼손하지 않도록 보호)
+    has_list_triggers = bool(re.search(r'^\s*(?:[\-•·]|\*(?!\*)|\d+\.)\s+', full_body, re.MULTILINE))
     if has_list_triggers:
         repairs_done.append("스마트에디터 dot(•) 및 번호 리스트 유발 기호(-, *, 1. 2.) 완전 제거")
-        full_body = re.sub(r'^\s*[\-\*•·]\s*', '', full_body, flags=re.MULTILINE)
+        full_body = re.sub(r'^\s*(?:[\-•·]\s*|\*(?!\*)\s+)', '', full_body, flags=re.MULTILINE)
         full_body = re.sub(r'^\s*\d+[\.\)]\s*', '', full_body, flags=re.MULTILINE)
 
     # [코리티 특별 검증 3] 공감(좋아요) 엔딩 멘트 누락 여부 검사 및 출처 URL - 인사말 분리 검사
-    # 사장님 특명: "주소 끝나고 / 소중한 시간 글자부터 띄워쓰기(독립 문단) 작성 후 검사할 것"
-    if re.search(r'https?://[^\s\n]+[^\n\s]', full_body) or re.search(r'https?://[^\s\n]+\n[^\n]', full_body):
+    # 사장님 특명: "주소 끝나고 / 오픈그래프 카드 / 소중한 시간 글자부터 독립 문단 작성 후 검사할 것"
+    if re.search(r'https?://[a-zA-Z0-9./?=&_%#\-+:~]+\s*[^\s\na-zA-Z0-9./?=&_%#\-+:~]', full_body):
         repairs_done.append("출처 URL과 '소중한 시간' 인사말 간격 밀착 감지 -> 빈 줄 2개 독립 문단으로 강제 분리 수리")
-        full_body = re.sub(r'(https?://[^\s\n]+)\s*(소중한\s*시간|[^\s\n])', r'\1\n\n\2', full_body)
+        full_body = re.sub(
+            r'(https?://[a-zA-Z0-9./?=&_%#\-+:~]+)\s*([^\s\na-zA-Z0-9./?=&_%#\-+:~])',
+            r'\1\n\n\2',
+            full_body
+        )
 
     if "공감(좋아요)" not in full_body:
         repairs_done.append("엔딩 공감(좋아요) 독자 참여 CTA 추가 수리")
@@ -155,9 +159,31 @@ def validate_and_repair_article_pre_publish(
     if has_orphan_number:
         repairs_done.append("번호 단독 분리 결함(1.\n) 감지 -> 번호+제목 결합 예외 로직으로 강제 수리")
 
-    subheading_count = len(re.findall(r'\[[^\]]+\]', full_body))
+    # [코리티 특별 검증 4] 동일 소제목 중복 노출 방지 및 자동 수리
+    subheadings = re.findall(r'\[[^\]]+\]', full_body)
+    subheading_count = len(subheadings)
     if subheading_count < 3:
         repairs_done.append(f"소제목 수량 주의 ({subheading_count}개 발견)")
+    elif len(set(subheadings)) < len(subheadings):
+        repairs_done.append("동일 소제목 중복 감지 -> 문맥별 고유 소제목 3종으로 자동 분리 수리")
+        fallback_subs = [
+            "[공식 발표 핵심 사양과 배경]",
+            "[기술적 진보와 시장 경쟁 구도]",
+            "[실무 도입 시 한계와 관전 포인트]"
+        ]
+        seen_subs = set()
+        sub_idx = 0
+        def _replace_dup_sub(m):
+            nonlocal sub_idx
+            s = m.group(0)
+            if s not in seen_subs and s != "[공식 보도자료 및 기술 문서 기반 분석]":
+                seen_subs.add(s)
+                return s
+            replacement = fallback_subs[sub_idx % len(fallback_subs)]
+            sub_idx += 1
+            seen_subs.add(replacement)
+            return replacement
+        full_body = re.sub(r'\[(?!(?:지치 블로그|공식 출처))[^\]]+\]', _replace_dup_sub, full_body)
 
     re_formatted = formatter.format_mobile_text(full_body)
     repaired_paragraphs = [p for p in re_formatted.split("\n\n") if p.strip()]
@@ -260,6 +286,40 @@ def inspect_latest_post_quality(expected_category: str = "AI 정보", is_article
                 duplicate_num_count += 1
         if duplicate_num_count > 0:
             report["issues"].append(f"❌ 스마트에디터 자동 번호 목록과 텍스트 숫자 중복 발견 ({duplicate_num_count}건)")
+
+        # 7. [대표님 스크린샷 검수 기준 1] 출처 URL 뒤에 '소중한 시간...' 등 한글 텍스트가 같은 줄에 붙어 있는지 검사
+        for p_el in latest_viewer.select("p.se-text-paragraph"):
+            p_txt = p_el.get_text(strip=True)
+            if re.search(r"https?://[a-zA-Z0-9./?=&_%#\-+:~]+[가-힣]", p_txt):
+                report["issues"].append(f"❌ 출처 URL과 본문 인사말 줄붙음 결함 감지: '{p_txt[:55]}...'")
+                break
+
+        # 8. [대표님 스크린샷 검수 기준 2] 오픈그래프(se-oglink) 카드가 URL 바로 아래, '소중한 시간...' 인사말 위에 위치하는지 검사
+        if is_article:
+            components = latest_viewer.select(".se-component")
+            url_comp_idx = -1
+            og_comp_idx = -1
+            cta_start_idx = -1
+            cta_end_idx = -1
+            for idx, comp in enumerate(components):
+                c_classes = comp.get("class") or []
+                c_txt = comp.get_text(" ", strip=True)
+                if "se-oglink" in c_classes:
+                    og_comp_idx = idx
+                if "http://" in c_txt or "https://" in c_txt:
+                    url_comp_idx = idx
+                if "소중한 시간" in c_txt:
+                    cta_start_idx = idx
+                if "전달해" in c_txt and "드리겠습니다" in c_txt:
+                    cta_end_idx = idx
+            if cta_start_idx != -1 and cta_end_idx != -1 and cta_start_idx != cta_end_idx:
+                report["issues"].append("❌ 엔딩 인사말('소중한 시간~드리겠습니다') 중간에 링크 카드가 끼어들어 문단이 쪼개짐")
+            elif og_comp_idx != -1 and cta_start_idx != -1 and og_comp_idx > cta_start_idx:
+                report["issues"].append("❌ 오픈그래프 링크 카드가 '소중한 시간' 인사말 아래로 밀려남 (배치 순서 불량)")
+
+        # 9. [대표님 스크린샷 검수 기준 3] 본문 내 마크다운 별표(**) 노출 결함 검사
+        if "**" in body_text:
+            report["issues"].append("❌ 본문 내 변환되지 않은 마크다운 별표(**) 노출 결함 감지")
 
     except Exception as e:
         print(f"⚠️ 품질 검사 웹 크롤링 중 오류: {e}")

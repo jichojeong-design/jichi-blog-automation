@@ -177,8 +177,8 @@ def _type_styled_line(page, line_text: str):
         return
 
     # [스마트에디터 dot 및 번호 리스트 원천 차단]
-    # 줄 시작 부분의 대시(-), 별(*), 점(•, ·) 및 숫자 번호(1. 2. 등)를 아예 타이핑하지 않고 제거
-    clean_line = re.sub(r"^[\-\*•·]\s*", "", clean_line)
+    # 줄 시작 부분의 대시(-), 점(•, ·), 단독 별표 불릿(* ) 및 숫자 번호(1. 2. 등)를 제거하되 **볼드**는 보존
+    clean_line = re.sub(r"^(?:[\-•·]\s*|\*(?!\*)\s+)", "", clean_line)
     clean_line = re.sub(r"^\d+[\.\)]\s*", "", clean_line)
     clean_line = clean_line.strip()
     if not clean_line:
@@ -190,7 +190,7 @@ def _type_styled_line(page, line_text: str):
         if not p:
             continue
         if p.startswith('**') and p.endswith('**') and len(p) >= 4:
-            bold_text = p[2:-2]
+            bold_text = p[2:-2].replace('*', '')
             # '공감(좋아요)' 등 특수 키워드는 네이버 빨간색(#FF0000)으로 스타일링 강조
             is_red = any(rk in bold_text for rk in ["공감", "좋아요", "공감(좋아요)"])
             if is_red:
@@ -203,7 +203,9 @@ def _type_styled_line(page, line_text: str):
             if is_red:
                 _reset_text_color(page)
         else:
-            page.keyboard.type(p, delay=15)
+            clean_p = p.replace('*', '')
+            if clean_p:
+                page.keyboard.type(clean_p, delay=15)
 
 
 def _enable_center_alignment(page):
@@ -458,22 +460,36 @@ def post_to_naver_blog(
                     time.sleep(0.15)
                 else:
                     lines = p_text.split("\n")
+                    has_url_in_para = False
                     for l_i, line in enumerate(lines):
                         line_str = line.strip()
+                        is_url_line = bool(re.search(r"^(?:https?://|www\.)\S+", line_str))
                         if line_str:
                             _type_styled_line(page, line_str)
-                        if l_i < len(lines) - 1:
-                            # 만약 현재 줄이 웹 URL 주소라면, Shift+Enter 대신 확실한 문단 분리 Enter를 적용하여 다음 문장과 붙지 않도록 보호
-                            if line_str.startswith(("http://", "https://", "www.")):
-                                page.keyboard.press("Enter")
-                                time.sleep(0.08)
-                            else:
-                                page.keyboard.press("Shift+Enter")
-                                time.sleep(0.03)
+                        if is_url_line:
+                            has_url_in_para = True
+                            # [대표님 특명]: URL 입력 직후 Enter로 오픈그래프(OG) 링크 카드를 먼저 완성시키고,
+                            # 카드 아래 독립 텍스트 블록으로 커서를 이동시켜 '소중한 시간...' 인사말과 절대 섞이지 않게 보호!
+                            og_before = page.locator(".se-component.se-oglink").count()
+                            page.keyboard.press("Enter")
+                            for _ in range(25):
+                                time.sleep(0.2)
+                                if page.locator(".se-component.se-oglink").count() > og_before:
+                                    break
+                            time.sleep(1.0)
+                            page.keyboard.press("Enter")
+                            time.sleep(0.15)
+                            page.keyboard.press("Enter")
+                            time.sleep(0.15)
+                            _enable_center_alignment(page)
+                        elif l_i < len(lines) - 1:
+                            page.keyboard.press("Shift+Enter")
+                            time.sleep(0.03)
                     
-                    # 일반 문단 끝난 후 기본 문단 간격 (Enter 1회로 스마트에디터 새 문단 블록 분리)
-                    page.keyboard.press("Enter")
-                    time.sleep(0.1)
+                    # 일반 문단 끝난 후 기본 문단 간격 (URL 문단은 이미 OG 카드 아래로 분리 완료)
+                    if not has_url_in_para:
+                        page.keyboard.press("Enter")
+                        time.sleep(0.1)
 
             # 본문 하단 해시태그 텍스트 추가 (네이버 본문 검색 인덱싱 보장)
             if tags:
