@@ -225,7 +225,22 @@ def validate_and_repair_article_pre_publish(
                 full_body
             )
 
-    # 2. 내부링크 BEST 3 이종 카테고리(편의점, 리센느 등) 오염 여부 전수 검사
+    # 2. 내부링크 BEST 3 실제 블로그 URL(https://blog.naver.com/jcjung1401/) 누락 및 이종 카테고리 오염 여부 전수 검사
+    import history_checker
+    if "https://blog.naver.com/jcjung1401/" not in full_body:
+        repairs_done.append("인간 눈높이 검수: BEST 3 추천 글에 실제 블로그 링크(URL) 누락 감지 -> 실시간 지치 블로그 테크 글 제목+URL 3종 즉시 연결")
+        full_body = re.sub(
+            r'\[함께 읽으면[^\]]*\][\s\S]*?(?=(?:공식\s*출처:|출처:|소중한\s*시간|$))',
+            '',
+            full_body
+        ).strip()
+        best3_real = history_checker.build_best3_tech_links_block("jcjung1401", exclude_title=topic)
+        if "소중한 시간" in full_body:
+            idx = full_body.find("소중한 시간")
+            full_body = full_body[:idx].rstrip() + f"\n\n{best3_real}\n\n" + full_body[idx:].lstrip()
+        else:
+            full_body += f"\n\n{best3_real}"
+
     if "[함께 읽으면" in full_body or "BEST 3" in full_body:
         banned_cross_category = ["편의점", "리센느", "사이다", "디저트", "모찌", "피스타치오"]
         for bcc in banned_cross_category:

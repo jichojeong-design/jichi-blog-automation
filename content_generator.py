@@ -365,12 +365,7 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
     - [문제 해결 중심 글쓰기 & 쉬운 해설 원칙]:
       * 도입부 첫 문단에서 빙빙 돌리지 말고 '결론부터 말씀드리면~' 형태로 검색자가 찾는 핵심 결론과 핵심 수치를 즉시 제시할 것!
       * 어려운 전문 용어(약어)는 반드시 괄호나 쉬운 일상 비유로 초등학생이나 어르신도 단번에 이해할 수 있게 풀어 쓸 것! (왜 중요한지 이유를 함께 설명)
-    - [내부링크 자산화 - 지치 블로그 동종 카테고리 테크/AI 전용 BEST 3 연계]:
-      * 본문 마무리 직전, 공감 인사말 위에 '[함께 읽으면 유익한 지치 블로그 테크 BEST 3]' 섹션을 구성할 것.
-      * [대표님 특별 엄명: 추천 글 카테고리 완전 일치 원칙]:
-        - 반드시 [AI 테크 기사] + [AI 테크 웹툰] 조합으로만 3개를 추천할 것!
-        - 성격이 전혀 다른 이종 카테고리(편의점 신상 식품, 리센느 아이돌 등)는 몰입도를 해치므로 절대 추천 금지!
-        - 추천 예시: 1. [차세대 AI 반도체] 엔비디아 루빈 HBM4 분석 / 2. [지치 테크 웹툰] 구글 안티그래비티 2.0 vs IDE 정복기 / 3. [빅테크 동향] 오픈AI 신규 모델 발표 팩트 체크
+    - (※ 주의: '[함께 읽으면 유익한 지치 블로그 테크 BEST 3]' 내부링크 섹션은 시스템이 실제 블로그 URL과 함께 본문 하단에 자동 삽입하므로, 본문(body) 안에는 임의의 추천 글 제목을 적지 말 것!)
     - 엔딩에 독자 참여를 유도하는 공감 인사말을 반드시 포함할 것:
       '소중한 시간 내어 읽어주셔서 진심으로 감사드립니다. 오늘 전해드린 테크 분석이 유익하셨다면 **공감(좋아요)** 꾹 눌러주시고 이웃 추가 부탁드립니다. 지치 블로그가 매일 가장 빠르고 정확한 글로벌 테크 동향을 전달해 드리겠습니다.'
     - 이모지(🌱, 🔥, ✨, 💡 등 본문 내용 중 남발) 절대 사용 금지!
@@ -401,9 +396,29 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
         if len(clean_title) > 30 or not clean_title:
             clean_title = sample_title
         clean_body = clean_ai_artifacts(parsed["body"])
+        # 혹시 LLM이 링크 없는 가짜 추천 글 섹션을 임의로 생성했다면 제거
+        clean_body = re.sub(
+            r'\[함께 읽으면[^\]]*\][\s\S]*?(?=(?:공식\s*출처:|출처:|소중한\s*시간|$))',
+            '',
+            clean_body
+        ).strip()
+        for fake_sub in ["[차세대 AI 반도체]", "[지치 테크 웹툰]", "[빅테크 동향]"]:
+            clean_body = clean_body.replace(fake_sub, "")
+
+        # 실제 발행된 지치 블로그 테크 글 제목 + 실제 블로그 링크(https://blog.naver.com/jcjung1401/logNo) 3개 자동 삽입
+        import history_checker
+        best3_block = history_checker.build_best3_tech_links_block("jcjung1401", exclude_title=topic)
+
         if url and url not in clean_body:
-            clean_body += f"\n\n출처: {url}"
-        
+            clean_body += f"\n\n공식 출처: {url}"
+
+        if "https://blog.naver.com/jcjung1401/" not in clean_body:
+            if "소중한 시간" in clean_body:
+                idx = clean_body.find("소중한 시간")
+                clean_body = clean_body[:idx].rstrip() + f"\n\n{best3_block}\n\n" + clean_body[idx:].lstrip()
+            else:
+                clean_body += f"\n\n{best3_block}"
+
         # 공감 & 이웃추가 전환율 극대화 CTA 마무리 문구 추가
         cta_text = "\n\n소중한 시간 내어 읽어주셔서 진심으로 감사드립니다.\n오늘 전해드린 테크 분석이 유익하셨다면 **공감(좋아요)** 꾹 눌러주시고 이웃 추가 부탁드립니다. 지치 블로그가 매일 가장 빠르고 정확한 글로벌 테크 동향을 전달해 드리겠습니다."
         if "공감(좋아요)" not in clean_body:
@@ -428,6 +443,8 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
     fallback_title = cheat_titles[0] if cheat_titles else f"{clean_t} 공식 발표! 핵심 기술 분석"
     default_summary = [f"{clean_t} 공식 발표", "글로벌 테크 판도 변화"]
     fact_snippet = scraped_facts[:450] if scraped_facts else f"{topic} 관련 글로벌 테크 기업의 공식 기술 문서 및 보도자료를 기반으로 분석한 최신 동향입니다."
+    import history_checker
+    best3_fallback = history_checker.build_best3_tech_links_block("jcjung1401", exclude_title=topic)
     fallback_body = f"""{topic} 소식이 공식 전해지면서 글로벌 인공지능 생태계와 엔터프라이즈 시장 전반에 적지 않은 파장이 일고 있습니다. 기존 서비스 구조를 뛰어넘는 기술적 전환점이 마련되었다는 분석과 함께, 실제 현업 도입 과정에서의 실효성을 둘러싼 논의가 동시에 급물살을 타고 있습니다. 빅테크 기업들이 주도해 온 생성형 AI 패권 경쟁이 이제는 실질적인 운영 효율성과 수익성 증명 단계로 이동했음을 보여주는 대목입니다.
 
 [공식 발표 핵심 사양과 배경]
@@ -446,6 +463,8 @@ def generate_article_with_ai(topic: str, url: str) -> dict:
 단순 사양 경쟁을 넘어 '실제 현업 인프라 비용 대비 실효성'을 확보했는지가 이번 기술의 최대 승부처입니다. 실무진은 벤치마크 점수에만 의존하지 말고 소규모 PoC(개념 검증)를 거쳐 자사 워크플로우에 최적화하는 전략이 요구됩니다.
 
 공식 출처: {url}
+
+{best3_fallback}
 
 소중한 시간 내어 읽어주셔서 진심으로 감사드립니다.
 오늘 전해드린 테크 분석이 유익하셨다면 **공감(좋아요)** 꾹 눌러주시고 이웃 추가 부탁드립니다. 지치 블로그가 매일 가장 날카롭고 신속한 글로벌 테크 동향을 전달해 드리겠습니다."""
