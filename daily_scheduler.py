@@ -52,7 +52,7 @@ def run_ai_article_routine(article_index: int):
     fresh_articles = [
         a for a in all_articles
         if a["title"] not in _SESSION_PUBLISHED_TITLES
-        and not history_checker.is_article_already_published_live(a["title"])
+        and not history_checker.is_article_already_published_live(a["title"], source_url=a.get("url"))
     ]
     pool = fresh_articles if fresh_articles else [
         a for a in all_articles if a["title"] not in _SESSION_PUBLISHED_TITLES
@@ -132,8 +132,25 @@ def run_ai_article_routine(article_index: int):
         )
         return False
 
-    # 발행 성공한 원문 제목을 세션 캐시에 등록하여 다음 회차 중복 선택 원천 차단
+    # 발행 성공한 원문 제목 및 URL을 세션 캐시 및 영구 히스토리 파일에 등록하여 중복 선택 원천 차단
     _SESSION_PUBLISHED_TITLES.add(target["title"])
+    try:
+        import json
+        h_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "published_sources_history.json")
+        h_data = []
+        if os.path.exists(h_file):
+            with open(h_file, "r", encoding="utf-8") as f:
+                h_data = json.load(f)
+        h_data.append({
+            "title": target["title"],
+            "url": target.get("url", ""),
+            "published_at": str(datetime.datetime.now()),
+            "blog_title": title
+        })
+        with open(h_file, "w", encoding="utf-8") as f:
+            json.dump(h_data[-100:], f, ensure_ascii=False, indent=2)
+    except Exception as he:
+        print(f"  ⚠️ 히스토리 기록 경고: {he}")
 
     # 6. 🕵️‍♂️ [코리티] 최종 발행 후 독자 모드 실시간 품질 검증
     time.sleep(5)

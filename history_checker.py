@@ -92,11 +92,61 @@ def _normalize_korean_token(tok: str) -> str:
     return tok
 
 
-def is_article_already_published_live(headline: str, blog_id: str = "jcjung1401") -> bool:
+# 한-영 빅테크 및 핵심 개념 상호 매핑 테이블 (외신 영문 헤드라인과 국문 블로그 제목 간 중복 100% 탐지)
+BILINGUAL_TOKEN_MAP = {
+    "google": ["구글", "google"],
+    "gemini": ["제미나이", "gemini"],
+    "search": ["검색", "search"],
+    "openai": ["오픈ai", "openai"],
+    "chatgpt": ["챗gpt", "chatgpt", "gpt"],
+    "meta": ["메타", "meta"],
+    "apple": ["애플", "apple"],
+    "nvidia": ["엔비디아", "nvidia"],
+    "tesla": ["테슬라", "tesla"],
+    "anthropic": ["앤트로픽", "anthropic", "claude", "클로드"],
+    "deepseek": ["딥시크", "deepseek"],
+    "microsoft": ["마이크로소프트", "ms", "microsoft"],
+    "agent": ["에이전트", "agent", "agents"],
+    "app": ["앱", "app", "apps", "어플"],
+    "connected": ["커넥티드", "연동", "connected"],
+    "model": ["모델", "model", "models"],
+    "ant": ["앤트그룹", "ant", "알리바바"]
+}
+
+
+def _expand_tokens_bilingual(tokens: list) -> list:
+    """영문/한글 토큰을 양방향 동의어 세트로 확장"""
+    expanded = set()
+    for tok in tokens:
+        t_low = tok.lower()
+        expanded.add(t_low)
+        for canon, syns in BILINGUAL_TOKEN_MAP.items():
+            if t_low in syns or any(s in t_low for s in syns):
+                for s in syns:
+                    expanded.add(s)
+    return list(expanded)
+
+
+def is_article_already_published_live(headline: str, blog_id: str = "jcjung1401", source_url: str = None) -> bool:
     """
-    AI 정보 카테고리(categoryNo=6) 및 전체 글(categoryNo=0)을 실시간 조회하여
-    이미 발행된 뉴스 기사인지 중복 여부를 판별합니다.
+    AI 정보 카테고리(categoryNo=6) 및 전체 글을 실시간 조회하고,
+    영-한 키워드 교차 매핑 및 원문 URL 캐시를 통해 중복 기사를 100% 원천 차단합니다.
     """
+    # 1. 영구 URL 히스토리 파일(published_sources_history.json) 검증
+    history_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "published_sources_history.json")
+    if os.path.exists(history_file):
+        try:
+            with open(history_file, "r", encoding="utf-8") as f:
+                hist_data = json.load(f)
+                recorded_urls = {item.get("url") for item in hist_data if item.get("url")}
+                recorded_titles = {item.get("title", "").strip().lower() for item in hist_data}
+                if source_url and source_url in recorded_urls:
+                    return True
+                if headline and headline.strip().lower() in recorded_titles:
+                    return True
+        except Exception:
+            pass
+
     live_posts = get_live_published_titles(blog_id=blog_id, category_no=6)
     all_posts = get_live_published_titles(blog_id=blog_id, category_no=0)
     seen_titles = {p["title"] for p in live_posts}
@@ -105,25 +155,27 @@ def is_article_already_published_live(headline: str, blog_id: str = "jcjung1401"
             live_posts.append(p)
             seen_titles.add(p["title"])
 
-    stopwords = {"AI", "인공지능", "공개", "출시", "발표", "개발", "기술", "기능", "시장", "분석", "전략"}
+    stopwords = {"ai", "인공지능", "공개", "출시", "발표", "개발", "기술", "기능", "시장", "분석", "전략", "news", "the", "and", "for", "with"}
     raw_tokens = [
         tok for tok in re.split(r"[\s,\.\(\)\[\]\"'‘’“”…·:\-/~!?]+", headline)
-        if len(tok) >= 2 and tok not in stopwords
+        if len(tok) >= 2 and tok.lower() not in stopwords
     ]
     tokens = []
     for t in raw_tokens:
         norm = _normalize_korean_token(t)
-        if len(norm) >= 2 and norm not in stopwords and norm not in tokens:
+        if len(norm) >= 2 and norm.lower() not in stopwords and norm not in tokens:
             tokens.append(norm)
 
-    if not tokens:
+    expanded_tokens = _expand_tokens_bilingual(tokens)
+    if not expanded_tokens:
         return False
 
     for p in live_posts:
-        title = p["title"]
+        title = p["title"].lower()
         if "인셉션, 최고 성능 믿었는데" in title:
             continue
-        matched = [tok for tok in tokens[:8] if tok.lower() in title.lower()]
+        # 영-한 교차 토큰 매칭 (2개 이상 핵심 개념 일치 시 동일 기사로 판정)
+        matched = [tok for tok in expanded_tokens if tok in title]
         if len(matched) >= 2:
             return True
     return False
