@@ -12,7 +12,18 @@ on:
       - main
 
 jobs:
+  syntax-guard:
+    name: 0. 코드 및 원고 업데이트 문법 무결성 자동 검증
+    runs-on: ubuntu-latest
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+      - name: 파이썬 구문 에러 전수 검사 (Syntax Guard)
+        run: |
+          python3 -m py_compile daily_scheduler.py content_generator.py auto_publisher.py quality_inspector.py formatter.py collector.py history_checker.py notifier.py
+
   run-daily-blog:
+    needs: syntax-guard
     if: github.event_name != 'push' || contains(github.event.head_commit.message, '[run-now]')
     runs-on: ubuntu-latest
     steps:

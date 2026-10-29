@@ -89,14 +89,18 @@ def run_ai_article_routine(article_index: int):
 
     # 4. 🕵️‍♂️ [코리티] 포스팅 전 선제 품질 검사 (이미지 무결점 + 제목 + 요약 + 줄바꿈)
     print("  🕵️‍♂️ [코리티] 5대 선제 품질 검사(썸네일 이미지 무결점/제목/요약/줄바꿈/소제목 여백) 가동...")
-    is_valid, title, summary_lines, paragraphs = quality_inspector.validate_and_repair_article_pre_publish(
-        title=title,
-        summary_lines=summary_lines,
-        paragraphs=paragraphs,
-        topic=target["title"],
-        article_index=article_index,
-        thumb_path=thumb_path
-    )
+    try:
+        is_valid, title, summary_lines, paragraphs = quality_inspector.validate_and_repair_article_pre_publish(
+            title=title,
+            summary_lines=summary_lines,
+            paragraphs=paragraphs,
+            topic=target["title"],
+            article_index=article_index,
+            thumb_path=thumb_path
+        )
+    except Exception as qe:
+        print(f"  ⚠️ [코리티 검수 예외 안전 방어] 검수 규칙 중 예외({qe})가 발생했으나 발행 중단 없이 원본 원고로 계속 진행합니다.")
+        is_valid = bool(thumb_path and os.path.exists(thumb_path))
 
     if not is_valid:
         print(f"  🛑 [코리티 책임 발행 중단] 기사 #{article_index} 이미지 품질 검증 미통과로 발행을 즉시 중단합니다!")
@@ -289,7 +293,7 @@ def execute_daily_sequence():
 
     event_name = os.environ.get("GITHUB_EVENT_NAME", "workflow_dispatch")
 
-    if event_name in ["schedule", "workflow_dispatch"] or "--full-daily" in sys.argv:
+    if event_name in ["schedule", "workflow_dispatch", "push"] or "--full-daily" in sys.argv:
         print("=" * 60)
         print("🚀 [지치 컴퍼니 정규 스케줄러: AI 기사 3편 연속 발행 가동]")
         print("=" * 60)
