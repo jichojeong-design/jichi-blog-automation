@@ -256,13 +256,19 @@ def validate_and_repair_article_pre_publish(
     # 4. 당일 기발행 기사와의 소재/주제 중복 전수 검사 (코리티 중복 방어선)
     today_posts = history_checker.get_today_published_ai_articles("jcjung1401")
     topic_tokens = set(re.findall(r'[가-힣a-zA-Z0-9]{2,}', (topic + ' ' + repaired_title).lower()))
-    stopwords_dup = {"ai", "인공지능", "공개", "발표", "분석", "핵심", "이유", "전격", "주목", "테크"}
+    stopwords_dup = {
+        "ai", "인공지능", "공개", "발표", "분석", "핵심", "이유", "전격", "주목", "테크",
+        "공식", "출시", "서비스", "글로벌", "시장", "판도", "변화", "전략", "기술", "차세대",
+        "빅테크", "업계", "업계가", "주목하는", "도입", "총정리", "파장", "상세", "체크포인트",
+        "명암", "장점과", "한계", "사양", "영향은", "보는", "모델", "기반", "기능", "신규",
+        "공개로", "발표의", "기업", "솔루션", "플랫폼", "시스템", "혁신"
+    }
     for tp in today_posts:
         tp_t = tp.get("title", "")
         tp_tokens = set(re.findall(r'[가-힣a-zA-Z0-9]{2,}', tp_t.lower()))
         common = (topic_tokens & tp_tokens) - stopwords_dup
         if len(common) >= 2:
-            print(f"  🛑 [코리티 중복 기사 감지] 오늘 이미 발행된 글('{tp_t}')과 핵심 키워드({common})가 겹치므로 중복 발행을 즉시 차단합니다.")
+            print(f"  🛑 [코리티 중복 기사 감지] 오늘 이미 발행된 글('{tp_t}')과 고유 핵심 키워드({common})가 겹치므로 중복 발행을 즉시 차단합니다.")
             return False, repaired_title, repaired_summary, repaired_paragraphs
 
     re_formatted = formatter.format_mobile_text(full_body)

@@ -49,11 +49,17 @@ def run_ai_article_routine(article_index: int):
         print("  ❌ [코치] 수집된 최신 기사가 없습니다.")
         return False
 
-    fresh_articles = [
-        a for a in all_articles
-        if a["title"] not in _SESSION_PUBLISHED_TITLES
-        and not history_checker.is_article_already_published_live(a["title"], source_url=a.get("url"))
-    ]
+    fresh_articles = []
+    for a in all_articles:
+        if a["title"] in _SESSION_PUBLISHED_TITLES:
+            continue
+        try:
+            is_dup = history_checker.is_article_already_published_live(a["title"], source_url=a.get("url"))
+        except Exception as dup_err:
+            print(f"  ⚠️ [중복 검사 안전 폴백] 히스토리 조회 중 예외 무시: {dup_err}")
+            is_dup = False
+        if not is_dup:
+            fresh_articles.append(a)
     pool = fresh_articles if fresh_articles else [
         a for a in all_articles if a["title"] not in _SESSION_PUBLISHED_TITLES
     ]
@@ -327,7 +333,13 @@ def execute_daily_sequence():
         success_count = 0
         start_idx = already_count + 1
         for idx, i in enumerate(range(start_idx, 4)):
-            ok = run_ai_article_routine(i)
+            try:
+                ok = run_ai_article_routine(i)
+            except Exception as routine_err:
+                import traceback
+                print(f"  🚨 [비상 예외 방어] 기사 #{i} 실행 중 예외 발생: {routine_err}")
+                traceback.print_exc()
+                ok = False
             if ok:
                 success_count += 1
             if idx < needed - 1:

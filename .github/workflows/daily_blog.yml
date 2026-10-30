@@ -13,14 +13,19 @@ on:
 
 jobs:
   syntax-guard:
-    name: 0. 코드 및 원고 업데이트 문법 무결성 자동 검증
+    name: 0. 코드 문법·미정의심볼(NameError)·런타임 드라이런 3중 무결성 검증
     runs-on: ubuntu-latest
     steps:
       - name: 코드 체크아웃
         uses: actions/checkout@v4
-      - name: 파이썬 구문 에러 전수 검사 (Syntax Guard)
+      - name: 파이썬 환경 및 경량 패키지 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: 3중 사전 무결성 검증 엔진 (Syntax + AST NameError + Runtime Dry-Run)
         run: |
-          python3 -m py_compile daily_scheduler.py content_generator.py auto_publisher.py quality_inspector.py formatter.py collector.py history_checker.py notifier.py
+          pip install requests beautifulsoup4 pillow schedule python-dotenv
+          python3 ci_preflight_check.py
 
   run-daily-blog:
     needs: syntax-guard
