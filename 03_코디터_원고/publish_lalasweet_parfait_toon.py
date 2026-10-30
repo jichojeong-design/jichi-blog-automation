@@ -77,8 +77,6 @@ def publish_lalasweet_parfait_toon(save_draft: bool = True):
         "코자이너 5컷~8컷 이미지 프롬프트 (ChatGPT용)",
         prompt_cut5_8,
 
-        "------------------------ CU '라라스윗 저당 파르페 요거놀라' 팩트 체크 ------------------------",
-
         "제품명 : CU '라라스윗 저당 파르페 요거놀라'",
 
         "가격 : 3,500원 (195kcal / 당류 8g)",

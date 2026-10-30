@@ -623,10 +623,8 @@ def generate_webtoon_with_ai(
     if photos and len(photos) >= 2:
         content_paragraphs.append(f"__IMAGE__:{photos[1]}")
 
-    # 4. [친누나표 팩트 체크 & Tasty Tip! 황금 포맷]
-    fact_check_p = f"""------------------------ {clean_snack} 팩트 체크 ------------------------
-
-제품명 : {clean_snack}
+    # 4. [친누나표 팩트 체크 & Tasty Tip! 황금 포맷 - 상단 구분선 없이 바로 제품명부터 시작]
+    fact_check_p = f"""제품명 : {clean_snack}
 
 가격 : 매장 판매가 기준 (편의점/매장 확인)
 
