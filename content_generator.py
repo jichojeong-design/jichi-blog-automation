@@ -623,32 +623,12 @@ def generate_webtoon_with_ai(
     if photos and len(photos) >= 2:
         content_paragraphs.append(f"__IMAGE__:{photos[1]}")
 
-    # 4. [친누나표 팩트 체크 & Tasty Tip! 황금 포맷 - 상단 구분선 없이 바로 제품명부터 시작]
-    fact_check_p = f"""제품명 : {clean_snack}
-
-가격 : 매장 판매가 기준 (편의점/매장 확인)
-
-매장 : 전국 편의점 및 공식 오프라인 매장
-
-
-핵심 플레이버: {tag}
-
-
-특징 및 식감: 뻔한 단맛 아님!
-
-원물의 진한 풍미와 크림의 황금밸런스
-
-입안 가득 퍼지는 쫀득하고 바삭한 식감이 완전 좋아요
-
-
-Tasty Tip!
-
-얼죽아 사람들과 딱인 아아와 함께!
-
-난 커피가 싫다! 우유나 홍차러버이신 분들은
-
-고소한 흰 우유나 얼그레이와 좋아요"""
-    content_paragraphs.append(fact_check_p)
+    # 4. [친누나표 팩트 체크 & Tasty Tip! 황금 포맷 - 4대 독립 블록 구성 (구분선 없이 바로 제품명 시작)]
+    block_info = f"제품명 : {clean_snack}\n가격 : 매장 판매가 기준 (편의점/매장 확인)\n매장 : 전국 편의점 및 공식 오프라인 매장"
+    block_flavor = f"핵심 플레이버 : {tag}\n달콤하고 부드러운 크림과 풍미 가득한 베이스 조합"
+    block_feature = "특징 및 식감: 뻔한 단맛 아님!\n원물의 진한 풍미와 크림의 황금밸런스\n입안 가득 퍼지는 쫀득하고 부드러운 식감이 완전 좋아요"
+    block_tip = "Tasty Tip!\n얼죽아 사람들과 딱인 아아와 함께!\n난 커피가 싫다! 우유나 홍차러버이신 분들은\n고소한 흰 우유나 얼그레이와 좋아요"
+    content_paragraphs.extend([block_info, block_flavor, block_feature, block_tip])
 
     # 5. 엔딩 공감 및 소통 멘트
     cta_p = "오늘 전해드린 편의점 신상 리뷰가 유익하셨다면 **공감(좋아요)** 꾹 눌러주시고 이웃 추가 부탁드립니다! 지치와 송이가 매일 가장 핫한 편의점 신상과 최신 트렌드를 전달해 드리겠습니다."

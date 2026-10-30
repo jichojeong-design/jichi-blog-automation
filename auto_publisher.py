@@ -73,33 +73,72 @@ def _set_font_family_bareun_hipi(page):
     try:
         font_btn = page.locator(
             "button.se-font-family-toolbar-button, "
+            "button.se-font-code-toolbar-button, "
             "button.se-fontname-toolbar-button, "
             ".se-toolbar-item-font-family button, "
+            ".se-toolbar-item-font-code button, "
             "button[data-name='font-family'], "
+            "button[data-name='font-code'], "
+            "button[data-name='fontName'], "
             "button[aria-label*='글꼴'], "
-            "button[class*='font-family']"
+            "button[class*='font-family'], "
+            "button[class*='font-code'], "
+            "button:has-text('기본서체'), "
+            "button:has-text('나눔고딕'), "
+            "button:has-text('바른히피')"
         ).first
-        if font_btn.is_visible(timeout=1500):
+        if font_btn.is_visible(timeout=2000):
             font_btn.click()
-            time.sleep(0.3)
+            time.sleep(0.4)
             # 바른히피 옵션 탐색 및 클릭
             hipi_opt = page.locator(
                 "button:has-text('바른히피'), "
                 "li:has-text('바른히피'), "
                 "span:has-text('바른히피'), "
                 "[data-value*='hipi'], "
-                "[data-value*='bareun']"
+                "[data-value*='bareun'], "
+                "[data-name*='바른히피']"
             ).first
-            if hipi_opt.is_visible(timeout=1500):
+            if hipi_opt.is_visible(timeout=2000):
                 hipi_opt.click()
                 time.sleep(0.3)
                 print("  ✍️ [글꼴 설정] 스마트에디터 서체 '바른히피' 적용 완료!")
                 return True
             else:
-                # 팝업 닫기 위해 다시 클릭
+                print("  ⚠️ [글꼴 설정] '바른히피' 목록 미표시, 툴바 닫기")
                 font_btn.click()
+                time.sleep(0.2)
     except Exception as e:
         print(f"  ⚠️ '바른히피' 글꼴 설정 시도 중 예외 (기본 서체 유지): {e}")
+    return False
+
+
+def _apply_bareun_hipi_to_all_content(page):
+    """
+    [대표님 특명] 본문 전체(모든 문단 및 텍스트 블록)를 선택(Control+A)하여
+    스마트에디터 ONE 서체를 '바른히피'로 일괄 강제 적용합니다.
+    (새 문단 생성이나 이미지 삽입 시 기본 서체(나눔고딕)로 리셋되는 현상 완벽 방지)
+    """
+    try:
+        print("✍️ [글꼴 일괄 적용] 본문 전체 선택(Control+A) 후 '바른히피' 서체 강제 동기화 시작...")
+        text_areas = page.locator(".se-component.se-text .se-module-text, .se-text-paragraph, [contenteditable='true']")
+        if text_areas.count() > 0:
+            text_areas.first.click()
+            time.sleep(0.3)
+            # 본문 전체 선택
+            page.keyboard.press("Control+a")
+            time.sleep(0.4)
+            # 글꼴을 바른히피로 변경
+            success = _set_font_family_bareun_hipi(page)
+            time.sleep(0.4)
+            # 선택 상태 해제
+            page.keyboard.press("ArrowDown")
+            time.sleep(0.2)
+            if success:
+                print("  ✅ [글꼴 일괄 적용] 본문 전체 '바른히피' 서체 완벽 적용 완료!")
+                return True
+    except Exception as e:
+        print(f"  ⚠️ 본문 전체 바른히피 적용 중 예외: {e}")
     return False
 
 
@@ -528,9 +567,15 @@ def post_to_naver_blog(
                             time.sleep(0.03)
                     
                     # 일반 문단 끝난 후 기본 문단 간격 (URL 문단은 이미 OG 카드 아래로 분리 완료)
+                    # [대표님 특명 / 친누나 황금 양식]: 각 독립 문단 블록 사이 확실한 빈 줄 여백 확보 (Enter 2회)
                     if not has_url_in_para:
                         page.keyboard.press("Enter")
+                        time.sleep(0.05)
+                        page.keyboard.press("Enter")
                         time.sleep(0.1)
+
+            # [대표님 특명] 본문 전체(모든 문단 및 텍스트 블록)를 '바른히피' 서체로 일괄 강제 적용!
+            _apply_bareun_hipi_to_all_content(page)
 
             # 본문 하단 해시태그 텍스트 추가 (네이버 본문 검색 인덱싱 보장)
             if tags:
