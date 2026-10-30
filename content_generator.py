@@ -602,63 +602,57 @@ def generate_webtoon_with_ai(
             "#지치웹툰"
         ]
 
-    # 본문 문단 구성: 2026-10-24 사장님 최종 공인 레이아웃 100% 일치
+    # 본문 문단 구성: 2026-10-30 사장님 & 친누나 600+ 조회수 황금 레이아웃 100% 적용
+    # [절대 원칙 1] 4컷 웹툰 이후 나오는 긴 텍스트 대화(1컷~8컷 대본) 전면 삭제! (방문객에게 빠르게 신상 핵심 전달)
+    # [절대 원칙 2] 코자이너 웹툰 말풍선은 5글자 이내 초심플 한글 키워드만 삽입!
+    # [절대 원칙 3] 친누나표 '팩트 체크 & Tasty Tip!' 황금 양식 적용!
     content_paragraphs = []
 
     # 1. 친근한 오프닝 인사 및 신상 화제성 소개
     intro_p = f"""안녕하세요, 지치 블로그를 찾아주신 여러분!
 귀여운 새싹 요정 지치와 호기심 대장 고양이 송이입니다!
-최근 SNS와 편의점 디저트 코너에서 오픈런 없이는 못 산다며 품절 대란을 일으키고 있는 디저트가 있습니다.
-바로 {snack_name}를 지치와 송이가 직접 체험해 보았습니다!"""
+최근 SNS와 편의점 디저트 코너에서 품절 대란을 일으키고 있는 화제의 신상,
+**{snack_name}**를 지치와 송이가 발 빠르게 만나보았습니다!"""
     content_paragraphs.append(intro_p)
 
-    # 2. [사진 1] 코서치의 단면 반갈 실사 컷 (1컷 앞 배치)
+    # 2. [사진 1] 코서치의 실사 컷 1
     if photos and len(photos) >= 1:
         content_paragraphs.append(f"__IMAGE__:{photos[0]}")
 
-    # 3. [상반부 스토리 대본] 1컷 ~ 4컷
-    part1_cuts = synopsis_cuts[:4]
-    for c in part1_cuts:
-        c_num = c.get("cut_number", 1)
-        action = c.get("action") or c.get("scene", "")
-        dial = c.get("dialogue", "")
-        content_paragraphs.append(f"{c_num}컷 · {action}\n{dial}")
-
-    # 4. [사진 2] 코서치의 패키지 및 매대 실사 컷 (4컷과 5컷 사이 배치)
+    # 3. [사진 2] 코서치의 실사 컷 2 (긴 1컷~8컷 대화 대본 없이 바로 실사 및 팩트체크로 직행!)
     if photos and len(photos) >= 2:
         content_paragraphs.append(f"__IMAGE__:{photos[1]}")
 
-    # 5. [하반부 스토리 대본] 5컷 ~ 8컷
-    part2_cuts = synopsis_cuts[4:8]
-    for c in part2_cuts:
-        c_num = c.get("cut_number", 5)
-        action = c.get("action") or c.get("scene", "")
-        dial = c.get("dialogue", "")
-        content_paragraphs.append(f"{c_num}컷 · {action}\n{dial}")
+    # 4. [친누나표 팩트 체크 & Tasty Tip! 황금 포맷]
+    fact_check_p = f"""------------------------ {clean_snack} 팩트 체크 ------------------------
 
-    # 6. [지치와 송이의 솔직 총평 & 200% 맛있게 먹는 꿀팁]
-    tips_p = f"""[지치와 송이의 솔직 총평 & 200% 맛있게 먹는 꿀팁]
+제품명 : {clean_snack}
 
-살짝 얼려 먹는 크림 모찌 꿀팁:
-상온에서 완전히 녹여 드시기보다 냉동실에서 꺼낸 뒤 딱 5~10분 정도 자연 해동했을 때 드셔보세요.
-겉은 쫀득하고 속은 고급 피스타치오 젤라또처럼 사르르 녹아내려 만족감이 2배로 상승합니다.
+가격 : 매장 판매가 기준 (편의점/매장 확인)
 
-커피 페어링 추천:
-피스타치오의 묵직한 버터리함이 돋보이므로 산미가 있는 깔끔한 아이스 아메리카노나 진한 콜드브루와 곁들이면 최고급 디저트 카페 부럽지 않은 조화를 이룹니다.
+매장 : 전국 편의점 및 공식 오프라인 매장
 
-품절 대란 구매 팁:
-편의점 공식 앱의 '재고 찾기' 기능을 활용해 주변 매장 입고 시간을 미리 확인 후 방문하시면 헛걸음 없이 겟하실 수 있습니다!"""
-    content_paragraphs.append(tips_p)
 
-    # 7. 출처 표기 (블로그 실구매 후기 2건)
-    source_p = """출처
-달콤로그 · 편의점 신상 솔직 후기 · 2026.10.22
-https://blog.naver.com/sweet_review/224445891201
-미식가냥이 · 내돈내산 찹쌀떡 리뷰 · 2026.10.23
-https://blog.naver.com/foodie_cat/224446012489"""
-    content_paragraphs.append(source_p)
+핵심 플레이버: {tag}
 
-    # 8. 엔딩 공감 및 소통 멘트
+
+특징 및 식감: 뻔한 단맛 아님!
+
+원물의 진한 풍미와 크림의 황금밸런스
+
+입안 가득 퍼지는 쫀득하고 바삭한 식감이 완전 좋아요
+
+
+Tasty Tip!
+
+얼죽아 사람들과 딱인 아아와 함께!
+
+난 커피가 싫다! 우유나 홍차러버이신 분들은
+
+고소한 흰 우유나 얼그레이와 좋아요"""
+    content_paragraphs.append(fact_check_p)
+
+    # 5. 엔딩 공감 및 소통 멘트
     cta_p = "오늘 전해드린 편의점 신상 리뷰가 유익하셨다면 **공감(좋아요)** 꾹 눌러주시고 이웃 추가 부탁드립니다! 지치와 송이가 매일 가장 핫한 편의점 신상과 최신 트렌드를 전달해 드리겠습니다."
     content_paragraphs.append(cta_p)
 
