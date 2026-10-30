@@ -115,28 +115,41 @@ def _set_font_family_bareun_hipi(page):
 
 def _apply_bareun_hipi_to_all_content(page):
     """
-    [대표님 특명] 본문 전체(모든 문단 및 텍스트 블록)를 선택(Control+A)하여
-    스마트에디터 ONE 서체를 '바른히피'로 일괄 강제 적용합니다.
-    (새 문단 생성이나 이미지 삽입 시 기본 서체(나눔고딕)로 리셋되는 현상 완벽 방지)
+    [대표님 특명] 에디터 내의 모든 독립 텍스트 컴포넌트(상단 인트로, 중간 프롬프트/가이드, 하단 팩트체크 등)를
+    전수 순회하며 각 컴포넌트마다 Control+A 전체 선택 후 '바른히피' 서체를 100% 빈틈없이 강제 적용합니다.
+    (이미지로 분리된 다중 컴포넌트 환경에서 상단/하단 서체 불일치 현상 완벽 박멸)
     """
     try:
-        print("✍️ [글꼴 일괄 적용] 본문 전체 선택(Control+A) 후 '바른히피' 서체 강제 동기화 시작...")
-        text_areas = page.locator(".se-component.se-text .se-module-text, .se-text-paragraph, [contenteditable='true']")
-        if text_areas.count() > 0:
-            text_areas.first.click()
-            time.sleep(0.3)
-            # 본문 전체 선택
-            page.keyboard.press("Control+a")
-            time.sleep(0.4)
-            # 글꼴을 바른히피로 변경
-            success = _set_font_family_bareun_hipi(page)
-            time.sleep(0.4)
-            # 선택 상태 해제
-            page.keyboard.press("ArrowDown")
-            time.sleep(0.2)
-            if success:
-                print("  ✅ [글꼴 일괄 적용] 본문 전체 '바른히피' 서체 완벽 적용 완료!")
-                return True
+        # 스마트에디터 ONE 내의 모든 독립 텍스트 컴포넌트 전수 탐색
+        components = page.locator(".se-component.se-text")
+        comp_count = components.count()
+        print(f"✍️ [글꼴 전수 동기화] 에디터 내 총 {comp_count}개 텍스트 컴포넌트 '바른히피' 일괄 적용 시작...")
+        
+        applied_count = 0
+        for idx in range(comp_count):
+            try:
+                comp = components.nth(idx)
+                # 컴포넌트 내 텍스트 모듈/문단 탐색
+                target = comp.locator(".se-module-text, .se-text-paragraph, [contenteditable='true']").first
+                if target.is_visible(timeout=1500):
+                    target.click(force=True)
+                    time.sleep(0.2)
+                    # 해당 컴포넌트의 모든 줄 전체 선택
+                    page.keyboard.press("Control+a")
+                    time.sleep(0.3)
+                    # 툴바 호출하여 바른히피 적용
+                    success = _set_font_family_bareun_hipi(page)
+                    time.sleep(0.3)
+                    page.keyboard.press("ArrowRight")
+                    time.sleep(0.1)
+                    if success:
+                        applied_count += 1
+                        print(f"  ✅ [텍스트 블록 {idx+1}/{comp_count}] '바른히피' 서체 완벽 적용 완료")
+            except Exception as item_err:
+                print(f"  ⚠️ 블록 {idx+1} 서체 적용 중 건너뜀: {item_err}")
+                
+        print(f"🎉 [글꼴 전수 동기화 완료] 총 {comp_count}개 중 {applied_count}개 텍스트 블록 '바른히피' 변환 완료!")
+        return applied_count > 0
     except Exception as e:
         print(f"  ⚠️ 본문 전체 바른히피 적용 중 예외: {e}")
     return False
