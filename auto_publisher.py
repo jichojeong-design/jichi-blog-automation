@@ -65,6 +65,44 @@ def _upload_single_image(page, img_path: str) -> bool:
     return uploaded
 
 
+def _set_font_family_bareun_hipi(page):
+    """
+    [대표님 특명] 네이버 스마트에디터 ONE의 글꼴(서체)을 '바른히피'로 자동 지정합니다.
+    - 툴바 글꼴 선택 버튼 클릭 -> 드롭다운 목록에서 '바른히피' 선택
+    """
+    try:
+        font_btn = page.locator(
+            "button.se-font-family-toolbar-button, "
+            "button.se-fontname-toolbar-button, "
+            ".se-toolbar-item-font-family button, "
+            "button[data-name='font-family'], "
+            "button[aria-label*='글꼴'], "
+            "button[class*='font-family']"
+        ).first
+        if font_btn.is_visible(timeout=1500):
+            font_btn.click()
+            time.sleep(0.3)
+            # 바른히피 옵션 탐색 및 클릭
+            hipi_opt = page.locator(
+                "button:has-text('바른히피'), "
+                "li:has-text('바른히피'), "
+                "span:has-text('바른히피'), "
+                "[data-value*='hipi'], "
+                "[data-value*='bareun']"
+            ).first
+            if hipi_opt.is_visible(timeout=1500):
+                hipi_opt.click()
+                time.sleep(0.3)
+                print("  ✍️ [글꼴 설정] 스마트에디터 서체 '바른히피' 적용 완료!")
+                return True
+            else:
+                # 팝업 닫기 위해 다시 클릭
+                font_btn.click()
+    except Exception as e:
+        print(f"  ⚠️ '바른히피' 글꼴 설정 시도 중 예외 (기본 서체 유지): {e}")
+    return False
+
+
 def _set_font_size_subheading(page):
     """
     스마트에디터 ONE의 글자 크기 툴바를 제어하여 소제목 전용 16px로 변경합니다.
@@ -410,8 +448,9 @@ def post_to_naver_blog(
                 for img_path in target_images:
                     _upload_single_image(page, img_path)
 
-            # 본문 타이핑 시작 전 가운데 정렬 활성화
+            # 본문 타이핑 시작 전 가운데 정렬 및 '바른히피' 글꼴 활성화 (대표님 특명)
             _enable_center_alignment(page)
+            _set_font_family_bareun_hipi(page)
 
             # 3. 문단별 정밀 타이핑 (소제목 앞뒤 확실한 여백 분리, 인라인 웹툰 이미지 업로드)
             for p_idx, para in enumerate(content_paragraphs):

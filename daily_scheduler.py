@@ -35,11 +35,12 @@ def run_ai_article_routine(article_index: int):
     """
     print(f"\n[{datetime.datetime.now()}] 🏢 [지치 컴퍼니] AI 정규 기사 #{article_index} 협업 파이프라인 가동!")
 
-    # 오늘 이미 3편 이상 발행되었는지 실시간 라이브 체크 (--force 옵션이 없을 때만 방어)
+    # 오늘 이미 2편 이상 발행되었는지 실시간 라이브 체크 (--force 옵션이 없을 때만 방어, 대표님 지침 3편->2편 축소)
+    max_daily_articles = 2
     if "--force" not in sys.argv:
         today_live = history_checker.get_today_published_ai_articles("jcjung1401")
-        if len(today_live) >= 3:
-            print(f"  ✅ [중복 발행 방어선] 오늘(KST) 이미 AI 정규 기사 {len(today_live)}편이 발행되어 있습니다. 추가 발행을 건너뜁니다.")
+        if len(today_live) >= max_daily_articles:
+            print(f"  ✅ [정원 발행 완료] 오늘(KST) 이미 AI 정규 기사 {len(today_live)}/{max_daily_articles}편이 발행되어 있습니다. 추가 발행을 건너뜁니다.")
             return True
 
     # 1. 🔎 [코치] 실시간 트렌드 및 빅테크 킬러 소재 탐색 (기발행 기사 100% 필터링)
@@ -318,21 +319,22 @@ def execute_daily_sequence():
 
     if event_name in ["schedule", "workflow_dispatch", "push"] or "--full-daily" in sys.argv:
         print("=" * 60)
-        print("🚀 [지치 컴퍼니 정규 스케줄러: AI 기사 3편 연속 발행 가동]")
+        print("🚀 [지치 컴퍼니 정규 스케줄러: AI 고품질 기사 2편 발행 가동 (품질 극대화 편제)]")
         print("=" * 60)
 
+        max_target = 2
         today_live = history_checker.get_today_published_ai_articles("jcjung1401")
         already_count = len(today_live) if "--force" not in sys.argv else 0
-        if already_count >= 3:
-            print(f"✅ 오늘(KST) 이미 AI 정규 기사 {already_count}편이 정상 발행되어 있습니다. (중복 발행 방어 완료)")
+        if already_count >= max_target:
+            print(f"✅ 오늘(KST) 이미 AI 정규 기사 {already_count}/{max_target}편이 정상 발행되어 있습니다. (중복 발행 방어 완료)")
             return
 
-        needed = 3 - already_count
-        print(f"📊 오늘 발행 현황: {already_count}/3편 완료 -> 남은 {needed}편 연속 발행 시작 (10분 안전 간격)")
+        needed = max_target - already_count
+        print(f"📊 오늘 발행 현황: {already_count}/{max_target}편 완료 -> 남은 {needed}편 연속 발행 시작 (10분 안전 간격)")
 
         success_count = 0
         start_idx = already_count + 1
-        for idx, i in enumerate(range(start_idx, 4)):
+        for idx, i in enumerate(range(start_idx, max_target + 1)):
             try:
                 ok = run_ai_article_routine(i)
             except Exception as routine_err:
@@ -378,8 +380,7 @@ def start_daily_scheduler():
     except Exception:
         pass
     schedule.every().day.at("09:00").do(run_ai_article_routine, article_index=1)
-    schedule.every().day.at("09:10").do(run_ai_article_routine, article_index=2)
-    schedule.every().day.at("09:20").do(run_ai_article_routine, article_index=3)
+    schedule.every().day.at("09:15").do(run_ai_article_routine, article_index=2)
 
     while True:
         schedule.run_pending()
