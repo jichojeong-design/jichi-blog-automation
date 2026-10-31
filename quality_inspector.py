@@ -33,6 +33,31 @@ STALE_TITLE_PATTERNS = [
 STALE_SUMMARY_PHRASE = "기술 격차와 시장 파장 분석"
 
 
+def validate_webtoon_tasty_tip_pairing(title: str, text: str) -> tuple:
+    """
+    [대표님 2026-10-31 특별 업무 매뉴얼 제1호]
+    코리티 Tasty Tip 식품 페어링 및 계절감 상식 무결점 검사 엔진
+    1. 아이스크림/빙과류에 '따뜻한 커피/차' 페어링 금지
+    2. 베이커리류(빵)의 계절감(가을/겨울: 따뜻한 아메리카노/우유, 봄/여름: 아이스 아메리카노/시원한 우유) 준수 여부
+    """
+    clean_t = title.lower()
+    clean_body = text.lower()
+
+    tt_match = re.search(r'tasty\s*tip!([\s\S]*?)(?=(?:https?://|\Z))', clean_body)
+    if not tt_match:
+        return True, ""
+
+    tt_content = tt_match.group(1).strip()
+
+    is_ice_product = any(k in clean_t or k in clean_body[:200] for k in ["아이스", "빙과", "젤리바", "하드", "아이스크림", "샤베트"])
+    if is_ice_product:
+        has_hot_drink = any(h in tt_content for h in ["따뜻한 커피", "따뜻한 아메리카노", "따뜻한 차", "뜨거운"])
+        if has_hot_drink:
+            return False, "❌ [코리티 매뉴얼 위반] 아이스/빙과류에 따뜻한 커피/차 페어링 감지! (사이다/탄산수 에이드 또는 상온 젤리 변신으로 즉시 수정 필요)"
+
+    return True, "✅ [코리티 Tasty Tip 검증 통과] 식품 및 계절감 상식 부합"
+
+
 def validate_and_repair_article_pre_publish(
     title: str,
     summary_lines: list,
@@ -396,6 +421,12 @@ def inspect_latest_post_quality(expected_category: str = "AI 정보", is_article
         report["fonts"] = list(font_classes)
         if font_classes and "se-ff-nanumbareunhipi" not in font_classes:
             report["issues"].append(f"⚠️ 대표님 특명 서체 '바른히피' 미적용 (현재 적용 서체: {list(font_classes)})")
+
+        # 11. [대표님 2026-10-31 업무 매뉴얼] 코리티 Tasty Tip 페어링 & 계절감 상식 검사
+        if not is_article:
+            tt_valid, tt_msg = validate_webtoon_tasty_tip_pairing(report["title"], body_text)
+            if not tt_valid:
+                report["issues"].append(tt_msg)
 
     except Exception as e:
         print(f"⚠️ 품질 검사 웹 크롤링 중 오류: {e}")
