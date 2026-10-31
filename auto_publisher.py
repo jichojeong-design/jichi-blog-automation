@@ -68,73 +68,69 @@ def _upload_single_image(page, img_path: str) -> bool:
 def _set_font_family_bareun_hipi(page):
     """
     [대표님 특명] 네이버 스마트에디터 ONE의 글꼴(서체)을 '바른히피'로 자동 지정합니다.
-    - 툴바 글꼴 선택 버튼 클릭 -> 드롭다운 목록에서 '바른히피' 선택
+    - 툴바 글꼴 선택 버튼 클릭 -> 드롭다운 목록에서 '바른히피' 버튼(data-value='nanumbareunhipi') 정밀 클릭
+    - 주의: li:has-text 셀렉터 사용 금지 (상위 툴바 컨테이너 li가 매칭되어 클릭 실패 원인)
     """
     try:
         font_btn = page.locator(
             "button.se-font-family-toolbar-button, "
+            "button[data-name='font-family'], "
+            ".se-toolbar-item-font-family button, "
             "button.se-font-code-toolbar-button, "
             "button.se-fontname-toolbar-button, "
-            ".se-toolbar-item-font-family button, "
-            ".se-toolbar-item-font-code button, "
-            "button[data-name='font-family'], "
-            "button[data-name='font-code'], "
-            "button[data-name='fontName'], "
-            "button[aria-label*='글꼴'], "
-            "button[class*='font-family'], "
-            "button[class*='font-code'], "
-            "button:has-text('기본서체'), "
-            "button:has-text('나눔고딕'), "
-            "button:has-text('바른히피')"
+            "button[aria-label*='글꼴']"
         ).first
         if font_btn.is_visible(timeout=2000):
             font_btn.click()
             time.sleep(0.4)
-            # 바른히피 옵션 탐색 및 클릭
+            # 바른히피 고유 버튼 셀렉터 (data-value 및 클래스 기반으로 한글 인코딩 무관 100% 동작)
             hipi_opt = page.locator(
-                "button:has-text('바른히피'), "
-                "li:has-text('바른히피'), "
-                "span:has-text('바른히피'), "
-                "[data-value*='hipi'], "
-                "[data-value*='bareun'], "
-                "[data-name*='바른히피']"
+                "button.se-toolbar-option-font-family-nanumbareunhipi-button, "
+                "button[data-value='nanumbareunhipi'], "
+                ".se-toolbar-option-font-family-nanumbareunhipi-button"
             ).first
             if hipi_opt.is_visible(timeout=2000):
                 hipi_opt.click()
                 time.sleep(0.3)
-                print("  ✍️ [글꼴 설정] 스마트에디터 서체 '바른히피' 적용 완료!")
+                print("  [글꼴 설정] 스마트에디터 서체 '바른히피(nanumbareunhipi)' 적용 완료!")
                 return True
             else:
-                print("  ⚠️ [글꼴 설정] '바른히피' 목록 미표시, 툴바 닫기")
+                # 텍스트 폴백 (클래스가 다를 경우 대비)
+                hipi_text_opt = page.locator("button.se-toolbar-option-text-button:has-text('바른히피')").first
+                if hipi_text_opt.is_visible(timeout=1500):
+                    hipi_text_opt.click()
+                    time.sleep(0.3)
+                    print("  [글꼴 설정] 스마트에디터 서체 '바른히피' (텍스트 매칭) 적용 완료!")
+                    return True
+                print("  [글꼴 설정] '바른히피' 목록 미표시, 툴바 닫기")
                 font_btn.click()
                 time.sleep(0.2)
     except Exception as e:
-        print(f"  ⚠️ '바른히피' 글꼴 설정 시도 중 예외 (기본 서체 유지): {e}")
+        print(f"  [글꼴 설정 경고] 바른히피 글꼴 설정 시도 중 예외: {e}")
     return False
 
 
 def _apply_bareun_hipi_to_all_content(page):
     """
-    [대표님 특명] 에디터 내의 모든 독립 텍스트 컴포넌트(상단 인트로, 중간 프롬프트/가이드, 하단 팩트체크 등)를
+    [대표님 특명] 에디터 내의 모든 독립 텍스트 컴포넌트(상단 인트로, 중간 소제목/본문, 하단 팩트체크 등)를
     전수 순회하며 각 컴포넌트마다 Control+A 전체 선택 후 '바른히피' 서체를 100% 빈틈없이 강제 적용합니다.
-    (이미지로 분리된 다중 컴포넌트 환경에서 상단/하단 서체 불일치 현상 완벽 박멸)
+    - 소제목(16px 볼드) 및 본문(15px)의 고유 크기/스타일은 그대로 보존하면서 글꼴만 바른히피로 통일됩니다.
     """
     try:
-        # 스마트에디터 ONE 내의 모든 독립 텍스트 컴포넌트 전수 탐색
         components = page.locator(".se-component.se-text")
         comp_count = components.count()
-        print(f"✍️ [글꼴 전수 동기화] 에디터 내 총 {comp_count}개 텍스트 컴포넌트 '바른히피' 일괄 적용 시작...")
+        print(f"[글꼴 전수 동기화] 에디터 내 총 {comp_count}개 텍스트 컴포넌트 '바른히피' 일괄 적용 시작...")
         
         applied_count = 0
         for idx in range(comp_count):
             try:
                 comp = components.nth(idx)
-                # 컴포넌트 내 텍스트 모듈/문단 탐색
-                target = comp.locator(".se-module-text, .se-text-paragraph, [contenteditable='true']").first
-                if target.is_visible(timeout=1500):
-                    target.click(force=True)
+                # contenteditable 내부로 포커스 진입
+                editable = comp.locator("[contenteditable='true'], .se-module-text").first
+                if editable.is_visible(timeout=1500):
+                    editable.click()
                     time.sleep(0.2)
-                    # 해당 컴포넌트의 모든 줄 전체 선택
+                    # 해당 컴포넌트 내부 텍스트 전체 선택
                     page.keyboard.press("Control+a")
                     time.sleep(0.3)
                     # 툴바 호출하여 바른히피 적용
@@ -144,14 +140,14 @@ def _apply_bareun_hipi_to_all_content(page):
                     time.sleep(0.1)
                     if success:
                         applied_count += 1
-                        print(f"  ✅ [텍스트 블록 {idx+1}/{comp_count}] '바른히피' 서체 완벽 적용 완료")
+                        print(f"  [텍스트 블록 {idx+1}/{comp_count}] '바른히피' 서체 완벽 적용 완료")
             except Exception as item_err:
-                print(f"  ⚠️ 블록 {idx+1} 서체 적용 중 건너뜀: {item_err}")
+                print(f"  블록 {idx+1} 서체 적용 중 건너뜀: {item_err}")
                 
-        print(f"🎉 [글꼴 전수 동기화 완료] 총 {comp_count}개 중 {applied_count}개 텍스트 블록 '바른히피' 변환 완료!")
+        print(f"[글꼴 전수 동기화 완료] 총 {comp_count}개 중 {applied_count}개 텍스트 블록 '바른히피' 변환 완료!")
         return applied_count > 0
     except Exception as e:
-        print(f"  ⚠️ 본문 전체 바른히피 적용 중 예외: {e}")
+        print(f"  본문 전체 바른히피 적용 중 예외: {e}")
     return False
 
 

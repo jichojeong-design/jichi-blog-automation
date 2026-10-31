@@ -40,8 +40,9 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 3. 필수 패키지 설치
+      - name: 3. 필수 패키지 및 한국어 글꼴 설치
         run: |
+          sudo apt-get update && sudo apt-get install -y fonts-nanum fonts-noto-cjk
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4 pillow playwright schedule python-dotenv
           python -m playwright install --with-deps chromium

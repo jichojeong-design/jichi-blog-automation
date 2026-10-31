@@ -387,6 +387,16 @@ def inspect_latest_post_quality(expected_category: str = "AI 정보", is_article
         if "**" in body_text:
             report["issues"].append("❌ 본문 내 변환되지 않은 마크다운 별표(**) 노출 결함 감지")
 
+        # 10. [대표님 특명] 서체 '바른히피' 적용 여부 정밀 검사
+        font_classes = set()
+        for span in latest_viewer.select(".se-main-container span"):
+            for cls in span.get("class", []):
+                if "se-ff-" in cls:
+                    font_classes.add(cls)
+        report["fonts"] = list(font_classes)
+        if font_classes and "se-ff-nanumbareunhipi" not in font_classes:
+            report["issues"].append(f"⚠️ 대표님 특명 서체 '바른히피' 미적용 (현재 적용 서체: {list(font_classes)})")
+
     except Exception as e:
         print(f"⚠️ 품질 검사 웹 크롤링 중 오류: {e}")
 
