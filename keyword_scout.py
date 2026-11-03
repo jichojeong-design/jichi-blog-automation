@@ -343,6 +343,67 @@ def scout_golden_keywords(topic: str, brand: str = "", key_person: str = "") -> 
     }
 
 
+def calculate_mega_hit_score(item_name: str, brand: str, snippet: str = "", trend_direction: str = "FLAT", recent_3d_avg: float = 0.0) -> dict:
+    """
+    [지치컴패니 공식 영구 업무 매뉴얼 제7호]
+    플래시 로우(Flash Low) 탑재용 '밤 티라미수급 대박 시그널' 5대 가산점 정량 채점 엔진
+    - 비정형 텍스트와 실시간 지표를 규칙 기반 점수로 자동 변환하여 메가 히트 아이템을 선별합니다.
+    """
+    score = 0
+    breakdown = []
+
+    # 1. [방송/셀럽/유튜브 직결 레시피 및 인물 (+35점)]
+    celebrity_signals = [
+        "흑백요리사", "나폴리맛피아", "권성준", "안성재", "최현석", "에드워드리", "정지선", "급식대가",
+        "편스토랑", "성시경", "쯔양", "백종원", "김혜자", "이장우", "히밥"
+    ]
+    matched_celebs = [c for c in celebrity_signals if c in item_name or c in snippet]
+    if matched_celebs:
+        score += 35
+        breakdown.append(f"방송/셀럽직결(+35: {', '.join(matched_celebs)})")
+
+    # 2. [사전예약/완판/품절/재고조회 결핍 시그널 (+30점)]
+    scarcity_signals = [
+        "사전예약", "완판", "품절", "대란", "오픈런", "재고조회", "포켓CU예약", "우리동네GS예약", "한정수량", "한정판"
+    ]
+    matched_scarcity = [s for s in scarcity_signals if s in item_name or s in snippet]
+    if matched_scarcity:
+        score += 30
+        breakdown.append(f"품절/예약결핍(+30: {', '.join(matched_scarcity)})")
+
+    # 3. [줄 서는 전국구 맛집 RMR / 전설 단종 재출시 (+15점)]
+    gourmet_signals = [
+        "교동짬뽕", "한정선", "태극당", "성심당", "런던베이글", "몽탄", "토라쿠", "삼립호빵", "13년", "역대최다"
+    ]
+    matched_gourmet = [g for g in gourmet_signals if g in item_name or g in snippet]
+    if matched_gourmet:
+        score += 15
+        breakdown.append(f"유명맛집/헤리티지(+15: {', '.join(matched_gourmet)})")
+
+    # 4. [네이버 데이터랩 급상승(UP) 보너스 (+15점)]
+    if trend_direction == "UP" or recent_3d_avg >= 20.0:
+        score += 15
+        breakdown.append(f"데이터랩상승세(+15: {trend_direction}, 3일평균 {recent_3d_avg})")
+
+    # 5. [바이럴 이색 디저트/SNS 화제템 (+10점)]
+    viral_signals = ["두바이", "쫀득빵", "푸딩", "모찌", "생초코", "크림빵", "크림브륄레"]
+    matched_viral = [v for v in viral_signals if v in item_name or v in snippet]
+    if matched_viral:
+        score += 10
+        breakdown.append(f"SNS바이럴디저트(+10: {', '.join(matched_viral)})")
+
+    # 판정 등급 부여
+    grade = "S급(메가히트 확정 - 최우선 발행)" if score >= 60 else ("A급(안정적 트래픽)" if score >= 35 else "B급(일반)")
+
+    return {
+        "item": item_name,
+        "brand": brand,
+        "total_score": score,
+        "grade": grade,
+        "breakdown": breakdown
+    }
+
+
 def _build_recommended_tags(topic: str, brand: str, person: str, discovered: list) -> list:
     tags = []
     if person:
