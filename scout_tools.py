@@ -131,33 +131,49 @@ def scout_product_3cuts(keyword, output_dir="02_코서치_자료"):
 
 def scout_8cuts_reference_images(product_name: str, brand: str, pairing_item: str = "", output_dir: str = "02_코서치_자료") -> dict:
     """
-    [지치컴패니 공식 영구 업무 매뉴얼 제4호]
+    [지치컴패니 공식 영구 업무 매뉴얼 제4호 개정]
     코서치 1~8컷 영문 프롬프트 맞춤형 실사 참조 이미지 매칭 및 자동 수집 엔진
-    - 대표님께서 ChatGPT 3D 웹툰 이미지를 생성하실 때 각 패널(Panel ①~⑧)의 내용과 100% 매칭되는
-      실제 참조 사진을 함께 제공하여 AI 생성 이미지의 싱크로율과 디테일을 극대화합니다.
+    - [대표님 특별 엄명 2026-11-03]
+      1. 동일 사진 중복 수집(기계적 긁어오기) 절대 엄금 (SHA256 해시 검사 탑재)
+      2. 크로스오버 웹툰의 경우 7대 핵심 요소(브랜드A 포스터, 외관, 매대 / 브랜드B 패키지, 매대, 조리 / 브랜드A 오픈 실물) 분할 수집!
     """
+    import hashlib
+    import urllib.request
+
     os.makedirs(output_dir, exist_ok=True)
     base_dir = os.path.dirname(os.path.abspath(__file__))
     target_dir = os.path.join(base_dir, output_dir)
 
     print("\n" + "=" * 70)
-    print(f"📸 [코서치 매뉴얼 제4호 가동] '{product_name}' 1~8컷 영문 프롬프트 맞춤형 실사 수집!")
+    print(f"📸 [코서치 매뉴얼 제4호 가동] '{product_name}' 맞춤형 실사 수집!")
     print("=" * 70)
 
-    # 1~8컷 영문 프롬프트 구조와 1:1 매칭되는 실사 검색 태스크
-    cut_tasks = [
-        {"cut": 1, "key": "cut_1_news", "query": f"{product_name} 출시 포스터 기사", "desc": "1컷: 스마트폰 뉴스 / 출시 포스터"},
-        {"cut": 2, "key": "cut_2_store", "query": f"{brand} 편의점 매장 외관 간판", "desc": "2컷: 편의점 매장 외관 출동"},
-        {"cut": 3, "key": "cut_3_shelf", "query": f"{brand} {product_name} 매대 진열", "desc": "3컷: 편의점 매대 진열 발견"},
-        {"cut": 4, "key": "cut_4_package", "query": f"{product_name} 패키지 포장 정면", "desc": "4컷: 제품 정면 패키지 실물"},
-        {"cut": 5, "key": "cut_5_open", "query": f"{product_name} 개봉 실물 내용물", "desc": "5컷: 개봉/조리 김모락/얼음잔 실사"},
-        {"cut": 6, "key": "cut_6_detail", "query": f"{product_name} 단면 근접 속 실사", "desc": "6컷: 디테일 단면/식감 클로즈업"},
-        {"cut": 7, "key": "cut_7_pairing", "query": f"{product_name} {pairing_item} 꿀조합" if pairing_item else f"{product_name} 꿀조합 안주", "desc": "7컷: 페어링/먹조합 실사"},
-        {"cut": 8, "key": "cut_8_finish", "query": f"{product_name} 완식 빈그릇 후기", "desc": "8컷: 완식 엔딩 / 깔끔한 마무리"}
-    ]
+    # 크로스오버 상황(pairing_item 존재)일 경우 대표님 황금 7대 요소 팩 발동
+    if pairing_item:
+        print(f"  🤝 [크로스오버 모드 감지]: {brand} {product_name} X {pairing_item}")
+        cut_tasks = [
+            {"cut": 1, "key": "upload_1_poster", "query": f"{product_name} 공식 포스터 카드뉴스", "desc": "1번: 제품A 공식 포스터/카드뉴스"},
+            {"cut": 2, "key": "upload_2_shelf_a", "query": f"{brand} {product_name} 도시락 매대 진열", "desc": "2번: 브랜드A 매대 진열 실사"},
+            {"cut": 3, "key": "upload_3_store_a", "query": f"{brand} 편의점 정면 외관 매장", "desc": "3번: 브랜드A 매장 외관 실사"},
+            {"cut": 4, "key": "upload_4_pkg_b", "query": f"{pairing_item} 컵라면 패키지 정면", "desc": "4번: 제품B 패키지 단독 정면"},
+            {"cut": 5, "key": "upload_5_shelf_b", "query": f"세븐일레븐 라면 매대 진열 PB라면", "desc": "5번: 브랜드B 라면 매대 진열 실사"},
+            {"cut": 6, "key": "upload_6_cook_b", "query": f"{pairing_item} 조리 면발 젓가락 후기", "desc": "6번: 제품B 조리/면발 실사"},
+            {"cut": 7, "key": "upload_7_open_a", "query": f"{product_name} 뚜껑 개봉 반찬 흑미밥 실물", "desc": "7번: 제품A 오픈/내용물 전체 실사"}
+        ]
+    else:
+        cut_tasks = [
+            {"cut": 1, "key": "cut_1_news", "query": f"{product_name} 공식 포스터 기사", "desc": "1컷: 스마트폰 뉴스 / 출시 포스터"},
+            {"cut": 2, "key": "cut_2_store", "query": f"{brand} 편의점 매장 외관 간판", "desc": "2컷: 편의점 매장 외관 출동"},
+            {"cut": 3, "key": "cut_3_shelf", "query": f"{brand} {product_name} 매대 진열", "desc": "3컷: 편의점 매대 진열 발견"},
+            {"cut": 4, "key": "cut_4_package", "query": f"{product_name} 패키지 포장 정면", "desc": "4컷: 제품 정면 패키지 실물"},
+            {"cut": 5, "key": "cut_5_open", "query": f"{product_name} 개봉 실물 내용물", "desc": "5컷: 개봉/조리 김모락 실사"},
+            {"cut": 6, "key": "cut_6_detail", "query": f"{product_name} 단면 근접 속 실사", "desc": "6컷: 디테일 단면/식감 클로즈업"},
+            {"cut": 7, "key": "cut_7_pairing", "query": f"{product_name} 꿀조합 페어링", "desc": "7컷: 페어링/먹조합 실사"},
+            {"cut": 8, "key": "cut_8_finish", "query": f"{product_name} 완식 빈그릇 후기", "desc": "8컷: 완식 엔딩 / 깔끔한 마무리"}
+        ]
 
     captured_cuts = {}
-    import urllib.request
+    seen_hashes = set()
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -166,7 +182,7 @@ def scout_8cuts_reference_images(product_name: str, brand: str, pairing_item: st
             viewport={"width": 1600, "height": 1000}
         )
 
-        headers = {'User-Agent': 'Mozilla/5.0'}
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
 
         for t in cut_tasks:
             cut_num = t["cut"]
@@ -175,43 +191,67 @@ def scout_8cuts_reference_images(product_name: str, brand: str, pairing_item: st
             desc = t["desc"]
             out_file = os.path.join(target_dir, f"{cut_key}.jpg")
 
-            print(f"  🔍 [{cut_num}컷] {desc} (검색어: '{q}')")
+            print(f"  🔍 [{cut_num}번] {desc} (검색어: '{q}')")
             encoded_q = urllib.parse.quote(q)
             search_url = f"https://search.naver.com/search.naver?where=image&sm=tab_jum&query={encoded_q}"
             
+            success = False
             try:
                 page.goto(search_url, wait_until="networkidle", timeout=8000)
                 time.sleep(1)
                 imgs = page.locator("img._fe_image_tab_content_thumbnail_image, .thumb img")
-                if imgs.count() > 0:
-                    src = imgs.first.get_attribute("src")
-                    # 원본 URL 추출 시도
+                count = imgs.count()
+
+                # 상위 15개 썸네일을 훑으며 중복되지 않는 고유한 이미지 선별
+                for idx in range(min(count, 15)):
+                    src = imgs.nth(idx).get_attribute("src")
+                    if not src:
+                        continue
                     parsed = urllib.parse.urlparse(src)
                     qs = urllib.parse.parse_qs(parsed.query)
                     orig_url = qs['src'][0] if 'src' in qs else src
-                    
+
                     try:
                         req = urllib.request.Request(orig_url, headers=headers)
                         with urllib.request.urlopen(req, timeout=5) as resp:
-                            with open(out_file, 'wb') as f:
-                                f.write(resp.read())
+                            data = resp.read()
+                            # 15KB 이상 유효 이미지 & 중복 해시 회피 검증
+                            if len(data) >= 15000:
+                                h = hashlib.sha256(data).hexdigest()
+                                if h not in seen_hashes:
+                                    seen_hashes.add(h)
+                                    with open(out_file, 'wb') as f:
+                                        f.write(data)
+                                    captured_cuts[cut_num] = {
+                                        "key": cut_key,
+                                        "desc": desc,
+                                        "path": out_file,
+                                        "exists": True
+                                    }
+                                    print(f"    ✅ [{cut_num}번 고유 실사 매칭 완료]: {os.path.basename(out_file)} ({len(data)//1024} KB)")
+                                    success = True
+                                    break
                     except Exception:
-                        imgs.first.screenshot(path=out_file)
-                        
+                        pass
+
+                # 폴백: 스크린샷 크롭
+                if not success and count > 0:
+                    imgs.first.screenshot(path=out_file)
                     captured_cuts[cut_num] = {
                         "key": cut_key,
                         "desc": desc,
                         "path": out_file,
-                        "exists": os.path.exists(out_file)
+                        "exists": True
                     }
-                    print(f"    ✅ [{cut_num}컷 매칭 완료]: {os.path.basename(out_file)}")
+                    print(f"    ✂️ [{cut_num}번 스크린샷 폴백 완료]: {os.path.basename(out_file)}")
+
             except Exception as e:
-                print(f"    ⚠️ [{cut_num}컷 검색 오류]: {e}")
+                print(f"    ⚠️ [{cut_num}번 검색 오류]: {e}")
 
         browser.close()
 
     print("=" * 70)
-    print(f"🎉 [코서치 1~8컷 매칭 완료] 총 {len(captured_cuts)}개 컷별 실사 이미지 확보!")
+    print(f"🎉 [코서치 매칭 완료] 총 {len(captured_cuts)}개 고유 실사 이미지 팩 준비 완료!")
     print("=" * 70 + "\n")
     return captured_cuts
 

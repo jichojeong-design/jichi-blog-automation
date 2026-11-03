@@ -34,17 +34,17 @@ def publish_crossover_gyodong_hyeja13_toon(save_draft: bool = True):
     title = "[지치와 송이의 편의점 탐방 웹툰] 편의점 뷔페 끝판왕 탄생! GS25 '혜자로운 집밥 13찬' X 세븐일레븐 '교동짬뽕' 솔직 리뷰!"
 
     hyeja_dir = os.path.join(base_dir, "02_코서치_자료", "hyeja_13chan")
-    real_pkg_img = os.path.join(hyeja_dir, "cut_4_package.jpg")
-    real_open_img = os.path.join(hyeja_dir, "cut_5_open.jpg")
+    real_pkg_img = os.path.join(hyeja_dir, "upload_1_hyeja_poster.jpg")
+    real_open_img = os.path.join(hyeja_dir, "upload_7_hyeja_open.jpg")
 
-    # 1~4컷 ChatGPT용 4분할 프롬프트 (5글자 이내 말풍선 엄수 + 1:N 개별 사진 합성 매핑)
+    # 1~4컷 ChatGPT용 4분할 프롬프트 (대표님 7대 실사 팩 합성 매핑 100% 일치)
     prompt_cut1_4 = (
         "[CHATGPT 컷 1~4 복사 시작]\n"
         "fidelity to the attached images!\n\n"
-        "1번컷 참조 사진: GS25 공식 앱 및 SNS 속 혜자로운 집밥 나눌수록 찬란하게 (13찬 도시락) 출시 포스터 실사 / 업로드 1번 사진\n"
-        "2번컷 참조 사진: 파란색 간판 GS25 편의점 정면 외관 및 도시락 신선 매대 진열 실사 / 업로드 2번, 3번 사진 합성\n"
-        "3번컷 참조 사진: 세븐일레븐 라면 매대에 진열된 정통 강릉교동짬뽕 컵라면 실사 / 업로드 4번 사진\n"
-        "4번컷 참조 사진: 식탁 위에 큼직한 혜자 13찬 도시락과 강릉교동짬뽕 컵라면을 나란히 세팅한 실물 투샷 / 업로드 5번, 6번 사진 합성\n\n"
+        "1번컷 참조 사진: GS25 공식 혜자로운 집밥 출시 카드뉴스 포스터 실사 / 업로드 1번 사진\n"
+        "2번컷 참조 사진: 파란색 간판 GS25 외관 및 도시락 신선 매대 진열 실사 (업로드 2번, 3번 사진 합성)\n"
+        "3번컷 참조 사진: 세븐일레븐 라면 매대에 진열된 정통 강릉교동짬뽕 컵라면 실사 (업로드 4번, 5번 사진 합성)\n"
+        "4번컷 참조 사진: 식탁 위에 혜자 13찬 도시락과 교동짬뽕 컵라면을 나란히 세팅한 실물 투샷 (업로드 6번, 7번 사진 합성)\n\n"
         "PANEL LAYOUT (2x2 Grid with subtle circular badge numbers ①, ②, ③, ④ on top-left of each panel):\n"
         "- Panel ① (Top-Left): Inside a cozy evening room. Songi the calico cat eagerly waving a smartphone displaying news of GS25's ultimate 13-side-dish feast '혜자로운 집밥 13찬 도시락' alongside Seven Eleven's spicy legend '정통 강릉교동짬뽕'! Jichi the green sprout fairy gasps with sparkling hungry eyes. Short Korean speech bubbles (MAX 5 chars): Songi says '13찬대박!', Jichi says '역대급뷔페!'.\n"
         "- Panel ② (Top-Right): Running excitedly toward the bright blue GS25 convenience store! Inside the fresh bento section, Jichi and Songi spot the massive, hefty 13-dish bento box featuring Kim Hye-ja's warm smiling label. Short Korean speech bubbles (MAX 5 chars): Songi says 'GS25출동!', Jichi says '13찬득템!'.\n"
@@ -56,23 +56,23 @@ def publish_crossover_gyodong_hyeja13_toon(save_draft: bool = True):
         "[CHATGPT 컷 1~4 복사 끝]"
     )
 
-    # 코자이너 1~4컷 실사 이미지 배치 가이드
+    # 코자이너 1~4컷 실사 이미지 배치 가이드 (대표님 지정 7대 팩 매핑)
     guide_cut1_4 = (
         "[코자이너 1컷~4컷 실사 이미지 배치 & 첨부 가이드]\n"
-        "- 1번컷 참조 사진: GS25 공식 앱 및 SNS 속 혜자로운 집밥 13찬 출시 포스터 실사 (업로드 1번 사진)\n"
+        "- 1번컷 참조 사진: GS25 공식 혜자로운 집밥 출시 카드뉴스 포스터 실사 (업로드 1번 사진)\n"
         "- 2번컷 참조 사진: 파란색 간판 GS25 외관 및 도시락 신선 매대 진열 실사 (업로드 2번, 3번 사진 합성)\n"
-        "- 3번컷 참조 사진: 세븐일레븐 라면 매대에 진열된 정통 강릉교동짬뽕 컵라면 실사 (업로드 4번 사진)\n"
-        "- 4번컷 참조 사진: 식탁 위에 혜자 13찬 도시락과 교동짬뽕 컵라면을 나란히 세팅한 실물 투샷 (업로드 5번, 6번 사진 합성)"
+        "- 3번컷 참조 사진: 세븐일레븐 라면 매대에 진열된 정통 강릉교동짬뽕 컵라면 실사 (업로드 4번, 5번 사진 합성)\n"
+        "- 4번컷 참조 사진: 식탁 위에 혜자 13찬 도시락과 교동짬뽕 컵라면을 나란히 세팅한 실물 투샷 (업로드 6번, 7번 사진 합성)"
     )
 
-    # 5~8컷 ChatGPT용 4분할 프롬프트 (5글자 이내 말풍선 엄수 + 1:N 개별 사진 합성 매핑)
+    # 5~8컷 ChatGPT용 4분할 프롬프트 (대표님 7대 실사 팩 합성 매핑 100% 일치)
     prompt_cut5_8 = (
         "[CHATGPT 컷 5~8 복사 시작]\n"
         "fidelity to the attached images!\n\n"
-        "5번컷 참조 사진: 전자레인지에 데워 뚜껑을 연 13찬 도시락의 김 모락모락 나는 실사 및 뜨거운 물을 부은 교동짬뽕 실사 / 업로드 5번, 6번 사진 합성\n"
-        "6번컷 참조 사진: 뚝배기불고기의 촉촉한 육즙, 바삭한 등심돈까스 단면, 계란말이 초접사 실사 / 업로드 6번 사진\n"
-        "7번컷 참조 사진: 흑미밥 한 숟가락에 불고기를 얹어 진한 짬뽕 국물에 살짝 적시는 환상의 페어링 실사 / 업로드 5번, 6번 사진 합성\n"
-        "8번컷 참조 사진: 13칸 도시락과 짬뽕 그릇을 깨끗이 비운 만족스러운 완식 실사 / 업로드 1번, 5번 사진 참조\n\n"
+        "5번컷 참조 사진: 전자레인지에 데워 뚜껑을 연 13찬 도시락의 김 모락모락 나는 실사 및 뜨거운 물을 부은 교동짬뽕 실사 (업로드 6번, 7번 사진 합성)\n"
+        "6번컷 참조 사진: 뚝배기불고기의 촉촉한 육즙, 바삭한 등심돈까스 단면, 계란말이 초접사 실사 (업로드 7번 사진 디테일 클로즈업)\n"
+        "7번컷 참조 사진: 흑미밥 한 숟가락에 불고기를 얹어 진한 짬뽕 국물에 살짝 적시는 환상의 페어링 실사 (업로드 6번, 7번 사진 합성)\n"
+        "8번컷 참조 사진: 13칸 도시락과 짬뽕 그릇을 깨끗이 비운 만족스러운 완식 엔딩 실사\n\n"
         "PANEL LAYOUT (2x2 Grid with subtle circular badge numbers ⑤, ⑥, ⑦, ⑧ on top-left of each panel):\n"
         "- Panel ⑤ (Top-Left): Unveiling the feast! Opening the warm bento lid to reveal 13 densely packed side dishes (beef bulgogi, pork cutlet, tofu kimchi, rolled egg, sausages) steaming hot, while pouring steaming water into the spicy red 교동짬뽕 cup. Short Korean speech bubbles (MAX 5 chars): Songi says '김이모락!', Jichi says '반찬가득!'.\n"
         "- Panel ⑥ (Top-Right): Ultimate food close-up! Songi lifts a juicy slice of crispy pork cutlet, while Jichi marvels at the glossy tender bulgogi and plump rolled egg. Extremely appetizing texture. Short Korean speech bubbles (MAX 5 chars): Songi says '돈까스바삭!', Jichi says '불고기꿀맛!'.\n"
@@ -84,13 +84,13 @@ def publish_crossover_gyodong_hyeja13_toon(save_draft: bool = True):
         "[CHATGPT 컷 5~8 복사 끝]"
     )
 
-    # 코자이너 5~8컷 실사 이미지 배치 가이드
+    # 코자이너 5~8컷 실사 이미지 배치 가이드 (대표님 지정 7대 팩 매핑)
     guide_cut5_8 = (
         "[코자이너 5컷~8컷 실사 이미지 배치 & 첨부 가이드]\n"
-        "- 5번컷 참조 사진: 전자레인지 조리 후 김이 모락모락 피어오르는 13찬 도시락 개봉 실사 (업로드 5번, 6번 사진 합성)\n"
-        "- 6번컷 참조 사진: 뚝배기불고기, 등심돈까스 단면, 계란말이, 두부김치 초접사 실사 (업로드 6번 사진)\n"
-        "- 7번컷 참조 사진: 흑미밥+불고기 한 숟갈과 교동짬뽕 얼큰 면발의 꿀조합 페어링 실사 (업로드 5번, 6번 사진 합성)\n"
-        "- 8번컷 참조 사진: 13칸 반찬 칸과 짬뽕 국물까지 싹 비운 완식 엔딩 실사 (업로드 1번, 5번 사진 참조)"
+        "- 5번컷 참조 사진: 전자레인지 조리 후 김이 모락모락 피어오르는 13찬 도시락 개봉 실사 (업로드 6번, 7번 사진 합성)\n"
+        "- 6번컷 참조 사진: 뚝배기불고기, 등심돈까스 단면, 계란말이 초접사 실사 (업로드 7번 사진 디테일 클로즈업)\n"
+        "- 7번컷 참조 사진: 흑미밥+불고기 한 숟갈과 교동짬뽕 얼큰 면발의 꿀조합 페어링 실사 (업로드 6번, 7번 사진 합성)\n"
+        "- 8번컷 참조 사진: 13칸 반찬 칸과 짬뽕 국물까지 싹 비운 완식 엔딩 실사"
     )
 
     # 친누나표 4대 독립 블록 (구분선 없이 바로 제품명 시작, 컴팩트 줄바꿈 + 블록 간 빈 줄)
