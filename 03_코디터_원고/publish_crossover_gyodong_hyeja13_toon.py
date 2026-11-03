@@ -18,16 +18,16 @@ if sys.platform.startswith('win'):
 
 def publish_crossover_gyodong_hyeja13_toon(save_draft: bool = True):
     """
-    [지치 컴퍼니 정규 편의점 신상 웹툰 제10탄 - 크로스오버 꿀조합 제2편 (수정 반영)]
+    [지치 컴퍼니 정규 편의점 신상 웹툰 제10탄 - 크로스오버 꿀조합 제2편]
     주제: 편의점 뷔페 끝판왕 탄생! 역대 최다 13첩 반상과 불맛 짬뽕의 기적!
           GS25 '혜자로운 집밥 13찬 (나눌수록 찬란하게)' X 세븐일레븐 '정통 강릉교동짬뽕'
     등장인물: 지치(새싹 요정) + 송이(삼색 고양이 미식 탐정)
 
-    [대표님 엄격 5대 절대 수칙 + 매뉴얼 1호·2호·3호·4호 100% 완전 준수]:
-    1. 4컷 이후 불필요한 긴 대화 대본 전면 삭제 (방문객 이탈 방지)
+    [대표님 엄격 절대 수칙 + 매뉴얼 1호·2호·3호·4호 100% 완전 준수]:
+    1. [대표님 2026-11-03 엄명] 위아래 똑같은 참조 가이드 중복 전면 제거! 프롬프트 내부에만 단 1회 통합 기재!
     2. 코자이너 웹툰 말풍선은 무조건 '5글자 이내' 초심플 한글 키워드 엄수!
     3. 친누나표 '팩트 체크 & Tasty Tip!' 황금 양식 (구분선 없이 바로 제품명 시작, 컴팩트 줄바꿈 + 블록 간 빈 줄)
-    4. [매뉴얼 4호 제2항 준수] 1~8컷 프롬프트 상단 'fidelity to the attached images!' 및 개별 사진 1:N 합성(Composite) 매핑 지시
+    4. [대표님 공인 7대 실사 팩 합성 매핑] 2번컷(2+3), 3번컷(4+5), 4번컷(6+7), 5번컷(6+7), 6번컷(7), 7번컷(6+7), 8번컷(6+7)
     5. 3·3·3 태그 공식 (인물/화제 3 + 브랜드 3 + 제품 3) 및 에디터 전역 '바른히피' 서체 + 중앙 정렬 강제 주입!
     6. 전방위 매대 크로스오버 실사 먹조합 (13찬 백반 한상 + 불향 얼큰 짬뽕 국물)
     """
@@ -37,7 +37,7 @@ def publish_crossover_gyodong_hyeja13_toon(save_draft: bool = True):
     real_pkg_img = os.path.join(hyeja_dir, "upload_1_hyeja_poster.jpg")
     real_open_img = os.path.join(hyeja_dir, "upload_7_hyeja_open.jpg")
 
-    # 1~4컷 ChatGPT용 4분할 프롬프트 (대표님 7대 실사 팩 합성 매핑 100% 일치)
+    # 1~4컷 ChatGPT용 단일 통합 프롬프트 (대표님 7대 팩 매핑 내장 / 외부에 중복 가이드 일절 없음!)
     prompt_cut1_4 = (
         "[CHATGPT 컷 1~4 복사 시작]\n"
         "fidelity to the attached images!\n\n"
@@ -56,23 +56,14 @@ def publish_crossover_gyodong_hyeja13_toon(save_draft: bool = True):
         "[CHATGPT 컷 1~4 복사 끝]"
     )
 
-    # 코자이너 1~4컷 실사 이미지 배치 가이드 (대표님 지정 7대 팩 매핑)
-    guide_cut1_4 = (
-        "[코자이너 1컷~4컷 실사 이미지 배치 & 첨부 가이드]\n"
-        "- 1번컷 참조 사진: GS25 공식 혜자로운 집밥 출시 카드뉴스 포스터 실사 (업로드 1번 사진)\n"
-        "- 2번컷 참조 사진: 파란색 간판 GS25 외관 및 도시락 신선 매대 진열 실사 (업로드 2번, 3번 사진 합성)\n"
-        "- 3번컷 참조 사진: 세븐일레븐 라면 매대에 진열된 정통 강릉교동짬뽕 컵라면 실사 (업로드 4번, 5번 사진 합성)\n"
-        "- 4번컷 참조 사진: 식탁 위에 혜자 13찬 도시락과 교동짬뽕 컵라면을 나란히 세팅한 실물 투샷 (업로드 6번, 7번 사진 합성)"
-    )
-
-    # 5~8컷 ChatGPT용 4분할 프롬프트 (대표님 7대 실사 팩 합성 매핑 100% 일치)
+    # 5~8컷 ChatGPT용 단일 통합 프롬프트 (대표님 7대 팩 매핑 내장 / 외부에 중복 가이드 일절 없음!)
     prompt_cut5_8 = (
         "[CHATGPT 컷 5~8 복사 시작]\n"
         "fidelity to the attached images!\n\n"
         "5번컷 참조 사진: 전자레인지에 데워 뚜껑을 연 13찬 도시락의 김 모락모락 나는 실사 및 뜨거운 물을 부은 교동짬뽕 실사 (업로드 6번, 7번 사진 합성)\n"
         "6번컷 참조 사진: 뚝배기불고기의 촉촉한 육즙, 바삭한 등심돈까스 단면, 계란말이 초접사 실사 (업로드 7번 사진 디테일 클로즈업)\n"
         "7번컷 참조 사진: 흑미밥 한 숟가락에 불고기를 얹어 진한 짬뽕 국물에 살짝 적시는 환상의 페어링 실사 (업로드 6번, 7번 사진 합성)\n"
-        "8번컷 참조 사진: 13칸 도시락과 짬뽕 그릇을 깨끗이 비운 만족스러운 완식 엔딩 실사\n\n"
+        "8번컷 참조 사진: 13칸 도시락과 짬뽕 그릇을 깨끗이 비운 만족스러운 완식 엔딩 실사 (업로드 6번, 7번 사진 참조)\n\n"
         "PANEL LAYOUT (2x2 Grid with subtle circular badge numbers ⑤, ⑥, ⑦, ⑧ on top-left of each panel):\n"
         "- Panel ⑤ (Top-Left): Unveiling the feast! Opening the warm bento lid to reveal 13 densely packed side dishes (beef bulgogi, pork cutlet, tofu kimchi, rolled egg, sausages) steaming hot, while pouring steaming water into the spicy red 교동짬뽕 cup. Short Korean speech bubbles (MAX 5 chars): Songi says '김이모락!', Jichi says '반찬가득!'.\n"
         "- Panel ⑥ (Top-Right): Ultimate food close-up! Songi lifts a juicy slice of crispy pork cutlet, while Jichi marvels at the glossy tender bulgogi and plump rolled egg. Extremely appetizing texture. Short Korean speech bubbles (MAX 5 chars): Songi says '돈까스바삭!', Jichi says '불고기꿀맛!'.\n"
@@ -82,15 +73,6 @@ def publish_crossover_gyodong_hyeja13_toon(save_draft: bool = True):
         "***CRITICAL MANDATORY INSTRUCTION FOR CHARACTER & PRODUCT FIDELITY***:\n"
         "Strictly maintain 100% faithful character fidelity to Jichi and Songi, and seamlessly composite the food details from the attached reference photos into the 3D scene!\n"
         "[CHATGPT 컷 5~8 복사 끝]"
-    )
-
-    # 코자이너 5~8컷 실사 이미지 배치 가이드 (대표님 지정 7대 팩 매핑)
-    guide_cut5_8 = (
-        "[코자이너 5컷~8컷 실사 이미지 배치 & 첨부 가이드]\n"
-        "- 5번컷 참조 사진: 전자레인지 조리 후 김이 모락모락 피어오르는 13찬 도시락 개봉 실사 (업로드 6번, 7번 사진 합성)\n"
-        "- 6번컷 참조 사진: 뚝배기불고기, 등심돈까스 단면, 계란말이 초접사 실사 (업로드 7번 사진 디테일 클로즈업)\n"
-        "- 7번컷 참조 사진: 흑미밥+불고기 한 숟갈과 교동짬뽕 얼큰 면발의 꿀조합 페어링 실사 (업로드 6번, 7번 사진 합성)\n"
-        "- 8번컷 참조 사진: 13칸 반찬 칸과 짬뽕 국물까지 싹 비운 완식 엔딩 실사"
     )
 
     # 친누나표 4대 독립 블록 (구분선 없이 바로 제품명 시작, 컴팩트 줄바꿈 + 블록 간 빈 줄)
@@ -125,7 +107,7 @@ def publish_crossover_gyodong_hyeja13_toon(save_draft: bool = True):
         "흑미밥에 뚝배기불고기를 올린 뒤 칼칼한 짬뽕 국물에 살짝 적셔 먹으면 극락의 단짠얼큰 하모니가 폭발합니다!"
     )
 
-    # 본문 문단 배치
+    # 본문 문단 배치 (위아래 중복 가이드 완전 제거!)
     paragraphs = [
         "안녕하세요, 지치 블로그를 찾아주신 여러분! 쌀쌀해진 저녁, 제대로 된 든든한 밥 한 상과 칼칼한 국물이 간절해지는 오늘, 편의점 매대를 종횡무진 누비며 분식집보다 더 화려한 꿀조합을 찾아 달리는 새싹 요정 지치와 미식 탐정 고양이 송이입니다!",
         "오늘 저녁엔 평범한 한 끼로 때우지 마세요! 편의점 2곳만 가볍게 들르면 8천 원대에 고급 한정식 뷔페 부럽지 않은 프리미엄 한 상이 완성됩니다! 바로 **GS25의 역대 최다 찬 구성 '혜자로운 집밥 13찬(나눌수록 찬란하게)' 도시락과 세븐일레븐의 13년 짬뽕 전설 '정통 강릉교동짬뽕'**의 역대급 크로스오버입니다!",
@@ -135,13 +117,11 @@ def publish_crossover_gyodong_hyeja13_toon(save_draft: bool = True):
 
         "코자이너 1컷~4컷 이미지 프롬프트 (ChatGPT용)",
         prompt_cut1_4,
-        guide_cut1_4,
 
         f"__IMAGE__:{real_open_img}",
 
         "코자이너 5컷~8컷 이미지 프롬프트 (ChatGPT용)",
         prompt_cut5_8,
-        guide_cut5_8,
 
         block_info,
         block_flavor,
@@ -164,7 +144,7 @@ def publish_crossover_gyodong_hyeja13_toon(save_draft: bool = True):
             formatted_paragraphs.append(p_str)
         elif "코자이너" in p_str and "프롬프트" in p_str:
             formatted_paragraphs.append(p_str)
-        elif "복사 시작" in p_str or "배치 & 첨부 가이드" in p_str:
+        elif "복사 시작" in p_str:
             formatted_paragraphs.append(p_str)
         else:
             fmt = formatter.format_mobile_text(p_str)
@@ -192,10 +172,10 @@ def publish_crossover_gyodong_hyeja13_toon(save_draft: bool = True):
     has_img2 = os.path.exists(real_open_img)
     print(f"  ✅ [검증 2] 실사 이미지 탑재: 1번 패키지({has_img1}), 2번 13찬 개봉({has_img2})")
 
-    # 3. 코자이너 1~8컷 배치 가이드 삽입 여부 검사
-    has_guide1 = "guide_cut1_4" in locals() and "실사 이미지 배치" in guide_cut1_4
-    has_guide2 = "guide_cut5_8" in locals() and "실사 이미지 배치" in guide_cut5_8
-    print(f"  ✅ [검증 3] 코자이너 1~8컷 실사 배치 가이드 포함 여부: {has_guide1 and has_guide2}")
+    # 3. 프롬프트 내부 참조 가이드 포함 및 외부 중복 제거 검사
+    has_inner_guide = "1번컷 참조 사진:" in prompt_cut1_4 and "5번컷 참조 사진:" in prompt_cut5_8
+    has_no_duplicate = not any("실사 이미지 배치 & 첨부 가이드" in p for p in paragraphs)
+    print(f"  ✅ [검증 3] 프롬프트 내부 통합 가이드({has_inner_guide}) / 외부 중복 제거({has_no_duplicate})")
 
     # 4. 친누나표 4대 블록 형식 검사
     has_all_blocks = all(k in "\n".join(paragraphs) for k in ["제품명 :", "핵심 플레이버 :", "특징 및 식감:", "Tasty Tip!"])
