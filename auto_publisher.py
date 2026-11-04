@@ -253,31 +253,45 @@ def _reset_text_color(page):
 
 def _type_styled_line(page, line_text: str):
     """
-    **볼드** 마크다운 서식을 파싱하여 중요한 부분만 스마트에디터에서 실제 굵은 글씨(Bold, Ctrl+B)로 타이핑합니다.
-    [사장님 특명 엄격 준수]
+    [대표님 특명 엄격 준수]
     1. 스마트 에디터 dot(•) 표시 원천 금지! (-, *, • 등 불릿 기호 완전 삭제)
     2. 소제목 및 본문 1. 2. 번호매김 원천 금지! (숫자+점 리스트 트리거 완전 삭제)
+    3. [RED]...[/RED] 태그 및 **볼드** 서식을 완벽 파싱하여 실제 빨간색(#ff0010) + 굵은 글씨로 타이핑!
     """
     clean_line = line_text.strip()
     if not clean_line:
         return
 
     # [스마트에디터 dot 및 번호 리스트 원천 차단]
-    # 줄 시작 부분의 대시(-), 점(•, ·), 단독 별표 불릿(* ) 및 숫자 번호(1. 2. 등)를 제거하되 **볼드**는 보존
     clean_line = re.sub(r"^(?:[\-•·]\s*|\*(?!\*)\s+)", "", clean_line)
     clean_line = re.sub(r"^\d+[\.\)]\s*", "", clean_line)
     clean_line = clean_line.strip()
     if not clean_line:
         return
 
-    # **볼드** 마커 분리 타이핑
-    parts = re.split(r'(\*\*.*?\*\*)', clean_line)
+    # [RED]...[/RED] 및 **볼드** 태그 정규식 분리
+    pattern = r'(\[RED\].*?\[/RED\]|\*\*.*?\*\*)'
+    parts = re.split(pattern, clean_line)
     for p in parts:
         if not p:
             continue
-        if p.startswith('**') and p.endswith('**') and len(p) >= 4:
+        if p.startswith('[RED]') and p.endswith('[/RED]'):
+            red_inner = p[5:-6]
+            is_bold = False
+            if red_inner.startswith('**') and red_inner.endswith('**') and len(red_inner) >= 4:
+                red_inner = red_inner[2:-2]
+                is_bold = True
+            red_inner = red_inner.replace('*', '')
+            if red_inner:
+                _set_text_color_red(page)
+                page.keyboard.press("Control+b")
+                time.sleep(0.02)
+                page.keyboard.insert_text(red_inner)
+                page.keyboard.press("Control+b")
+                time.sleep(0.02)
+                _reset_text_color(page)
+        elif p.startswith('**') and p.endswith('**') and len(p) >= 4:
             bold_text = p[2:-2].replace('*', '')
-            # '공감(좋아요)' 등 특수 키워드는 네이버 빨간색(#FF0000)으로 스타일링 강조
             is_red = any(rk in bold_text for rk in ["공감", "좋아요", "공감(좋아요)"])
             if is_red:
                 _set_text_color_red(page)

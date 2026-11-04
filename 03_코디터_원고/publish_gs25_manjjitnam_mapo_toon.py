@@ -22,13 +22,12 @@ def publish_gs25_manjjitnam_mapo_toon(save_draft: bool = True):
     소재: GS25 흑백요리사 만찢남 조광효 마파두부덮밥
     주인공: 지치(새싹 요정) + 송이(삼색 미식 탐정 고양이)
 
-    [대표님 컨펌 규격 + 매뉴얼 1호~7호 100% 엄격 준수]:
-    1. [매뉴얼 4호] 외부 중복 가이드 완전 제거! 프롬프트 내부에만 1회 완벽 탑재!
-    2. [매뉴얼 3호] 말풍선 '5글자 이하' 원칙 100% 준수 (만찢남!, 마파두부!, GS25출동!, 득템성공!, 만찢남픽!, 불향가득!, 한상완성!, 먹방시작!, 마라오일!, 김이모락!, 두부탱글!, 얼얼매콤!, 감칠맛폭발!, 극락의맛!, 배터져요!, 좋아요❤️)
-    3. [친누나표 4대 블록] 제품명, 핵심 플레이버, 특징 및 식감, Tasty Tip! 황금 규격 준수
-    4. [실사 8종 연계] 1번컷(업로드 1번), 2번컷(2+3번), 3번컷(4번), 4번컷(4+5번), 5번컷(5+6번), 6번컷(7번), 7번컷(6+7번), 8번컷(8번)
-    5. [서체 & 정렬] 바른히피 일괄 강제 적용 + 중앙 정렬
-    6. [3·3·3 태그] 흑백요리사, 만찢남, 조광효셰프 / GS25, 우리동네GS, 편의점도시락 / 마파두부덮밥, 만찢남마파두부, 편의점신상
+    [대표님 피드백 100% 반영 영구 불변 표준]:
+    1. 인트로 내 핵심 주제 선명한 빨간색 강조: [RED]...[/RED] 태그 적용
+    2. 본문 최하단 이전 연계 포스팅 링크: 흑백요리사 1탄(밤티라미수: 224455926788) 자동 카드 생성
+    3. 친누나표 4대 블록: 대표님 스크린샷 100% 일치 띄어쓰기 및 줄바꿈 적용
+    4. 프롬프트 내부 통합 가이드 및 5글자 이하 말풍선 엄수
+    5. 바른히피 서체 + 가운데 정렬 자동 지정
     """
     title = "[지치와 송이의 편의점 탐방 웹툰] 흑백요리사 만찢남의 불맛 강타! GS25 '조광효 마파두부덮밥' 솔직 리뷰!"
 
@@ -36,7 +35,6 @@ def publish_gs25_manjjitnam_mapo_toon(save_draft: bool = True):
     real_poster_img = os.path.join(img_dir, "upload_1_poster.jpg")
     real_texture_img = os.path.join(img_dir, "upload_7_texture.jpg")
 
-    # 1~4컷 ChatGPT용 프롬프트
     prompt_cut1_4 = (
         "[CHATGPT 컷 1~4 복사 시작]\n"
         "fidelity to the attached images!\n\n"
@@ -55,7 +53,6 @@ def publish_gs25_manjjitnam_mapo_toon(save_draft: bool = True):
         "[CHATGPT 컷 1~4 복사 끝]"
     )
 
-    # 5~8컷 ChatGPT용 프롬프트
     prompt_cut5_8 = (
         "[CHATGPT 컷 5~8 복사 시작]\n"
         "fidelity to the attached images!\n\n"
@@ -74,7 +71,6 @@ def publish_gs25_manjjitnam_mapo_toon(save_draft: bool = True):
         "[CHATGPT 컷 5~8 복사 끝]"
     )
 
-    # 친누나표 4대 독립 블록
     block_info = (
         "제품명 : GS25 흑백요리사 만찢남 조광효 마파두부덮밥\n"
         "가격 : 5,700원\n"
@@ -83,29 +79,40 @@ def publish_gs25_manjjitnam_mapo_toon(save_draft: bool = True):
     )
 
     block_flavor = (
-        "핵심 플레이버 :\n"
+        "핵심 플레이버\n\n"
         "사천식 정통 두반장의 깊고 구수한 감칠맛에\n"
-        "알싸한 화조유(마라 고추기름)의 짜릿한 불향이 어우러진 비법 소스,\n"
-        "탱글탱글하고 부드러운 두부와 듬뿍 씹히는 국내산 돼지고기의 환상적인 밸런스!"
+        "알싸한 화조유(마라 고추기름)의\n"
+        "짜릿한 불향이 어우러진 비법 소스,\n"
+        "탱글탱글하고 부드러운 두부와\n"
+        "듬뿍 씹히는 국내산 돼지고기의 환상적인 밸런스!"
     )
 
     block_feature = (
-        "특징 및 식감:\n"
-        "넷플릭스 '흑백요리사'의 중식 신흥 강자 만찢남(조광효 셰프)의 조리 철학이 깃든 공식 콜라보!\n"
-        "고슬고슬하고 차진 CJ 햇반과 부드러운 연두부의 대조적인 식감이 일품이며,\n"
-        "전자레인지 2분 조리 후 동봉된 비법 고추마라 풍미유를 마지막에 둘러주면 중식 전문점 웍(Wok)에서 갓 볶아낸 듯한 강렬한 불맛을 선사합니다."
+        "특징 및 식감\n\n"
+        "넷플릭스 '흑백요리사'의 중식 신흥 강자\n"
+        "만찢남(조광효 셰프)의 조리 철학이 깃든 공식 콜라보!\n"
+        "고슬고슬하고 차진 CJ 햇반과 부드러운 연두부의\n"
+        "대조적인 식감이 일품이며,\n"
+        "전자레인지 2분 조리 후 동봉된 비법 고추마라 풍미유를\n"
+        "마지막에 둘러주면 중식 전문점 웍(Wok)에서\n"
+        "갓 볶아낸 듯한 강렬한 불맛을 선사합니다."
     )
 
     block_tasty_tip = (
-        "Tasty Tip! :\n"
-        "매운맛을 사랑하시는 분은 마라 풍미유를 남김없이 털어 넣고 잘 비벼 드셔보세요.\n"
-        "얼얼함이 올라올 때 노른자가 반숙인 계란후라이를 살짝 얹어 비벼 먹거나 바삭한 조미김에 싸서 드시면 매운맛은 부드럽게 감싸주고 감칠맛은 2배로 폭발합니다!\n"
-        "더욱 든든한 한 상을 원하신다면 시원한 탄산음료나 칼칼한 편의점 짬뽕 국물을 곁들여도 환상의 궁합을 자랑합니다."
+        "Tasty Tip!\n\n"
+        "매운맛을 사랑하시는 분은 마라 풍미유를\n"
+        "남김없이 털어 넣고 잘 비벼 드셔보세요.\n"
+        "얼얼함이 올라올 때 노른자가 반숙인 계란후라이를 살짝 얹어\n"
+        "비벼 먹거나 바삭한 조미김에 싸서 드시면\n"
+        "매운맛은 부드럽게 감싸주고 감칠맛은 2배로 폭발합니다!\n"
+        "더욱 든든한 한 상을 원하신다면 시원한 탄산음료나\n"
+        "칼칼한 편의점 짬뽕 국물을 곁들여도 환상의 궁합을 자랑합니다."
     )
 
+    # 대표님 지시: 핵심 주제 [RED]...[/RED] 태그 적용 및 최하단 내부 연계 링크 탑재
     paragraphs = [
         "안녕하세요, 지치 블로그를 찾아주신 여러분! 넷플릭스 '흑백요리사'의 열풍 속에서 중식의 화려한 불맛과 만화 같은 요리로 전 국민을 사로잡았던 '만찢남' 조광효 셰프를 기억하시나요? 오늘은 편의점 매대를 종횡무진 누비며 가장 핫한 신상을 찾아 달리는 새싹 요정 지치와 미식 탐정 고양이 송이가 GS25에 상륙했습니다!",
-        "오늘 저녁엔 평범한 한 끼로 때우지 마세요! 편의점 문만 열면 미슐랭급 중식당 부럽지 않은 정통 사천 마파두부덮밥이 눈앞에 펼쳐집니다! 바로 **GS25와 흑백요리사 만찢남 조광효 셰프의 공식 컬래버 신작, '조광효 마파두부덮밥'**을 발 빠르게 모셔왔습니다!",
+        "오늘 저녁엔 평범한 한 끼로 때우지 마세요! 편의점 문만 열면 미슐랭급 중식당 부럽지 않은 정통 사천 마파두부덮밥이 눈앞에 펼쳐집니다! 바로 [RED]GS25와 흑백요리사 만찢남 조광효 셰프의 공식 컬래버 신작, '조광효 마파두부덮밥'[/RED]을 발 빠르게 모셔왔습니다!",
         "큼직하고 부드러운 연두부와 듬뿍 들어간 다진 돼지고기, 여기에 알싸하게 코끝을 찌르는 사천 화조유(마라 고추기름)가 뿜어내는 기적 같은 풍미! 지치와 송이의 유쾌한 4컷 웹툰과 생생한 실사 팩트 체크로 지금 바로 만나보세요!",
 
         f"__IMAGE__:{real_poster_img}",
@@ -121,7 +128,9 @@ def publish_gs25_manjjitnam_mapo_toon(save_draft: bool = True):
         block_info,
         block_flavor,
         block_feature,
-        block_tasty_tip
+        block_tasty_tip,
+
+        "https://blog.naver.com/jcjung1401/224455926788"
     ]
 
     formatted_paragraphs = []
@@ -133,7 +142,7 @@ def publish_gs25_manjjitnam_mapo_toon(save_draft: bool = True):
             formatted_paragraphs.append(p_str)
         elif p_str.startswith("http://") or p_str.startswith("https://"):
             formatted_paragraphs.append(p_str)
-        elif any(k in p_str for k in ["제품명 :", "핵심 플레이버 :", "특징 및 식감:", "Tasty Tip!"]):
+        elif any(k in p_str for k in ["제품명 :", "핵심 플레이버", "특징 및 식감", "Tasty Tip!"]):
             formatted_paragraphs.append(p_str)
         elif "코자이너" in p_str and "프롬프트" in p_str:
             formatted_paragraphs.append(p_str)
@@ -152,7 +161,7 @@ def publish_gs25_manjjitnam_mapo_toon(save_draft: bool = True):
     ]
 
     print("\n" + "=" * 60)
-    print("🕵️‍♂️ [코부장 & 코리티 원고 발행 전 5대 황금 수칙 + 매뉴얼 1호·3호·4호 최종 감사]")
+    print("🕵️‍♂️ [코부장 & 코리티 원고 발행 전 3대 필수 시각 요소 및 7대 황금 헌법 최종 감사]")
     print("=" * 60)
 
     # 1. 5글자 이내 말풍선 검사
@@ -170,21 +179,27 @@ def publish_gs25_manjjitnam_mapo_toon(save_draft: bool = True):
     has_no_duplicate = not any("실사 이미지 배치 & 첨부 가이드" in p for p in paragraphs)
     print(f"  ✅ [검증 3] 프롬프트 내부 통합 가이드({has_inner_guide}) / 외부 중복 제거({has_no_duplicate})")
 
-    # 4. 친누나표 4대 블록 형식 검사
-    has_all_blocks = all(k in "\n".join(paragraphs) for k in ["제품명 :", "핵심 플레이버 :", "특징 및 식감:", "Tasty Tip!"])
-    print(f"  ✅ [검증 4] 친누나표 4대 독립 블록 무결성: {has_all_blocks}")
+    # 4. 대표님 특명 3대 시각 요소(레드 태그, 내부 링크, 친누나 4대 블록) 전수 검사
+    full_text = "\n".join(paragraphs)
+    v_ok, v_msg = quality_inspector.validate_webtoon_golden_rules(title, full_text)
+    print(f"  ✅ [검증 4] {v_msg}")
+    if not v_ok:
+        print(f"  🚨 검증 실패로 발행 중단: {v_msg}")
+        return False
 
     # 5. 서체 바른히피 일괄 적용 엔진 장착 검사
     print("  ✅ [검증 5] 스마트에디터 ONE 전역 바른히피(Nanum BareunHipi) 일괄 강제 적용 엔진 장착 완료")
 
     # 6. 매뉴얼 1호 Tasty Tip 페어링 검사
-    tt_ok, tt_msg = quality_inspector.validate_webtoon_tasty_tip_pairing(title, "\n".join(paragraphs))
+    tt_ok, tt_msg = quality_inspector.validate_webtoon_tasty_tip_pairing(title, full_text)
     print(f"  ✅ [검증 6] {tt_msg}")
     print("=" * 60 + "\n")
 
     print(f"🚀 네이버 블로그에 '{title}' {'[임시저장]' if save_draft else '[즉시발행]'} 진행합니다...")
     print(f"  - 카테고리: 웹툰 (No. 7)")
     print(f"  - 첨부 이미지: {2}장 (실사 100% 장착)")
+    print(f"  - 주제 레드 강조: [RED]...[/RED] 네이버 공식 빨간색(#ff0010) 자동 적용")
+    print(f"  - 연계 링크 카드: 흑백요리사 1탄(밤티라미수) 카드 자동 생성")
     print(f"  - 서체: 바른히피 일괄 자동 지정")
     print(f"  - 정렬: 가운데 정렬")
 

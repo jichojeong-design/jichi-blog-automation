@@ -33,6 +33,34 @@ STALE_TITLE_PATTERNS = [
 STALE_SUMMARY_PHRASE = "기술 격차와 시장 파장 분석"
 
 
+def validate_webtoon_golden_rules(title: str, text: str) -> tuple:
+    """
+    [대표님 2026-11-04 영구 불변 감사 헌법]
+    코리티 발행 전 필수 3대 시각 요소 무결점 검사:
+    1. 인트로 내 핵심 주제 빨간색 강조([RED]...[/RED]) 존재 여부
+    2. 본문 하단 지치 블로그 연계 포스팅 링크(blog.naver.com/jcjung1401/...) 존재 여부
+    3. 친누나표 4대 독립 블록(제품명, 핵심 플레이버, 특징 및 식감, Tasty Tip!) 무결성
+    """
+    issues = []
+    
+    # 1. [RED] 태그 검사
+    if "[RED]" not in text or "[/RED]" not in text:
+        issues.append("❌ [주제 레드 강조 누락] 인트로 핵심 주제를 강조하는 [RED]...[/RED] 태그가 없습니다!")
+        
+    # 2. 내부 링크(Internal Link) 검사
+    if "blog.naver.com/jcjung1401/" not in text:
+        issues.append("❌ [참고 블로그 링크 누락] 글 하단 이전 연계 포스팅 URL(blog.naver.com/jcjung1401/...)이 누락되었습니다!")
+        
+    # 3. 친누나표 4대 블록 검사
+    for block_name in ["제품명", "핵심 플레이버", "특징 및 식감", "Tasty Tip!"]:
+        if block_name not in text:
+            issues.append(f"❌ [친누나 4대 블록 누락] '{block_name}' 블록이 본문에 없습니다!")
+
+    if issues:
+        return False, " | ".join(issues)
+    return True, "✅ [코리티 황금 수칙 통과] 주제 레드 강조, 이전글 링크, 친누나 4대 블록 100% 무결점!"
+
+
 def validate_webtoon_tasty_tip_pairing(title: str, text: str) -> tuple:
     """
     [대표님 2026-10-31 특별 업무 매뉴얼 제1호]

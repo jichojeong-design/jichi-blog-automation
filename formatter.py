@@ -9,9 +9,13 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
     1. 소제목 번호매김 절대 금지! ([1. 소제목] -> [소제목]으로 자동 정제)
     2. 스마트에디터 dot(•) 및 번호 리스트 트리거 문자(-, *, 1. 2.) 원천 차단!
     3. 온점(.), 물음표(?), 느낌표(!) 기준으로 자연스러운 호흡 부여
+    4. [RED]...[/RED] 빨간색 강조 태그 완벽 보존 및 줄바꿈 시 자동 짝맞춤 지원
     """
     if not text:
         return ""
+    
+    # 0. [RED]...[/RED] 태그를 임시 플레이스홀더로 보호 (소제목 대괄호 정규식에 걸리지 않도록 방지)
+    text = re.sub(r'\[RED\](.*?)\[/RED\]', r'⟪RED⟫\1⟪/RED⟫', text, flags=re.DOTALL)
     
     # 1. 소제목 내 번호 매김 완전 제거 ([1. ...] -> [...])
     text = re.sub(r'\[\s*\d+[\.\)]\s*', '[', text)
@@ -19,17 +23,11 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
     text = re.sub(r'(\[[^\]]+\])', r'\n\n\1\n\n', text)
 
     # [사장님 특명: 주소 끝난 후 및 '소중한 시간' 앞뒤 확실한 독립 문단/빈 줄 분리]
-    # 혹시 '공식\n\n출처:'로 쪼개진 경우 '공식 출처:'로 즉시 복원
     text = re.sub(r'공식\s*\n+\s*출처:', '공식 출처:', text)
-    # 출처 레이블 앞 분리 ('공식'과 '출처:' 사이가 쪼개지지 않도록 보호)
     text = re.sub(r'([^\n])\s*(?<!공식\s)(?<!공식)(공식\s*출처:|출처:)', r'\1\n\n\2', text)
-    # 출처 콜론과 URL 사이 독립 문단 분리
     text = re.sub(r'(공식\s*출처:|출처:)\s*(https?://[^\s\n]+)', r'\1\n\n\2', text)
-    # 단독 URL 앞 문단 분리 (단, URL 내부 문자가 잘리지 않도록 ASCII URL 패턴과 한글/문단 경계만 분리)
-    text = re.sub(r'([^\n])\s*(https?://[a-zA-Z0-9./?=&_%#\-+:~]+)', r'\1\n\n\2', text)
-    # URL 주소가 끝난 직후 한글/본문 텍스트가 붙어 있으면 반드시 빈 줄 2개(\n\n)로 완전히 분리
-    text = re.sub(r'(https?://[a-zA-Z0-9./?=&_%#\-+:~]+)\s*([^\s\na-zA-Z0-9./?=&_%#\-+:~])', r'\1\n\n\2', text)
-    # '소중한 시간' 독자 감사 인사말 블록 앞뒤 무조건 빈 줄 2개(\n\n)로 확실한 독립 문단 보장
+    text = re.sub(r'([^\n])\s*(https?://[a-zA-Z0-9./?=&_%#\-+:=~]+)', r'\1\n\n\2', text)
+    text = re.sub(r'(https?://[a-zA-Z0-9./?=&_%#\-+:=~]+)\s*([^\s\na-zA-Z0-9./?=&_%#\-+:=~])', r'\1\n\n\2', text)
     text = re.sub(r'([^\n])\s*(소중한\s*시간)', r'\1\n\n\2', text)
     
     paragraphs = re.split(r'\n\s*\n', text.strip())
@@ -40,7 +38,7 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
         if not para_clean:
             continue
             
-        # 대괄호 소제목인 경우 줄바꿈 없이 깔끔하게 단독 문단으로 유지 (내부 번호 완전 제거)
+        # 대괄호 소제목인 경우 줄바꿈 없이 깔끔하게 단독 문단으로 유지
         if re.match(r'^\[[^\]]+\]$', para_clean):
             clean_sub = re.sub(r'\[\s*\d+[\.\)]\s*', '[', para_clean)
             formatted_paragraphs.append(clean_sub)
@@ -51,8 +49,6 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
             formatted_paragraphs.append(para_clean)
             continue
 
-        # [스마트에디터 dot 및 번호 리스트 원천 차단]
-        # 문단 내부의 각 줄마다 대시(-), 불릿(*, •, ·), 숫자(1. 2. 3.) 완전 박멸
         cleaned_lines = []
         for raw_line in para_clean.split('\n'):
             line_s = raw_line.strip()
@@ -69,12 +65,12 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
             
         para_clean = " ".join(cleaned_lines)
 
-        # [볼드 마크다운(**) 짝맞춤 정제]: 짝이 맞는 **...** 만 보호하고 깨진 홀수 별표(*)는 완전 제거
+        # 볼드 마크다운(**) 짝맞춤 정제
         para_clean = re.sub(r'\*\*([^\*\n]+?)\*\*', r'⟪B⟫\1⟪/B⟫', para_clean)
         para_clean = para_clean.replace('*', '')
         para_clean = para_clean.replace('⟪B⟫', '**').replace('⟪/B⟫', '**')
             
-        # 1. 문장 단위로 분리 (. ? !)
+        # 문장 단위 분리 (. ? !)
         raw_sentences = re.split(r'((?<!\d)[.?!]\s+)', para_clean)
         sentences = []
         for i in range(0, len(raw_sentences) - 1, 2):
@@ -88,13 +84,11 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
             if not s_clean:
                 continue
                 
-            # 18자 이내의 짧은 문장은 줄바꿈 없이 한 호흡으로 유지
-            clean_len = len(re.sub(r'\*\*', '', s_clean))
+            clean_len = len(re.sub(r'\*\*|⟪/?RED⟫', '', s_clean))
             if clean_len <= max_chars + 2:
                 lines.append(s_clean)
                 continue
                 
-            # 긴 문장은 쉼표(,) 단위 절 분리 후 어절 맞춤 줄바꿈
             clauses = re.split(r'(,\s+)', s_clean)
             clause_list = []
             for j in range(0, len(clauses) - 1, 2):
@@ -107,8 +101,8 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
                 words = c.split()
                 for word in words:
                     is_url = word.startswith(("http://", "https://", "www."))
-                    word_len = len(re.sub(r'\*\*', '', word))
-                    cur_clean_len = len(re.sub(r'\*\*', '', current_line))
+                    word_len = len(re.sub(r'\*\*|⟪/?RED⟫', '', word))
+                    cur_clean_len = len(re.sub(r'\*\*|⟪/?RED⟫', '', current_line))
                     if not current_line:
                         if word_len > max_chars and not is_url:
                             for k in range(0, len(word), max_chars):
@@ -121,30 +115,51 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
                         else:
                             lines.append(current_line)
                             current_line = word
-                # 쉼표 뒤에서 줄 길이가 12자 이상이면 자연스러운 호흡으로 줄바꿈
-                cur_clean_len = len(re.sub(r'\*\*', '', current_line))
+                cur_clean_len = len(re.sub(r'\*\*|⟪/?RED⟫', '', current_line))
                 if c.endswith(",") and cur_clean_len >= 12:
                     lines.append(current_line)
                     current_line = ""
             if current_line:
                 lines.append(current_line)
 
-        # [줄바꿈으로 인해 **볼드** 구간이 두 줄로 나뉜 경우 각 줄마다 **...** 완벽 짝맞춤]
+        # [줄바꿈으로 인해 **볼드** 및 ⟪RED⟫ 구간이 나뉜 경우 각 줄마다 완벽 짝맞춤]
         balanced_lines = []
         in_bold = False
+        in_red = False
         for ln in lines:
             if in_bold:
                 ln = "**" + ln
+            if in_red:
+                ln = "⟪RED⟫" + ln
+
+            # RED 짝맞춤 검사
+            red_opens = ln.count("⟪RED⟫")
+            red_closes = ln.count("⟪/RED⟫")
+            if in_red:
+                if red_closes > red_opens - 1:
+                    in_red = False
+                else:
+                    ln = ln + "⟪/RED⟫"
+                    in_red = True
+            else:
+                if red_opens > red_closes:
+                    ln = ln + "⟪/RED⟫"
+                    in_red = True
+
+            # Bold 짝맞춤 검사
             if ln.count("**") % 2 == 1:
                 ln = ln + "**"
                 in_bold = True
             else:
                 in_bold = False
+
             balanced_lines.append(ln)
                 
         formatted_paragraphs.append("\n".join(balanced_lines))
         
-    return "\n\n".join(formatted_paragraphs)
+    result_text = "\n\n".join(formatted_paragraphs)
+    result_text = result_text.replace("⟪RED⟫", "[RED]").replace("⟪/RED⟫", "[/RED]")
+    return result_text
 
 
 def create_rounded_mask(size, radius):
