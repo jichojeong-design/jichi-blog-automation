@@ -210,25 +210,39 @@ def _set_font_size_15px(page):
     return False
 
 
-def _set_text_color_red(page):
+COLOR_MAP = {
+    "RED": "#ff0010",     # 네이버 공식 선명한 빨간색
+    "BLUE": "#0066cc",    # 시원한 네이비/블루 (쵸단)
+    "MINT": "#00b050",    # 상큼한 민트/그린 (히나)
+    "PURPLE": "#800080"   # 사랑스러운 보라/핑크 (시연)
+}
+
+
+def _set_text_color(page, color_code: str):
     """
-    스마트에디터 ONE의 글자 색상 팔레트에서 네이버 공식 선명한 빨간색(#ff0010)을 선택합니다.
+    스마트에디터 ONE의 글자 색상 팔레트에서 특정 컬러(data-color)를 선택합니다.
     """
     try:
         color_btn = page.locator("button.se-font-color-toolbar-button").first
         if color_btn.is_visible(timeout=1500):
             color_btn.click()
             time.sleep(0.25)
-            # 네이버 스마트에디터 ONE의 공식 빨간색 팔레트 셀렉터 (data-color="#ff0010")
-            red_opt = page.locator('button.se-color-palette[data-color="#ff0010"]').first
-            if red_opt.is_visible(timeout=1500):
-                red_opt.click()
+            opt = page.locator(f'button.se-color-palette[data-color="{color_code}"]').first
+            if opt.is_visible(timeout=1500):
+                opt.click()
                 time.sleep(0.2)
-                print("  🎨 빨간색(#ff0010) 폰트 색상 적용 완료!")
                 return True
+            else:
+                # 색상 버튼 닫기 폴백
+                color_btn.click()
+                time.sleep(0.15)
     except Exception as e:
-        print(f"  ⚠️ 빨간색 색상 지정 실패: {e}")
+        pass
     return False
+
+
+def _set_text_color_red(page):
+    return _set_text_color(page, "#ff0010")
 
 
 def _reset_text_color(page):
@@ -244,10 +258,9 @@ def _reset_text_color(page):
             if reset_btn.is_visible(timeout=1500):
                 reset_btn.click()
                 time.sleep(0.2)
-                print("  🎨 폰트 색상 기본색으로 복귀 완료!")
                 return True
     except Exception as e:
-        print(f"  ⚠️ 색상 초기화 실패: {e}")
+        pass
     return False
 
 
@@ -256,7 +269,7 @@ def _type_styled_line(page, line_text: str):
     [대표님 특명 엄격 준수]
     1. 스마트 에디터 dot(•) 표시 원천 금지! (-, *, • 등 불릿 기호 완전 삭제)
     2. 소제목 및 본문 1. 2. 번호매김 원천 금지! (숫자+점 리스트 트리거 완전 삭제)
-    3. [RED]...[/RED] 태그 및 **볼드** 서식을 완벽 파싱하여 실제 빨간색(#ff0010) + 굵은 글씨로 타이핑!
+    3. [RED], [BLUE], [MINT], [PURPLE] 등 다채로운 컬러 및 **볼드** 서식을 완벽 파싱하여 실제 스타일로 타이핑!
     """
     clean_line = line_text.strip()
     if not clean_line:
@@ -269,24 +282,26 @@ def _type_styled_line(page, line_text: str):
     if not clean_line:
         return
 
-    # [RED]...[/RED] 및 **볼드** 태그 정규식 분리
-    pattern = r'(\[RED\].*?\[/RED\]|\*\*.*?\*\*)'
+    # 컬러 태그 및 **볼드** 정규식 분리
+    pattern = r'(\[(?:RED|BLUE|MINT|PURPLE)\].*?\[/(?:RED|BLUE|MINT|PURPLE)\]|\*\*.*?\*\*)'
     parts = re.split(pattern, clean_line)
     for p in parts:
         if not p:
             continue
-        if p.startswith('[RED]') and p.endswith('[/RED]'):
-            red_inner = p[5:-6]
+        tag_match = re.match(r'^\[(RED|BLUE|MINT|PURPLE)\](.*?)\[/\1\]$', p)
+        if tag_match:
+            cname, inner = tag_match.groups()
             is_bold = False
-            if red_inner.startswith('**') and red_inner.endswith('**') and len(red_inner) >= 4:
-                red_inner = red_inner[2:-2]
+            if inner.startswith('**') and inner.endswith('**') and len(inner) >= 4:
+                inner = inner[2:-2]
                 is_bold = True
-            red_inner = red_inner.replace('*', '')
-            if red_inner:
-                _set_text_color_red(page)
+            inner = inner.replace('*', '')
+            if inner:
+                color_hex = COLOR_MAP.get(cname, "#ff0010")
+                _set_text_color(page, color_hex)
                 page.keyboard.press("Control+b")
                 time.sleep(0.02)
-                page.keyboard.insert_text(red_inner)
+                page.keyboard.insert_text(inner)
                 page.keyboard.press("Control+b")
                 time.sleep(0.02)
                 _reset_text_color(page)

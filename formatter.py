@@ -9,13 +9,15 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
     1. 소제목 번호매김 절대 금지! ([1. 소제목] -> [소제목]으로 자동 정제)
     2. 스마트에디터 dot(•) 및 번호 리스트 트리거 문자(-, *, 1. 2.) 원천 차단!
     3. 온점(.), 물음표(?), 느낌표(!) 기준으로 자연스러운 호흡 부여
-    4. [RED]...[/RED] 빨간색 강조 태그 완벽 보존 및 줄바꿈 시 자동 짝맞춤 지원
+    4. [RED], [BLUE], [MINT], [PURPLE] 등 컬러 강조 태그 완벽 보존 및 줄바꿈 시 자동 짝맞춤 지원
     """
     if not text:
         return ""
     
-    # 0. [RED]...[/RED] 태그를 임시 플레이스홀더로 보호 (소제목 대괄호 정규식에 걸리지 않도록 방지)
-    text = re.sub(r'\[RED\](.*?)\[/RED\]', r'⟪RED⟫\1⟪/RED⟫', text, flags=re.DOTALL)
+    # 0. 컬러 태그들을 임시 플레이스홀더로 보호 (소제목 대괄호 정규식에 걸리지 않도록 방지)
+    color_names = ["RED", "BLUE", "MINT", "PURPLE"]
+    for cname in color_names:
+        text = re.sub(rf'\[{cname}\](.*?)\[/{cname}\]', rf'⟪{cname}⟫\1⟪/{cname}⟫', text, flags=re.DOTALL)
     
     # 1. 소제목 내 번호 매김 완전 제거 ([1. ...] -> [...])
     text = re.sub(r'\[\s*\d+[\.\)]\s*', '[', text)
@@ -84,7 +86,7 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
             if not s_clean:
                 continue
                 
-            clean_len = len(re.sub(r'\*\*|⟪/?RED⟫', '', s_clean))
+            clean_len = len(re.sub(r'\*\*|⟪/?(?:RED|BLUE|MINT|PURPLE)⟫', '', s_clean))
             if clean_len <= max_chars + 2:
                 lines.append(s_clean)
                 continue
@@ -101,8 +103,8 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
                 words = c.split()
                 for word in words:
                     is_url = word.startswith(("http://", "https://", "www."))
-                    word_len = len(re.sub(r'\*\*|⟪/?RED⟫', '', word))
-                    cur_clean_len = len(re.sub(r'\*\*|⟪/?RED⟫', '', current_line))
+                    word_len = len(re.sub(r'\*\*|⟪/?(?:RED|BLUE|MINT|PURPLE)⟫', '', word))
+                    cur_clean_len = len(re.sub(r'\*\*|⟪/?(?:RED|BLUE|MINT|PURPLE)⟫', '', current_line))
                     if not current_line:
                         if word_len > max_chars and not is_url:
                             for k in range(0, len(word), max_chars):
@@ -115,36 +117,37 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
                         else:
                             lines.append(current_line)
                             current_line = word
-                cur_clean_len = len(re.sub(r'\*\*|⟪/?RED⟫', '', current_line))
+                cur_clean_len = len(re.sub(r'\*\*|⟪/?(?:RED|BLUE|MINT|PURPLE)⟫', '', current_line))
                 if c.endswith(",") and cur_clean_len >= 12:
                     lines.append(current_line)
                     current_line = ""
             if current_line:
                 lines.append(current_line)
 
-        # [줄바꿈으로 인해 **볼드** 및 ⟪RED⟫ 구간이 나뉜 경우 각 줄마다 완벽 짝맞춤]
+        # [줄바꿈으로 인해 **볼드** 및 컬러 태그 구간이 나뉜 경우 각 줄마다 완벽 짝맞춤]
         balanced_lines = []
         in_bold = False
-        in_red = False
+        active_color = None
         for ln in lines:
             if in_bold:
                 ln = "**" + ln
-            if in_red:
-                ln = "⟪RED⟫" + ln
+            if active_color:
+                ln = f"⟪{active_color}⟫" + ln
 
-            # RED 짝맞춤 검사
-            red_opens = ln.count("⟪RED⟫")
-            red_closes = ln.count("⟪/RED⟫")
-            if in_red:
-                if red_closes > red_opens - 1:
-                    in_red = False
+            # 컬러 짝맞춤 검사
+            for cname in color_names:
+                c_opens = ln.count(f"⟪{cname}⟫")
+                c_closes = ln.count(f"⟪/{cname}⟫")
+                if active_color == cname:
+                    if c_closes > c_opens - 1:
+                        active_color = None
+                    else:
+                        ln = ln + f"⟪/{cname}⟫"
+                        active_color = cname
                 else:
-                    ln = ln + "⟪/RED⟫"
-                    in_red = True
-            else:
-                if red_opens > red_closes:
-                    ln = ln + "⟪/RED⟫"
-                    in_red = True
+                    if c_opens > c_closes:
+                        ln = ln + f"⟪/{cname}⟫"
+                        active_color = cname
 
             # Bold 짝맞춤 검사
             if ln.count("**") % 2 == 1:
@@ -158,7 +161,8 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
         formatted_paragraphs.append("\n".join(balanced_lines))
         
     result_text = "\n\n".join(formatted_paragraphs)
-    result_text = result_text.replace("⟪RED⟫", "[RED]").replace("⟪/RED⟫", "[/RED]")
+    for cname in color_names:
+        result_text = result_text.replace(f"⟪{cname}⟫", f"[{cname}]").replace(f"⟪/{cname}⟫", f"[/{cname}]")
     return result_text
 
 

@@ -22,12 +22,12 @@ def publish_emart24_qwer_sandwich_toon(save_draft: bool = True):
     소재: 이마트24 X QWER 멤버별 샌드위치 4종 (쵸단·마젠타·히나·시연)
     주인공: 지치(새싹 요정) + 초코(턱시도 고양이 - QWER 열혈 찐팬!)
 
-    [대표님 컨펌 규격 + 매뉴얼 1호~7호 100% 엄격 준수]:
-    1. 인트로 내 핵심 주제 선명한 빨간색 강조: [RED]...[/RED] 태그 적용
-    2. 본문 최하단 이전 연계 포스팅 링크: 흑백요리사 1탄(밤티라미수: 224455926788) 자동 카드 생성
-    3. 친누나표 4대 블록: 제품명, 핵심 플레이버, 특징 및 식감, Tasty Tip! 황금 규격 준수
-    4. 프롬프트 내부 통합 가이드 및 5글자 이하 말풍선 엄수
-    5. 바른히피 서체 + 가운데 정렬 자동 지정
+    [대표님 컨펌 규격 100% 완전 일치 튜닝]:
+    1. 인트로 3문단 멤버별 4색 컬러 폰트 완벽 적용:
+       - 쵸단(파랑: #0066cc), 마젠타(빨강: #ff0010), 히나(초록: #00b050), 시연(보라: #800080)
+    2. 친누나표 4대 블록 내부: Shift+Enter(단일 문단 내 줄바꿈)로 줄간격 밀착!
+    3. 친누나표 4대 블록 사이: 빈 줄(Enter 2회)로 시원한 독립 여백 보장!
+    4. 대표님 손수 교정한 줄바꿈 호흡 1글자 오차 없이 100% 반영
     """
     title = "[지치와 초코의 편의점 탐방 웹툰] 락밴드 QWER이 떴다! 이마트24 쵸단·마젠타·히나·시연 샌드위치 전격 비교 & 일일 점장 응모 꿀팁!"
 
@@ -71,6 +71,7 @@ def publish_emart24_qwer_sandwich_toon(save_draft: bool = True):
         "[CHATGPT 컷 5~8 복사 끝]"
     )
 
+    # 대표님이 직접 교정하신 4대 블록 (각 블록 내부는 단일 문단으로 줄간격 밀착)
     block_info = (
         "제품명 : 이마트24 X QWER 콜라보 샌드위치 (쵸단·마젠타·히나·시연 4종)\n"
         "가격 : 각 3,200원\n"
@@ -78,32 +79,83 @@ def publish_emart24_qwer_sandwich_toon(save_draft: bool = True):
         "구매처 : 이마트24 편의점 신선 냉장 샌드위치 코너"
     )
 
-    block_flavor = (
-        "핵심 플레이버\n\n"
+    block_flavor_title = "핵심 플레이버"
+    block_flavor_body = (
         "리더 쵸단의 담백 고소한 고단백 어니언참치샐러드,\n"
         "마젠타의 감칠맛 폭발 갈릭에그 햄치즈,\n"
         "히나의 든든하고 달콤짭조름한 소시지에그치즈,\n"
         "시연의 프레시하고 청량한 아삭햄야채까지 4인 4색 맞춤 조화!"
     )
 
-    block_feature = (
-        "특징 및 식감\n\n"
-        "대세 걸밴드 QWER 멤버들의 실제 취향을 100% 반영한 공식 한정 콜라보!\n"
-        "부드러운 식빵 속에 아낌없이 꽉 채워진 토핑이 한 입 가득 풍성한 식감을 선사하며,\n"
-        "샌드위치 구매 후 이마트24 앱 스탬프 응모 시 11월 18일 서울숲 디저트랩에서 열리는 'QWER 일일 점장 행사(팬미팅)'에 초대되는 역대급 팬덤 혜택을 제공합니다."
+    block_feature_title = "특징 및 식감"
+    block_feature_body = (
+        "대세 걸밴드 QWER 멤버들의 실제 취향을 100%\n"
+        "반영한 공식 한정 콜라보!\n"
+        "부드러운 식빵 속에 아낌없이 꽉 채워진 토핑이\n"
+        "한 입 가득 풍성한 식감을 선사하며,\n"
+        "샌드위치 구매 후 이마트24 앱 스탬프 응모 시\n"
+        "11월 18일 서울숲 디저트랩에서\n"
+        "열리는 'QWER 일일 점장 행사(팬미팅)'에\n"
+        "초대되는 역대급 팬덤 혜택을 제공합니다."
     )
 
-    block_tasty_tip = (
-        "Tasty Tip!\n\n"
-        "11월 한 달간 행사 카드로 결제 시 핫아메리카노 또는 레쓰비 캔커피가 100% 무료 증정!\n"
-        "쌉싸름하고 따뜻한 아메리카노와 함께 즐기면 갈릭에그와 소시지의 기름진 맛을 깔끔하게 잡아주고,\n"
-        "조금 더 부드러운 단맛을 원하신다면 달콤한 캔커피나 흰 우유와 곁들여 브런치 카페 부럽지 않은 든든한 한 끼를 완성해보세요."
+    block_tasty_tip_title = "Tasty Tip!"
+    block_tasty_tip_body = (
+        "11월 한 달간 행사 카드로 결제 시\n"
+        "핫아메리카노 또는 레쓰비 캔커피가 100% 무료 증정!\n"
+        "쌉싸름하고 따뜻한 아메리카노와 함께 즐기면\n"
+        "갈릭에그와 소시지의 기름진 맛을 깔끔하게 잡아주고,\n"
+        "조금 더 부드러운 단맛을 원하신다면 달콤한 캔커피나\n"
+        "흰 우유와 곁들여 브런치 카페 부럽지 않은\n"
+        "든든한 한 끼를 완성해보세요."
     )
 
-    paragraphs = [
-        "안녕하세요, 지치 블로그를 찾아주신 여러분! 오늘도 신나는 에너지가 넘치는 편의점 신상 탐방 시간입니다! 오늘은 특별히 인기 걸밴드 QWER의 열혈 찐팬인 턱시도 고양이 초코가 헤드폰을 끼고 음악을 듣다가, 방금 막 터진 엄청난 편의점 대형 콜라보 소식을 접하고 눈을 반짝이며 새싹 요정 지치에게 달려왔습니다!",
-        "오늘 점심엔 평범한 샌드위치로 때우지 마세요! 편의점 문만 열면 최애 걸밴드 멤버들의 개성이 듬뿍 담긴 4인 4색 프리미엄 샌드위치가 눈앞에 펼쳐집니다! 바로 [RED]이마트24와 대세 걸밴드 QWER의 공식 컬래버 신작, 'QWER 멤버별 샌드위치 4종'[/RED]을 발 빠르게 모셔왔습니다!",
-        "운동 마니아 쵸단의 고단백 어니언참치샐러드부터 마젠타의 진한 갈릭에그 햄치즈, 히나의 소시지에그치즈, 시연의 아삭햄야채까지! 여기에 서울숲 디저트랩 일일 점장 팬미팅 응모 기회까지 담긴 초특급 신상! 지치와 초코의 유쾌한 4컷 웹툰과 생생한 실사 팩트 체크로 지금 바로 만나보세요!",
+    # 대표님이 직접 교정하신 인트로 1, 2, 3문단 (멤버별 4색 컬러 태그 적용)
+    intro_1 = (
+        "안녕하세요, 지치 블로그를\n"
+        "찾아주신 여러분!\n"
+        "오늘도 신나는 에너지가 넘치는\n"
+        "편의점 신상 탐방 시간입니다!\n"
+        "오늘은 특별히 인기 걸밴드\n"
+        "QWER의 열혈 찐팬인 턱시도\n"
+        "고양이 초코가 헤드폰을 끼고\n"
+        "음악을 듣다가, 방금 막 터진\n"
+        "엄청난 편의점 대형 콜라보 소식을\n"
+        "접하고 눈을 반짝이며\n"
+        "새싹 요정 지치에게 달려왔습니다!"
+    )
+
+    intro_2 = (
+        "오늘 점심엔 평범한 샌드위치로\n"
+        "때우지 마세요!\n"
+        "편의점 문만 열면 최애 걸밴드\n"
+        "멤버들의 개성이 듬뿍 담긴 4인\n"
+        "4색 프리미엄 샌드위치가 눈앞에\n"
+        "펼쳐집니다!\n"
+        "바로 [RED]이마트24와 대세 걸밴드[/RED]\n"
+        "[RED]QWER의 공식 컬래버 신작,[/RED]\n"
+        "[RED]'QWER 멤버별 샌드위치[/RED]\n"
+        "[RED]4종'[/RED]을 발 빠르게 모셔왔습니다!"
+    )
+
+    intro_3 = (
+        "운동 마니아 [BLUE]쵸단[/BLUE]의 고단백\n"
+        "[BLUE]어니언참치샐러드[/BLUE]부터 [RED]마젠타[/RED]의 진한\n"
+        "[RED]갈릭에그 햄치즈[/RED], [MINT]히나[/MINT]의\n"
+        "[MINT]소시지에그치즈[/MINT], [PURPLE]시연[/PURPLE]의\n"
+        "[PURPLE]아삭햄야채[/PURPLE]까지!\n"
+        "여기에 서울숲 디저트랩 일일 점장\n"
+        "팬미팅 응모 기회까지 담긴\n"
+        "초특급 신상!\n"
+        "지치와 초코의 유쾌한 4컷 웹툰과\n"
+        "생생한 실사 팩트 체크로 지금\n"
+        "바로 만나보세요!"
+    )
+
+    formatted_paragraphs = [
+        intro_1,
+        intro_2,
+        intro_3,
 
         f"__IMAGE__:{real_poster_img}",
 
@@ -116,33 +168,15 @@ def publish_emart24_qwer_sandwich_toon(save_draft: bool = True):
         prompt_cut5_8,
 
         block_info,
-        block_flavor,
-        block_feature,
-        block_tasty_tip,
+        block_flavor_title,
+        block_flavor_body,
+        block_feature_title,
+        block_feature_body,
+        block_tasty_tip_title,
+        block_tasty_tip_body,
 
         "https://blog.naver.com/jcjung1401/224455926788"
     ]
-
-    formatted_paragraphs = []
-    for p in paragraphs:
-        p_str = str(p).strip()
-        if not p_str:
-            continue
-        if p_str.startswith("__IMAGE__:"):
-            formatted_paragraphs.append(p_str)
-        elif p_str.startswith("http://") or p_str.startswith("https://"):
-            formatted_paragraphs.append(p_str)
-        elif any(k in p_str for k in ["제품명 :", "핵심 플레이버", "특징 및 식감", "Tasty Tip!"]):
-            formatted_paragraphs.append(p_str)
-        elif "코자이너" in p_str and "프롬프트" in p_str:
-            formatted_paragraphs.append(p_str)
-        elif "복사 시작" in p_str:
-            formatted_paragraphs.append(p_str)
-        else:
-            fmt = formatter.format_mobile_text(p_str)
-            for sub in fmt.split("\n\n"):
-                if sub.strip():
-                    formatted_paragraphs.append(sub.strip())
 
     tags = [
         "QWER", "이마트24", "QWER샌드위치",
@@ -166,11 +200,11 @@ def publish_emart24_qwer_sandwich_toon(save_draft: bool = True):
 
     # 3. 프롬프트 내부 통합 가이드 포함 및 외부 중복 제거 검사
     has_inner_guide = "1번컷 참조 사진:" in prompt_cut1_4 and "5번컷 참조 사진:" in prompt_cut5_8
-    has_no_duplicate = not any("실사 이미지 배치 & 첨부 가이드" in p for p in paragraphs)
+    has_no_duplicate = not any("실사 이미지 배치 & 첨부 가이드" in p for p in formatted_paragraphs)
     print(f"  ✅ [검증 3] 프롬프트 내부 통합 가이드({has_inner_guide}) / 외부 중복 제거({has_no_duplicate})")
 
-    # 4. 대표님 특명 3대 시각 요소(레드 태그, 내부 링크, 친누나 4대 블록) 전수 검사
-    full_text = "\n".join(paragraphs)
+    # 4. 대표님 특명 3대 시각 요소 전수 검사
+    full_text = "\n".join(formatted_paragraphs)
     v_ok, v_msg = quality_inspector.validate_webtoon_golden_rules(title, full_text)
     print(f"  ✅ [검증 4] {v_msg}")
     if not v_ok:
@@ -188,9 +222,8 @@ def publish_emart24_qwer_sandwich_toon(save_draft: bool = True):
     print(f"🚀 네이버 블로그에 '{title}' {'[임시저장]' if save_draft else '[즉시발행]'} 진행합니다...")
     print(f"  - 카테고리: 웹툰 (No. 7)")
     print(f"  - 첨부 이미지: {2}장 (실사 100% 장착)")
-    print(f"  - 주인공: 지치(새싹 요정) + 초코(턱시도 고양이 - QWER 찐팬)")
-    print(f"  - 주제 레드 강조: [RED]...[/RED] 네이버 공식 빨간색(#ff0010) 자동 적용")
-    print(f"  - 연계 링크 카드: 흑백요리사 1탄(밤티라미수) 카드 자동 생성")
+    print(f"  - 인트로: 대표님 100% 일치 줄바꿈 + 멤버별 4색 컬러 폰트 적용")
+    print(f"  - 본문 4대 블록: 대표님 100% 일치 단일 문단 밀착 및 시원한 블록 분리")
     print(f"  - 서체: 바른히피 일괄 자동 지정")
     print(f"  - 정렬: 가운데 정렬")
 
