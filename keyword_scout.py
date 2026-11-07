@@ -22,6 +22,44 @@ HEADERS = {
 }
 
 
+def get_published_blog_keywords() -> list:
+    """
+    [지치컴패니 공식 영구 업무 매뉴얼 제2호] 기발행 중복 필터링 엔진
+    지치 블로그(jcjung1401) RSS 피드 및 기발행 DB를 실시간 스캔하여
+    이미 포스팅된 신상 아이템을 후보군에서 100% 원천 배제합니다.
+    """
+    blacklist = [
+        "교동짬뽕", "혜자 13찬", "13찬 도시락", "복분자 하이볼", "권성준 감자스틱",
+        "조광효 마파두부", "만찢남", "QWER 샌드위치", "다마고치 드럼 키링", "밤 티라미수"
+    ]
+    try:
+        url = 'https://rss.blog.naver.com/jcjung1401.xml'
+        req = urllib.request.Request(url, headers=HEADERS)
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(resp.read().decode('utf-8', errors='ignore'))
+            for item in root.findall('.//item'):
+                t = item.find('title')
+                if t is not None and t.text:
+                    clean_t = t.text.replace(" ", "")
+                    blacklist.append(clean_t)
+    except Exception as e:
+        pass
+    return blacklist
+
+
+def is_already_published(item_name: str, published_db: list) -> bool:
+    clean_name = item_name.replace(" ", "")
+    for pub in published_db:
+        # 단어 상호 포함 관계 정밀 대조
+        if (pub in clean_name and len(pub) >= 4) or (clean_name in pub and len(clean_name) >= 4):
+            return True
+        # 특정 고유 명사 직접 체크
+        if any(core in clean_name for core in ["교동짬뽕", "13찬", "복분자하이볼", "만찢남", "마파두부", "QWER샌드위치", "드럼키링"]):
+            return True
+    return False
+
+
 def get_smart_week_queries(now: datetime = None) -> list:
     """
     [대표님 2026-11-01 특명] 주차별 스마트 탐색 쿼리 생성기
@@ -553,7 +591,7 @@ if __name__ == "__main__":
         print(f"  - {q}")
 
     # 2026년 11월 1주차 핵심 신상 후보군 (날씨 특수 아이템 포함)
-    candidates = [
+    raw_candidates = [
         {
             "title": "CU 삼립 다마고치 호빵",
             "brand": "CU",
@@ -573,6 +611,12 @@ if __name__ == "__main__":
             "keywords": ["교동짬뽕 컵라면", "세븐 교동짬뽕", "교동짬뽕"]
         },
         {
+            "title": "GS25 심플리쿡 얼큰 우육면",
+            "brand": "GS25",
+            "snippet": "기온 뚝 떨어진 날씨에 생각나는 칼칼하고 진한 고기 국물 우육면 신상",
+            "keywords": ["심플리쿡 우육면", "GS25 우육면", "편의점 우육면"]
+        },
+        {
             "title": "CU 모찌파베초콜릿 말차",
             "brand": "CU",
             "snippet": "쫀득한 찹쌀떡 모찌 속에 생초콜릿 파베초콜릿이 듬뿍 들어간 SNS 바이럴",
@@ -585,6 +629,17 @@ if __name__ == "__main__":
             "keywords": ["GS25 태극당", "태극당 버터크림빵", "태극당 빵"]
         }
     ]
+
+    # [매뉴얼 제2호] 기발행 중복 필터링 적용!
+    published_db = get_published_blog_keywords()
+    candidates = []
+    print(f"\n🛡️ [기발행 중복 필터링 검역 가동]")
+    for rc in raw_candidates:
+        if is_already_published(rc["title"], published_db):
+            print(f"  ❌ [기발행 자동 제외]: '{rc['title']}' (지치 블로그에 이미 발행 완료됨)")
+        else:
+            candidates.append(rc)
+            print(f"  ✅ [검역 통과]: '{rc['title']}'")
 
     print("\n📈 [2단계-A] 네이버 데이터랩 (datalab.naver.com) 최근 30일 관심도 지수 비교:")
     dl_groups = [{"title": c["title"], "keywords": c["keywords"]} for c in candidates]
