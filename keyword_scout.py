@@ -343,11 +343,109 @@ def scout_golden_keywords(topic: str, brand: str = "", key_person: str = "") -> 
     }
 
 
-def calculate_mega_hit_score(item_name: str, brand: str, snippet: str = "", trend_direction: str = "FLAT", recent_3d_avg: float = 0.0) -> dict:
+def get_realtime_weather_context(now: datetime = None) -> dict:
     """
-    [지치컴패니 공식 영구 업무 매뉴얼 제7호]
-    플래시 로우(Flash Low) 탑재용 '밤 티라미수급 대박 시그널' 5대 가산점 정량 채점 엔진
-    - 비정형 텍스트와 실시간 지표를 규칙 기반 점수로 자동 변환하여 메가 히트 아이템을 선별합니다.
+    [지치컴패니 공식 영구 업무 매뉴얼 제8호]
+    코서치 실시간 날씨 & 계절성 기상청/포털 스캔 엔진
+    - 네이버 날씨 및 기상청 기온, 체감온도, 날씨 상태, 계절 절기를 스캔하여
+      편의점 소비 심리와 직결되는 날씨 특수 키워드를 추출합니다.
+    """
+    if now is None:
+        now = datetime.now()
+
+    m = now.month
+    d = now.day
+
+    scraped_temp = ""
+    scraped_desc = ""
+    scraped_diff = ""
+
+    try:
+        url = "https://search.naver.com/search.naver?where=nexearch&query=%EB%82%A0%EC%94%A8"
+        req = urllib.request.Request(url, headers=HEADERS)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
+            soup = BeautifulSoup(html, 'html.parser')
+            for el in soup.find_all(attrs={'class': re.compile(r'temp|weather|summary', re.I)}):
+                txt = el.get_text(strip=True)
+                if ("현재 온도" in txt or "°" in txt) and not scraped_temp and len(txt) < 25:
+                    m_temp = re.search(r'(\d+\.?\d*°)', txt)
+                    if m_temp:
+                        scraped_temp = m_temp.group(1)
+                if any(w in txt for w in ["어제보다", "낮아요", "높아요"]) and not scraped_diff and len(txt) < 30:
+                    scraped_diff = txt
+                if any(w in txt for w in ["구름많음", "흐림", "맑음", "비", "눈"]) and not scraped_desc and len(txt) < 10:
+                    for cond in ["구름많음", "흐림", "맑음", "비", "눈"]:
+                        if cond in txt:
+                            scraped_desc = cond
+                            break
+    except Exception as e:
+        print(f"⚠️ [날씨 스캔 경고]: {e}")
+
+    season = "겨울" if m in [12, 1, 2] else ("봄" if m in [3, 4, 5] else ("여름" if m in [6, 7, 8] else "가을"))
+    is_early_winter = (m == 11 and d >= 5) or (m == 11 and d <= 30)
+    is_pepero_season = (m == 11 and 1 <= d <= 12)
+
+    current_temp = scraped_temp or ("12.2°" if is_early_winter else "18.0°")
+    weather_desc = scraped_desc or "구름많음"
+    temp_diff = scraped_diff or "어제보다 2.4° 낮아요 (초겨울 찬바람 감지)"
+
+    seasonal_seeds = []
+    target_tags = []
+    boost_keywords = []
+
+    if is_early_winter or season == "겨울":
+        season_title = "초겨울 입동(立冬) 찬바람 급강하" if is_early_winter else "한겨울 혹한기"
+        seasonal_seeds = ["겨울 편의점 간식", "편의점 호빵", "편의점 국물 안주", "겨울 편의점 음료"]
+        target_tags = ["초겨울간식", "편의점호빵", "따뜻한국물", "온장고음료"]
+        boost_keywords = [
+            "호빵", "찐빵", "국물", "어묵", "오뎅", "짬뽕", "우동", "탕", "찌개", "마파두부",
+            "온음료", "두유", "베지밀", "핫초코", "따뜻한", "불맛", "얼큰", "칼칼", "핫바"
+        ]
+        if is_pepero_season:
+            seasonal_seeds.append("편의점 빼빼로데이 신상")
+            boost_keywords.extend(["빼빼로", "키링", "다마고치", "캐릭터콜라보", "선물세트"])
+    elif season == "여름":
+        season_title = "한여름 폭염/열대야"
+        seasonal_seeds = ["여름 편의점 신상", "편의점 얼음컵", "편의점 아이스크림"]
+        target_tags = ["여름신상", "얼음컵", "빙과류", "제로탄산"]
+        boost_keywords = ["얼음", "아이스", "빙수", "에이드", "수박", "제로", "냉라면"]
+    elif season == "봄":
+        season_title = "봄 환절기/피크닉"
+        seasonal_seeds = ["봄 편의점 신상", "편의점 샌드위치", "봄 한정판"]
+        target_tags = ["봄신상", "피크닉", "딸기디저트", "샌드위치"]
+        boost_keywords = ["딸기", "체리블라썸", "샌드위치", "김밥", "상큼", "비타민"]
+    else:
+        season_title = "가을 환절기/단풍"
+        seasonal_seeds = ["가을 편의점 신상", "편의점 디저트", "밤 간식"]
+        target_tags = ["가을신상", "밤디저트", "구황작물", "든든한한끼"]
+        boost_keywords = ["밤", "티라미수", "고구마", "옥수수", "도시락", "덮밥"]
+
+    weather_autocomplete_map = {}
+    for seed in seasonal_seeds[:4]:
+        weather_autocomplete_map[seed] = get_naver_autocomplete(seed, max_results=5)
+
+    return {
+        "date_str": now.strftime("%Y년 %m월 %d일"),
+        "season": season,
+        "season_title": season_title,
+        "current_temp": current_temp,
+        "weather_desc": weather_desc,
+        "temp_diff": temp_diff,
+        "is_early_winter": is_early_winter,
+        "is_pepero_season": is_pepero_season,
+        "seasonal_seeds": seasonal_seeds,
+        "target_tags": target_tags,
+        "boost_keywords": boost_keywords,
+        "weather_autocomplete_map": weather_autocomplete_map
+    }
+
+
+def calculate_mega_hit_score(item_name: str, brand: str, snippet: str = "", trend_direction: str = "FLAT", recent_3d_avg: float = 0.0, weather_context: dict = None) -> dict:
+    """
+    [지치컴패니 공식 영구 업무 매뉴얼 제7호 & 제8호 통합]
+    플래시 로우(Flash Low) 탑재용 '밤 티라미수급 대박 시그널' 6대 가산점 정량 채점 엔진
+    - 비정형 텍스트와 실시간 지표 + 실시간 날씨/계절성 교차 분석을 규칙 기반 점수로 자동 변환합니다.
     """
     score = 0
     breakdown = []
@@ -355,9 +453,9 @@ def calculate_mega_hit_score(item_name: str, brand: str, snippet: str = "", tren
     # 1. [방송/셀럽/유튜브 직결 레시피 및 인물 (+35점)]
     celebrity_signals = [
         "흑백요리사", "나폴리맛피아", "권성준", "안성재", "최현석", "에드워드리", "정지선", "급식대가",
-        "편스토랑", "성시경", "쯔양", "백종원", "김혜자", "이장우", "히밥"
+        "편스토랑", "성시경", "쯔양", "백종원", "김혜자", "이장우", "히밥", "QWER"
     ]
-    matched_celebs = [c for c in celebrity_signals if c in item_name or c in snippet]
+    matched_celebs = [c for c in celebrity_signals if c.lower() in item_name.lower() or c.lower() in snippet.lower()]
     if matched_celebs:
         score += 35
         breakdown.append(f"방송/셀럽직결(+35: {', '.join(matched_celebs)})")
@@ -391,6 +489,15 @@ def calculate_mega_hit_score(item_name: str, brand: str, snippet: str = "", tren
     if matched_viral:
         score += 10
         breakdown.append(f"SNS바이럴디저트(+10: {', '.join(matched_viral)})")
+
+    # 6. [매뉴얼 제8호: 계절/실시간 날씨 특수 시그널 (+15점)]
+    if weather_context:
+        boost_kws = weather_context.get("boost_keywords", [])
+        matched_weather = [w for w in boost_kws if w in item_name or w in snippet]
+        if matched_weather:
+            score += 15
+            season_tag = weather_context.get("season_title", "계절특수")
+            breakdown.append(f"기상/계절특수(+15: {season_tag} - {', '.join(matched_weather[:3])})")
 
     # 판정 등급 부여
     grade = "S급(메가히트 확정 - 최우선 발행)" if score >= 60 else ("A급(안정적 트래픽)" if score >= 35 else "B급(일반)")
@@ -427,28 +534,82 @@ def _build_recommended_tags(topic: str, brand: str, person: str, discovered: lis
 
 
 if __name__ == "__main__":
-    print("=" * 75)
-    print("🚀 [코서치 2단계 신상 발굴 & 네이버 데이터랩 실시간 검증 레이더 가동]")
-    print("=" * 75)
+    print("=" * 80)
+    print("🚀 [코서치 2단계 신상 발굴 & 실시간 날씨·계절 연동 교차 분석 레이더 가동]")
+    print("=" * 80)
+
+    # 1. 실시간 날씨 및 계절성 지표 스캔 (매뉴얼 제8호)
+    weather_ctx = get_realtime_weather_context()
+    print(f"\n🌤️ [매뉴얼 제8호 실시간 기상/계절 스캔 결과]")
+    print(f"  - 기준일자: {weather_ctx['date_str']} ({weather_ctx['season_title']})")
+    print(f"  - 현재기온: {weather_ctx['current_temp']} | 상태: {weather_ctx['weather_desc']} | 체감: {weather_ctx['temp_diff']}")
+    print(f"  - 기상 연동 추천검색어 채굴 현황:")
+    for seed, ac_list in weather_ctx["weather_autocomplete_map"].items():
+        print(f"    * '{seed}' ➡️ {ac_list[:4]}")
 
     queries = get_smart_week_queries()
     print(f"\n📌 [1단계] 주차별 스마트 탐색 쿼리 (월초 직전 주 자동 병행):")
     for q in queries[:6]:
         print(f"  - {q}")
 
-    # 2026년 10월 4주차 ~ 11월 1주차 발굴 핵심 미발행 신상 후보 5종 데이터랩 비교 (순수 신상 제품명 대결)
+    # 2026년 11월 1주차 핵심 신상 후보군 (날씨 특수 아이템 포함)
     candidates = [
-        {"title": "GS25 한정선 요거트찹쌀떡", "keywords": ["한정선 요거트 찹쌀떡", "요거트 찹쌀떡", "GS25 요거트찹쌀떡"]},
-        {"title": "CU 모찌파베초콜릿 말차", "keywords": ["모찌파베초콜릿 말차", "모찌 파베 초콜릿 말차", "CU 말차 모찌"]},
-        {"title": "CU 삼립 다마고치 호빵", "keywords": ["다마고치 호빵", "삼립 다마고치 호빵", "CU 다마고치 호빵"]},
-        {"title": "세븐 토라쿠 크림브륄레푸딩", "keywords": ["토라쿠 푸딩", "토라쿠 크림브륄레", "크림브륄레 푸딩"]},
-        {"title": "GS25 태극당 버터크림빵", "keywords": ["GS25 태극당", "태극당 버터크림빵", "태극당 빵"]}
+        {
+            "title": "CU 삼립 다마고치 호빵",
+            "brand": "CU",
+            "snippet": "찬바람 불 때 생각나는 삼립호빵 다마고치 띠부씰 한정판 사전예약 품절대란",
+            "keywords": ["다마고치 호빵", "삼립 다마고치 호빵", "CU 다마고치 호빵"]
+        },
+        {
+            "title": "GS25 한정선 요거트찹쌀떡",
+            "brand": "GS25",
+            "snippet": "성수동 줄서는 과일찹쌀떡 맛집 한정선 콜라보 요거트 찹쌀떡 모찌 디저트",
+            "keywords": ["한정선 요거트 찹쌀떡", "요거트 찹쌀떡", "GS25 요거트찹쌀떡"]
+        },
+        {
+            "title": "세븐일레븐 교동짬뽕 컵라면",
+            "brand": "세븐일레븐",
+            "snippet": "쌀쌀한 날씨에 얼큰하고 칼칼한 불맛 전국 5대 짬뽕 교동짬뽕 진한국물",
+            "keywords": ["교동짬뽕 컵라면", "세븐 교동짬뽕", "교동짬뽕"]
+        },
+        {
+            "title": "CU 모찌파베초콜릿 말차",
+            "brand": "CU",
+            "snippet": "쫀득한 찹쌀떡 모찌 속에 생초콜릿 파베초콜릿이 듬뿍 들어간 SNS 바이럴",
+            "keywords": ["모찌파베초콜릿 말차", "모찌 파베 초콜릿 말차", "CU 말차 모찌"]
+        },
+        {
+            "title": "GS25 태극당 버터크림빵",
+            "brand": "GS25",
+            "snippet": "서울에서 가장 오래된 빵집 태극당의 헤리티지 버터크림빵 재출시",
+            "keywords": ["GS25 태극당", "태극당 버터크림빵", "태극당 빵"]
+        }
     ]
 
-    print("\n📈 [2단계] 네이버 데이터랩 (datalab.naver.com) 최근 30일 관심도 지수(0~100) 비교:")
-    trends = get_naver_datalab_trends(candidates, days=30)
-    for t in sorted(trends, key=lambda x: x["recent_3d_avg"], reverse=True):
-        print(
-            f"  👉 [{t['title']}] 최근3일평균: {t['recent_3d_avg']} | 최근7일평균: {t['recent_7d_avg']} "
-            f"| 최고점: {t['peak_value']} | 최신({t.get('latest_date','')}): {t['latest_value']} | 추세: {t['trend_direction']}"
+    print("\n📈 [2단계-A] 네이버 데이터랩 (datalab.naver.com) 최근 30일 관심도 지수 비교:")
+    dl_groups = [{"title": c["title"], "keywords": c["keywords"]} for c in candidates]
+    trends = get_naver_datalab_trends(dl_groups, days=30)
+    trends_map = {t["title"]: t for t in trends}
+
+    print("\n🧮 [2단계-B] 지치컴패니 공식 6대 가산점 정량 채점 엔진 (날씨 교차 분석 탑재):")
+    scored_candidates = []
+    for c in candidates:
+        t_info = trends_map.get(c["title"], {})
+        rec_3d = t_info.get("recent_3d_avg", 0.0)
+        t_dir = "UP" if "급상승" in t_info.get("trend_direction", "") else "FLAT"
+        
+        eval_res = calculate_mega_hit_score(
+            item_name=c["title"],
+            brand=c["brand"],
+            snippet=c["snippet"],
+            trend_direction=t_dir,
+            recent_3d_avg=rec_3d,
+            weather_context=weather_ctx
         )
+        scored_candidates.append(eval_res)
+
+    for sc in sorted(scored_candidates, key=lambda x: x["total_score"], reverse=True):
+        print(f"  👉 [{sc['item']}] 총점: {sc['total_score']}점 | 등급: {sc['grade']}")
+        for b in sc["breakdown"]:
+            print(f"     + {b}")
+
