@@ -151,6 +151,75 @@ def _apply_bareun_hipi_to_all_content(page):
     return False
 
 
+def _set_font_family_nanum_gothic(page):
+    """
+    [AI 정보 기사 전용] 네이버 스마트에디터 ONE의 글꼴(서체)을 깔끔하고 신뢰감 있는 '나눔고딕(nanumgothic)'으로 지정합니다.
+    """
+    try:
+        font_btn = page.locator(
+            "button.se-font-family-toolbar-button, "
+            "button[data-name='font-family'], "
+            ".se-toolbar-item-font-family button, "
+            "button.se-font-code-toolbar-button, "
+            "button.se-fontname-toolbar-button, "
+            "button[aria-label*='글꼴']"
+        ).first
+        if font_btn.is_visible(timeout=2000):
+            font_btn.click()
+            time.sleep(0.4)
+            gothic_opt = page.locator(
+                "button.se-toolbar-option-font-family-nanumgothic-button, "
+                "button[data-value='nanumgothic'], "
+                ".se-toolbar-option-font-family-nanumgothic-button, "
+                "button.se-toolbar-option-text-button:has-text('나눔고딕')"
+            ).first
+            if gothic_opt.is_visible(timeout=2000):
+                gothic_opt.click()
+                time.sleep(0.3)
+                print("  [글꼴 설정] AI 기사 전용 매거진 서체 '나눔고딕(nanumgothic)' 적용 완료!")
+                return True
+            else:
+                font_btn.click()
+                time.sleep(0.2)
+    except Exception as e:
+        print(f"  [글꼴 설정 경고] 나눔고딕 설정 중 예외: {e}")
+    return False
+
+
+def _set_font_size_19px(page):
+    """
+    [AI 정보 기사 매거진 소제목 전용] 글자 크기를 시원한 19px(fs19)로 변경합니다.
+    """
+    try:
+        size_btn = page.locator(
+            "button.se-font-size-code-toolbar-button, "
+            "button.se-font-size-toolbar-button, "
+            "button[data-name='font-size'], "
+            ".se-toolbar-item-font-size button"
+        ).first
+        if size_btn.is_visible(timeout=1500):
+            size_btn.click()
+            time.sleep(0.3)
+            opt_19 = page.locator(
+                "button[data-value='fs19'], "
+                "button.se-toolbar-option-font-size-code-fs19-button, "
+                "button:has-text('19')"
+            ).first
+            if opt_19.is_visible(timeout=1500):
+                opt_19.click()
+                time.sleep(0.2)
+                return True
+            else:
+                opt_16 = page.locator("button[data-value='fs16'], button:has-text('16')").first
+                if opt_16.is_visible(timeout=1000):
+                    opt_16.click()
+                    time.sleep(0.2)
+                    return True
+    except Exception:
+        pass
+    return False
+
+
 def _set_font_size_subheading(page):
     """
     스마트에디터 ONE의 글자 크기 툴바를 제어하여 소제목 전용 16px로 변경합니다.
@@ -264,12 +333,69 @@ def _reset_text_color(page):
     return False
 
 
+def _set_bg_highlight(page, bg_type: str = "HL_SKY"):
+    """
+    스마트에디터 ONE의 글자 배경색(형광펜) 팔레트에서 파스텔 하늘색/노란색 음영을 선택합니다.
+    """
+    try:
+        bg_btn = page.locator(
+            "button.se-background-color-toolbar-button, "
+            "button[data-name='background-color'], "
+            ".se-toolbar-item-background-color button"
+        ).first
+        if bg_btn.is_visible(timeout=1200):
+            bg_btn.click()
+            time.sleep(0.25)
+            candidates = (
+                ["#d4f4fa", "#e0f2fe", "#c8f0f8", "#e8f5ff", "#b2ebf2", "#00b8ff"]
+                if bg_type == "HL_SKY"
+                else ["#fff9c4", "#fff59d", "#fef08a", "#fff8b8", "#ffeb3b"]
+            )
+            for hex_c in candidates:
+                opt = page.locator(f'button.se-color-palette[data-color="{hex_c}"]').first
+                if opt.count() > 0 and opt.is_visible(timeout=400):
+                    opt.click()
+                    time.sleep(0.2)
+                    return True
+            # 정확히 일치하는 hex가 없으면 팔레트의 파스텔 행(2~3번째 스와치) 선택 시도 후 닫기
+            bg_btn.click()
+            time.sleep(0.15)
+    except Exception:
+        pass
+    return False
+
+
+def _reset_bg_highlight(page):
+    """
+    글자 배경색(형광펜)을 '색상 없음(se-color-palette-no-color)'으로 초기화합니다.
+    """
+    try:
+        bg_btn = page.locator(
+            "button.se-background-color-toolbar-button, "
+            "button[data-name='background-color'], "
+            ".se-toolbar-item-background-color button"
+        ).first
+        if bg_btn.is_visible(timeout=1200):
+            bg_btn.click()
+            time.sleep(0.25)
+            reset_btn = page.locator('button.se-color-palette-no-color').first
+            if reset_btn.is_visible(timeout=1000):
+                reset_btn.click()
+                time.sleep(0.2)
+                return True
+            bg_btn.click()
+            time.sleep(0.15)
+    except Exception:
+        pass
+    return False
+
+
 def _type_styled_line(page, line_text: str):
     """
     [대표님 특명 엄격 준수]
-    1. 스마트 에디터 dot(•) 표시 원천 금지! (-, *, • 등 불릿 기호 완전 삭제)
+    1. 스마트 에디터 dot(•) 표시 원천 금지! (-, *, • 등 불릿 기호 완전 삭제, 단 '▸'는 요약 박스용으로 허용)
     2. 소제목 및 본문 1. 2. 번호매김 원천 금지! (숫자+점 리스트 트리거 완전 삭제)
-    3. [RED], [BLUE], [MINT], [PURPLE] 등 다채로운 컬러 및 **볼드** 서식을 완벽 파싱하여 실제 스타일로 타이핑!
+    3. [RED], [BLUE], [MINT], [PURPLE], [HL_SKY], [HL_YELLOW] 및 **볼드** 서식을 완벽 파싱하여 실제 스타일로 타이핑!
     """
     clean_line = line_text.strip()
     if not clean_line:
@@ -282,29 +408,39 @@ def _type_styled_line(page, line_text: str):
     if not clean_line:
         return
 
-    # 컬러 태그 및 **볼드** 정규식 분리
-    pattern = r'(\[(?:RED|BLUE|MINT|PURPLE)\].*?\[/(?:RED|BLUE|MINT|PURPLE)\]|\*\*.*?\*\*)'
+    # 컬러/하이라이트 태그 및 **볼드** 정규식 분리
+    pattern = r'(\[(?:RED|BLUE|MINT|PURPLE|HL_SKY|HL_YELLOW)\].*?\[/(?:RED|BLUE|MINT|PURPLE|HL_SKY|HL_YELLOW)\]|\*\*.*?\*\*)'
     parts = re.split(pattern, clean_line)
     for p in parts:
         if not p:
             continue
-        tag_match = re.match(r'^\[(RED|BLUE|MINT|PURPLE)\](.*?)\[/\1\]$', p)
+        tag_match = re.match(r'^\[(RED|BLUE|MINT|PURPLE|HL_SKY|HL_YELLOW)\](.*?)\[/\1\]$', p)
         if tag_match:
             cname, inner = tag_match.groups()
-            is_bold = False
             if inner.startswith('**') and inner.endswith('**') and len(inner) >= 4:
                 inner = inner[2:-2]
-                is_bold = True
             inner = inner.replace('*', '')
             if inner:
-                color_hex = COLOR_MAP.get(cname, "#ff0010")
-                _set_text_color(page, color_hex)
-                page.keyboard.press("Control+b")
-                time.sleep(0.02)
-                page.keyboard.insert_text(inner)
-                page.keyboard.press("Control+b")
-                time.sleep(0.02)
-                _reset_text_color(page)
+                if cname in ("HL_SKY", "HL_YELLOW"):
+                    bg_applied = _set_bg_highlight(page, cname)
+                    _set_text_color(page, "#0066cc")
+                    page.keyboard.press("Control+b")
+                    time.sleep(0.02)
+                    page.keyboard.insert_text(inner)
+                    page.keyboard.press("Control+b")
+                    time.sleep(0.02)
+                    _reset_text_color(page)
+                    if bg_applied:
+                        _reset_bg_highlight(page)
+                else:
+                    color_hex = COLOR_MAP.get(cname, "#ff0010")
+                    _set_text_color(page, color_hex)
+                    page.keyboard.press("Control+b")
+                    time.sleep(0.02)
+                    page.keyboard.insert_text(inner)
+                    page.keyboard.press("Control+b")
+                    time.sleep(0.02)
+                    _reset_text_color(page)
         elif p.startswith('**') and p.endswith('**') and len(p) >= 4:
             bold_text = p[2:-2].replace('*', '')
             is_red = any(rk in bold_text for rk in ["공감", "좋아요", "공감(좋아요)"])
@@ -335,19 +471,47 @@ def _enable_center_alignment(page):
         ).first
         if align_btn.is_visible(timeout=2500):
             align_btn.click()
-            time.sleep(0.5)
+            time.sleep(0.4)
             center_opt = page.locator(
                 "button[data-value='center'], "
                 "button[data-name='align-center'], "
                 ".se-toolbar-option-align-center-button"
             ).first
-            if center_opt.is_visible(timeout=2500):
+            if center_opt.is_visible(timeout=2000):
                 center_opt.click()
-                time.sleep(0.4)
-                print("  📐 가운데 정렬(Center) 툴바 클릭 완료")
+                time.sleep(0.3)
+                print("  📐 가운데 정렬(Center) 활성화 완료")
                 return
     except Exception as e:
         print(f"  ⚠️ 가운데 정렬 클릭 중 예외: {e}")
+
+
+def _enable_left_alignment(page):
+    """
+    [AI 정보 매거진 본문 전용] 스마트에디터 ONE의 정렬 툴바에서 '왼쪽 정렬(Left)'을 활성화하여
+    영수증처럼 좁게 쪼개지지 않고 매거진 칼럼처럼 시원하게 읽히도록 설정합니다.
+    """
+    try:
+        align_btn = page.locator(
+            "button.se-alignment-toolbar-button, "
+            "button[data-name='align-drop-down-with-justify'], "
+            ".se-toolbar-item-align button"
+        ).first
+        if align_btn.is_visible(timeout=2500):
+            align_btn.click()
+            time.sleep(0.4)
+            left_opt = page.locator(
+                "button[data-value='left'], "
+                "button[data-name='align-left'], "
+                ".se-toolbar-option-align-left-button"
+            ).first
+            if left_opt.is_visible(timeout=2000):
+                left_opt.click()
+                time.sleep(0.3)
+                print("  📐 왼쪽 정렬(Left - 매거진 본문 모드) 활성화 완료")
+                return
+    except Exception as e:
+        print(f"  ⚠️ 왼쪽 정렬 클릭 중 예외: {e}")
 
 
 def post_to_naver_blog(
@@ -509,27 +673,45 @@ def post_to_naver_blog(
                 page.keyboard.press("Enter")
             time.sleep(1)
 
-            # 인라인 이미지 마커(__IMAGE__:)가 없는 경우에만 상단 대표 이미지 업로드
-            # (주의: 웹툰 카테고리에서는 절대 기사 전용 썸네일 '완성_썸네일_1691x930.png'을 폴백으로 쓰지 않음!)
+            # 상단 대표 이미지 업로드:
+            # - AI 정보 카테고리(target_cat_no == "6")는 본문 중간에 인포그래픽(__IMAGE__:)이 있더라도
+            #   최상단 대표 썸네일(image_paths)을 무조건 먼저 업로드합니다!
+            # - 웹툰 카테고리(target_cat_no == "7")는 인라인 이미지 마커가 없을 때만 기본 이미지를 업로드합니다.
+            base_dir = os.path.dirname(os.path.abspath(__file__))
             has_inline_markers = any(str(p).strip().startswith("__IMAGE__:") for p in content_paragraphs)
-            if not has_inline_markers:
-                base_dir = os.path.dirname(os.path.abspath(__file__))
-                if target_cat_no == "6":
-                    default_thumb = os.path.join(base_dir, "완성_썸네일_1691x930.png")
-                    target_images = image_paths if image_paths else ([default_thumb] if os.path.exists(default_thumb) else [])
-                else:
-                    wt1 = os.path.join(base_dir, "webtoon_cut_1.png")
-                    wt2 = os.path.join(base_dir, "webtoon_cut_2.png")
-                    default_wt = [p for p in [wt1, wt2] if os.path.exists(p)]
-                    target_images = image_paths if image_paths else default_wt
+            if target_cat_no == "6":
+                default_thumb = os.path.join(base_dir, "완성_썸네일_1691x930.png")
+                target_images = image_paths if image_paths else ([default_thumb] if os.path.exists(default_thumb) else [])
+                for img_path in target_images:
+                    _upload_single_image(page, img_path)
+            elif not has_inline_markers:
+                wt1 = os.path.join(base_dir, "webtoon_cut_1.png")
+                wt2 = os.path.join(base_dir, "webtoon_cut_2.png")
+                default_wt = [p for p in [wt1, wt2] if os.path.exists(p)]
+                target_images = image_paths if image_paths else default_wt
                 for img_path in target_images:
                     _upload_single_image(page, img_path)
 
-            # 본문 타이핑 시작 전 가운데 정렬 및 '바른히피' 글꼴 활성화 (대표님 특명)
-            _enable_center_alignment(page)
-            _set_font_family_bareun_hipi(page)
+            # 카테고리별 서체 및 기본 정렬 초기화 (웹툰: 바른히피+가운데정렬 / AI 정보: 나눔고딕+매거진 하이브리드 정렬)
+            if target_cat_no == "7":
+                _enable_center_alignment(page)
+                _set_font_family_bareun_hipi(page)
+            else:
+                _enable_center_alignment(page)
+                _set_font_family_nanum_gothic(page)
 
-            # 3. 문단별 정밀 타이핑 (소제목 앞뒤 확실한 여백 분리, 인라인 웹툰 이미지 업로드)
+            current_align = "center"
+
+            def _ensure_align(mode: str):
+                nonlocal current_align
+                if current_align != mode:
+                    if mode == "center":
+                        _enable_center_alignment(page)
+                    else:
+                        _enable_left_alignment(page)
+                    current_align = mode
+
+            # 3. 문단별 정밀 타이핑 (매거진 마커 [HOOK], [SUMMARY_BOX], [SUB], [QUOTE] 및 인라인 이미지 완벽 처리)
             for p_idx, para in enumerate(content_paragraphs):
                 p_text = str(para).strip()
                 if not p_text:
@@ -537,46 +719,132 @@ def post_to_naver_blog(
                 if p_idx % 5 == 0 or p_idx == len(content_paragraphs) - 1:
                     print(f"  - 원고 타이핑 진행 중: {p_idx+1}/{len(content_paragraphs)}")
 
+                # (A) 인라인 이미지 업로드 (__IMAGE__:)
                 if p_text.startswith("__IMAGE__:"):
                     inline_img = p_text.split("__IMAGE__:", 1)[1].strip()
                     inline_img = re.sub(r'[\r\n]+', '', inline_img).strip()
                     _upload_single_image(page, inline_img)
-                    _enable_center_alignment(page)
+                    if target_cat_no == "7":
+                        _enable_center_alignment(page)
+                        current_align = "center"
+                    else:
+                        _enable_left_alignment(page)
+                        current_align = "left"
                     continue
 
-                # 소제목 판별: [제목] 형태 또는 숫자 없는 [소제목] 모두 지원
-                is_subheading = bool(re.match(r"^\[(?:\d+\.\s*)?[^\]]+\]$", p_text))
-                if is_subheading:
-                    # [소제목 상단 확실한 여백 확보]: 앞 문단과 넉넉한 간격을 두기 위해 빈 줄 2개 삽입
+                # (B) [HOOK]...[/HOOK] : 상단 2줄 헤드카피 및 하단 엔딩 슬로건 (가운데 정렬 + 16px)
+                if p_text.startswith("[HOOK]") and p_text.endswith("[/HOOK]"):
+                    inner_hook = p_text[6:-7].strip()
+                    _ensure_align("center")
+                    _set_font_size_subheading(page)
+                    hook_lines = [ln.strip() for ln in inner_hook.split("\n") if ln.strip()]
+                    for h_i, h_ln in enumerate(hook_lines):
+                        _type_styled_line(page, h_ln)
+                        if h_i < len(hook_lines) - 1:
+                            page.keyboard.press("Shift+Enter")
+                            time.sleep(0.04)
+                    _set_font_size_15px(page)
+                    page.keyboard.press("Enter")
+                    time.sleep(0.05)
+                    page.keyboard.press("Enter")
+                    time.sleep(0.1)
+                    continue
+
+                # (C) [SUMMARY_BOX]...[/SUMMARY_BOX] : 상단 [핵심 3줄 요약] 박스 (왼쪽 정렬 + 구분선 박스)
+                if p_text.startswith("[SUMMARY_BOX]") and p_text.endswith("[/SUMMARY_BOX]"):
+                    inner_box = p_text[13:-14].strip()
+                    _ensure_align("left")
+                    _set_font_size_15px(page)
+                    box_lines = [ln.strip() for ln in inner_box.split("\n") if ln.strip()]
+                    _set_text_color(page, "#0066cc")
+                    page.keyboard.insert_text("━━━━━━━━━━━━━━━━━━━━━━")
+                    _reset_text_color(page)
+                    page.keyboard.press("Shift+Enter")
+                    time.sleep(0.04)
+                    for b_i, b_ln in enumerate(box_lines):
+                        _type_styled_line(page, b_ln)
+                        page.keyboard.press("Shift+Enter")
+                        time.sleep(0.04)
+                    _set_text_color(page, "#0066cc")
+                    page.keyboard.insert_text("━━━━━━━━━━━━━━━━━━━━━━")
+                    _reset_text_color(page)
+                    page.keyboard.press("Enter")
+                    time.sleep(0.05)
+                    page.keyboard.press("Enter")
+                    time.sleep(0.12)
+                    continue
+
+                # (D) [QUOTE]...[/QUOTE] : 중간 브릿지 질문형 따옴표 인용구 (가운데 정렬 + 16px 볼드 블루)
+                if p_text.startswith("[QUOTE]") and p_text.endswith("[/QUOTE]"):
+                    inner_q = p_text[7:-8].strip()
+                    _ensure_align("center")
+                    _set_font_size_subheading(page)
+                    _set_text_color(page, "#0066cc")
+                    page.keyboard.press("Control+b")
+                    time.sleep(0.04)
+                    page.keyboard.insert_text(inner_q)
+                    page.keyboard.press("Control+b")
+                    _reset_text_color(page)
+                    _set_font_size_15px(page)
+                    page.keyboard.press("Enter")
+                    time.sleep(0.05)
+                    page.keyboard.press("Enter")
+                    time.sleep(0.12)
+                    continue
+
+                # (E) 소제목 판별: [SUB]...[/SUB] 또는 구형 [소제목]
+                is_mag_sub = p_text.startswith("[SUB]") and p_text.endswith("[/SUB]")
+                is_legacy_sub = bool(re.match(r"^\[(?:\d+\.\s*)?[^\]]+\]$", p_text))
+                if is_mag_sub or is_legacy_sub:
                     if p_idx > 0:
                         page.keyboard.press("Enter")
                         time.sleep(0.05)
-                        page.keyboard.press("Enter")
-                        time.sleep(0.1)
-                    
-                    # ⭐ 사장님 특명: 소제목 1pt 확대(16px) + 두꺼운 글씨(Bold) 서식 정밀 적용
-                    _set_font_size_subheading(page)
-                    page.keyboard.press("Control+b")
-                    time.sleep(0.08)
 
-                    clean_sub = p_text
-                    # 대괄호 및 앞단의 1. 2. 3. 번호 완전히 제거
-                    if clean_sub.startswith("[") and clean_sub.endswith("]"):
-                        clean_sub = clean_sub[1:-1].strip()
+                    if target_cat_no == "6":
+                        _ensure_align("left")
+                        _set_font_size_19px(page)
+                    else:
+                        _ensure_align("center")
+                        _set_font_size_subheading(page)
+
+                    page.keyboard.press("Control+b")
+                    time.sleep(0.06)
+
+                    if is_mag_sub:
+                        clean_sub = p_text[5:-6].strip()
+                    else:
+                        clean_sub = p_text[1:-1].strip()
                     clean_sub = re.sub(r"^\d+\.\s*", "", clean_sub).strip()
 
-                    page.keyboard.type(clean_sub, delay=25)
+                    if target_cat_no == "6":
+                        clean_sub = re.sub(r"^[▎|]\s*", "", clean_sub).strip()
+                        _set_text_color(page, "#0066cc")
+                        page.keyboard.insert_text("▎ ")
+                        _reset_text_color(page)
+                        page.keyboard.insert_text(clean_sub)
+                    else:
+                        page.keyboard.type(clean_sub, delay=25)
 
                     page.keyboard.press("Control+b")
                     _set_font_size_15px(page)
                     time.sleep(0.08)
-                    
-                    # [소제목 하단 여백 확보]: 소제목과 아래 본문 문단 사이에 확실한 공백 줄 생성
+
                     page.keyboard.press("Enter")
                     time.sleep(0.05)
                     page.keyboard.press("Enter")
-                    time.sleep(0.15)
+                    time.sleep(0.12)
                 else:
+                    # (F) 일반 본문 문단:
+                    # - 웹툰(7): 가운데 정렬 유지
+                    # - AI 정보(6): 본문 해설은 왼쪽 정렬(매거진 칼럼 폭), 마지막 감사 인사만 가운데 정렬
+                    if target_cat_no == "6":
+                        if "소중한 시간 내어 읽어주셔서" in p_text:
+                            _ensure_align("center")
+                        else:
+                            _ensure_align("left")
+                    else:
+                        _ensure_align("center")
+
                     lines = p_text.split("\n")
                     has_url_in_para = False
                     for l_i, line in enumerate(lines):
@@ -586,8 +854,6 @@ def post_to_naver_blog(
                             _type_styled_line(page, line_str)
                         if is_url_line:
                             has_url_in_para = True
-                            # [대표님 특명]: URL 입력 직후 Enter로 오픈그래프(OG) 링크 카드를 먼저 완성시키고,
-                            # 카드 아래 독립 텍스트 블록으로 커서를 이동시켜 '소중한 시간...' 인사말과 절대 섞이지 않게 보호!
                             og_before = page.locator(".se-component.se-oglink").count()
                             page.keyboard.press("Enter")
                             for _ in range(25):
@@ -599,21 +865,26 @@ def post_to_naver_blog(
                             time.sleep(0.15)
                             page.keyboard.press("Enter")
                             time.sleep(0.15)
-                            _enable_center_alignment(page)
+                            if target_cat_no == "7":
+                                _enable_center_alignment(page)
+                                current_align = "center"
+                            else:
+                                _enable_left_alignment(page)
+                                current_align = "left"
                         elif l_i < len(lines) - 1:
                             page.keyboard.press("Shift+Enter")
                             time.sleep(0.03)
-                    
-                    # 일반 문단 끝난 후 기본 문단 간격 (URL 문단은 이미 OG 카드 아래로 분리 완료)
-                    # [대표님 특명 / 친누나 황금 양식]: 각 독립 문단 블록 사이 확실한 빈 줄 여백 확보 (Enter 2회)
+
                     if not has_url_in_para:
                         page.keyboard.press("Enter")
                         time.sleep(0.05)
                         page.keyboard.press("Enter")
                         time.sleep(0.1)
 
-            # [대표님 특명] 본문 전체(모든 문단 및 텍스트 블록)를 '바른히피' 서체로 일괄 강제 적용!
-            _apply_bareun_hipi_to_all_content(page)
+            # [대표님 특명] 웹툰(카테고리 7)일 때만 본문 전체를 '바른히피' 서체로 일괄 강제 적용!
+            # AI 정보(카테고리 6)는 전문 테크 매거진 가독성을 위해 깔끔한 고딕 서체 유지!
+            if target_cat_no == "7":
+                _apply_bareun_hipi_to_all_content(page)
 
             # 본문 하단 해시태그 텍스트 추가 (네이버 본문 검색 인덱싱 보장)
             if tags:

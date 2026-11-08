@@ -296,13 +296,14 @@ def get_best_tech_internal_links(blog_id: str = "jcjung1401", exclude_title: str
     return results
 
 
-def build_best3_tech_links_block(blog_id: str = "jcjung1401", exclude_title: str = "") -> str:
+def build_best3_tech_links_block(blog_id: str = "jcjung1401", exclude_title: str = "", max_links: int = 1) -> str:
     """
-    '[함께 읽으면 유익한 지치 블로그 테크 BEST 3]' 소제목과 실제 블로그 글 제목 + 실제 블로그 링크 3세트를 생성합니다.
+    [하단부 다이어트 적용] 본문보다 하단 링크 카드가 더 길어지는 현상을 방지하기 위해,
+    가장 연관성이 높은 대표 테크 분석 글 1개(기본값 max_links=1)만 스마트에디터 카드로 깔끔하게 연결합니다.
     """
     links = get_best_tech_internal_links(blog_id=blog_id, exclude_title=exclude_title)
-    lines = ["[함께 읽으면 유익한 지치 블로그 테크 BEST 3]"]
-    for item in links:
+    lines = ["[SUB]▎ 함께 읽으면 유익한 지치 블로그 연관 분석[/SUB]"]
+    for item in links[:max_links]:
         lines.append(f"**{item['title']}**\n\n{item['url']}")
     return "\n\n".join(lines)
 

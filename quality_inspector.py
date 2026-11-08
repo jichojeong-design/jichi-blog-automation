@@ -212,50 +212,36 @@ def validate_and_repair_article_pre_publish(
     if has_orphan_number:
         repairs_done.append("번호 단독 분리 결함(1.\n) 감지 -> 번호+제목 결합 예외 로직으로 강제 수리")
 
-    # [코리티 특별 검증 4] 동일 소제목 중복 노출 방지 및 자동 수리
-    subheadings = re.findall(r'\[[^\]]+\]', full_body)
+    # [코리티 특별 검증 4] 매거진 소제목([SUB]...[/SUB]) 검증 (컬러/레이아웃 태그는 절대 훼손 금지!)
+    subheadings = re.findall(r'\[SUB\](.*?)\[/SUB\]', full_body)
+    if not subheadings:
+        # 구형 대괄호 소제목만 추출 (서식 태그 제외)
+        subheadings = re.findall(
+            r'\[(?!(?:RED|BLUE|MINT|PURPLE|HL_SKY|HL_YELLOW|HOOK|SUMMARY_BOX|QUOTE|SUB|/))[0-9가-힣a-zA-Z\s·:\-]+?\]',
+            full_body
+        )
     subheading_count = len(subheadings)
     if subheading_count < 3:
-        repairs_done.append(f"소제목 수량 주의 ({subheading_count}개 발견)")
-    elif len(set(subheadings)) < len(subheadings):
-        repairs_done.append("동일 소제목 중복 감지 -> 문맥별 고유 소제목 3종으로 자동 분리 수리")
-        fallback_subs = [
-            "[공식 발표 핵심 사양과 배경]",
-            "[기술적 진보와 시장 경쟁 구도]",
-            "[실무 도입 시 한계와 관전 포인트]"
-        ]
-        seen_subs = set()
-        sub_idx = 0
-        def _replace_dup_sub(m):
-            nonlocal sub_idx
-            s = m.group(0)
-            if s not in seen_subs and s != "[공식 보도자료 및 기술 문서 기반 분석]":
-                seen_subs.add(s)
-                return s
-            replacement = fallback_subs[sub_idx % len(fallback_subs)]
-            sub_idx += 1
-            seen_subs.add(replacement)
-            return replacement
-        full_body = re.sub(r'\[(?!(?:지치 블로그|공식 출처))[^\]]+\]', _replace_dup_sub, full_body)
+        repairs_done.append(f"소제목 수량 확인 ({subheading_count}개)")
 
     re_formatted = formatter.format_mobile_text(full_body)
     repaired_paragraphs = [p for p in re_formatted.split("\n\n") if p.strip()]
-    if has_awkward_break:
+    if has_awkward_break and not any(m in full_body for m in ["[HOOK]", "[SUMMARY_BOX]", "[SUB]"]):
         repairs_done.append("본문 줄바꿈 호흡 불량 감지 -> 문장/절 단위 자연스러운 줄바꿈으로 자동 완벽 수리")
 
     # 4. 네이버 우수 블로거 선정 기준 필수 요소 정밀 검사:
     # (1) [자료 기반 설명 vs 직접 경험 구분 여부]
     # (2) [지치 블로그 테크 전문 분석 1~2줄 포함 여부]
-    has_source_mark = any(m in full_body for m in ["[공식 발표", "[공식 보도자료", "자료 분석", "출처:"])
+    has_source_mark = any(m in full_body for m in ["[공식 발표", "[공식 보도자료", "자료 분석", "출처:", "공식 출처", "[SUMMARY_BOX]"])
     if not has_source_mark:
         repairs_done.append("자료 기반 설명 명시 보강 (신뢰도 제고)")
         repaired_paragraphs.insert(0, "(※ 본 포스팅은 공식 발표 자료 및 기술 문서를 바탕으로 심층 분석한 정보성 콘텐츠입니다.)")
 
-    has_analysis = any(a in full_body for a in ["[지치 블로그 테크 전문 분석]", "테크 전문 분석", "전문 분석]"])
+    has_analysis = any(a in full_body for a in ["[지치 블로그 테크 전문 분석]", "테크 전문 분석", "전문 분석"])
     if not has_analysis:
         repairs_done.append("전문 분석 1~2줄 자동 보강 완료")
         analysis_block = (
-            "[지치 블로그 테크 전문 분석]\n"
+            "[SUB]▎ 지치 블로그 테크 전문 분석[/SUB]\n\n"
             "단순 수치 경쟁을 넘어 실질적인 인프라 비용 대비 효율성과 도입 실효성이 최대 승부처입니다. "
             "실무진은 벤치마크 지표뿐만 아니라 자사 환경에 맞는 PoC(개념 검증)를 선제적으로 거치는 접근이 권장됩니다."
         )
@@ -278,32 +264,32 @@ def validate_and_repair_article_pre_publish(
                 full_body
             )
 
-    # 2. 내부링크 BEST 3 실제 블로그 URL(https://blog.naver.com/jcjung1401/) 누락 및 이종 카테고리 오염 여부 전수 검사
+    # 2. 내부링크 실제 블로그 URL(https://blog.naver.com/jcjung1401/) 누락 및 이종 카테고리 오염 여부 전수 검사
     import history_checker
     if "https://blog.naver.com/jcjung1401/" not in full_body:
-        repairs_done.append("인간 눈높이 검수: BEST 3 추천 글에 실제 블로그 링크(URL) 누락 감지 -> 실시간 지치 블로그 테크 글 제목+URL 3종 즉시 연결")
+        repairs_done.append("인간 눈높이 검수: 추천 글에 실제 블로그 링크(URL) 누락 감지 -> 실시간 지치 블로그 테크 글 제목+URL 즉시 연결")
         full_body = re.sub(
             r'\[함께 읽으면[^\]]*\][\s\S]*?(?=(?:공식\s*출처:|출처:|소중한\s*시간|$))',
             '',
             full_body
         ).strip()
-        best3_real = history_checker.build_best3_tech_links_block("jcjung1401", exclude_title=topic)
+        best1_real = history_checker.build_best3_tech_links_block("jcjung1401", exclude_title=topic, max_links=1)
         if "소중한 시간" in full_body:
             idx = full_body.find("소중한 시간")
-            full_body = full_body[:idx].rstrip() + f"\n\n{best3_real}\n\n" + full_body[idx:].lstrip()
+            full_body = full_body[:idx].rstrip() + f"\n\n{best1_real}\n\n" + full_body[idx:].lstrip()
         else:
-            full_body += f"\n\n{best3_real}"
+            full_body += f"\n\n{best1_real}"
 
-    if "[함께 읽으면" in full_body or "BEST 3" in full_body:
+    if "함께 읽으면" in full_body or "BEST 3" in full_body:
         banned_cross_category = ["편의점", "리센느", "사이다", "디저트", "모찌", "피스타치오"]
         for bcc in banned_cross_category:
-            if bcc in full_body[full_body.find("BEST 3"):] if "BEST 3" in full_body else False:
+            if bcc in full_body[full_body.find("함께 읽으면"):] if "함께 읽으면" in full_body else False:
                 repairs_done.append(f"인간 눈높이 검수: 테크 기사 내 이종 카테고리('{bcc}') 추천 감지 -> AI 테크 전용 글로 즉시 정화 교정")
                 full_body = full_body.replace(bcc, "AI 테크")
 
-    # 3. 도입부 결론(두괄식) 포함 여부 인간 눈높이 체크
+    # 3. 도입부 결론(두괄식) 또는 매거진 훅([HOOK]/[SUMMARY_BOX]) 포함 여부 인간 눈높이 체크
     first_p = repaired_paragraphs[0] if repaired_paragraphs else ""
-    if not any(hook in first_p for hook in ["결론부터", "핵심은", "이유는", "공식 발표"]):
+    if not any(hook in first_p for hook in ["결론부터", "핵심은", "이유는", "공식 발표", "[HOOK]", "[SUMMARY_BOX]", "핵심"]):
         repairs_done.append("인간 눈높이 검수: 첫 문단 3초 훅 두괄식 결론 보강")
 
     # 4. 당일 기발행 기사와의 소재/주제 중복 전수 검사 (코리티 중복 방어선)
@@ -440,15 +426,15 @@ def inspect_latest_post_quality(expected_category: str = "AI 정보", is_article
         if "**" in body_text:
             report["issues"].append("❌ 본문 내 변환되지 않은 마크다운 별표(**) 노출 결함 감지")
 
-        # 10. [대표님 특명] 서체 '바른히피' 적용 여부 정밀 검사
+        # 10. [대표님 특명] 카테고리별 맞춤 서체(웹툰: 바른히피 / AI 정보: 고딕) 적용 여부 정밀 검사
         font_classes = set()
         for span in latest_viewer.select(".se-main-container span"):
             for cls in span.get("class", []):
                 if "se-ff-" in cls:
                     font_classes.add(cls)
         report["fonts"] = list(font_classes)
-        if font_classes and "se-ff-nanumbareunhipi" not in font_classes:
-            report["issues"].append(f"⚠️ 대표님 특명 서체 '바른히피' 미적용 (현재 적용 서체: {list(font_classes)})")
+        if not is_article and font_classes and "se-ff-nanumbareunhipi" not in font_classes:
+            report["issues"].append(f"⚠️ 웹툰 전용 서체 '바른히피' 미적용 (현재 적용 서체: {list(font_classes)})")
 
         # 11. [대표님 2026-10-31 업무 매뉴얼] 코리티 Tasty Tip 페어링 & 계절감 상식 검사
         if not is_article:

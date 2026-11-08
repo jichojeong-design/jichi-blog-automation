@@ -28,16 +28,16 @@ import history_checker
 _SESSION_PUBLISHED_TITLES = set()
 
 
-def run_ai_article_routine(article_index: int):
+def run_ai_article_routine(article_index: int, save_draft: bool = False):
     """
-    [지치 컴퍼니 AI 드림팀 협업 파이프라인]
-    - 코치(소재 발굴) -> 코포터(기사 집필) -> 코자이너(썸네일 디자인) -> 코리티(품질 검사 및 수리) -> 코널리스트(발행 및 통계)
+    [지치 컴퍼니 AI 드림팀 협업 파이프라인 - ACE ETF급 매거진 대수술 완결판]
+    - 코치(소재 발굴) -> 코포터(매거진 기사 집필) -> 코자이너(썸네일 + 중간 인포그래픽 카드 디자인) -> 코리티(품질 검사) -> 코널리스트(발행/임시저장)
     """
-    print(f"\n[{datetime.datetime.now()}] 🏢 [지치 컴퍼니] AI 정규 기사 #{article_index} 협업 파이프라인 가동!")
+    print(f"\n[{datetime.datetime.now()}] 🏢 [지치 컴퍼니] AI 정규 기사 #{article_index} 협업 파이프라인 가동! (모드: {'임시저장' if save_draft else '실전발행'})")
 
-    # 오늘 이미 2편 이상 발행되었는지 실시간 라이브 체크 (--force 옵션이 없을 때만 방어, 대표님 지침 3편->2편 축소)
+    # 오늘 이미 2편 이상 발행되었는지 실시간 라이브 체크 (--force 또는 save_draft 모드일 때는 통과)
     max_daily_articles = 2
-    if "--force" not in sys.argv:
+    if "--force" not in sys.argv and not save_draft:
         today_live = history_checker.get_today_published_ai_articles("jcjung1401")
         if len(today_live) >= max_daily_articles:
             print(f"  ✅ [정원 발행 완료] 오늘(KST) 이미 AI 정규 기사 {len(today_live)}/{max_daily_articles}편이 발행되어 있습니다. 추가 발행을 건너뜁니다.")
@@ -70,16 +70,16 @@ def run_ai_article_routine(article_index: int):
     target = pool[0]
     print(f"  🎯 [코치] 오늘의 타겟 소재 확정 (미발행 신선 풀 {len(fresh_articles)}건 중 1위): '{target['title'][:35]}...'")
 
-    # 2. ✍️ [코포터] 10년 차 IT 테크 기자 심층 원고 집필
-    print(f"  ✍️ [코포터] 1,500자 심층 분석 원고 및 가독성 볼드 하이라이트 작성 중...")
-    generated = content_generator.generate_article_with_ai(target["title"], target["url"])
+    # 2. ✍️ [코포터] 10년 차 IT 테크 에디터 매거진 심층 원고 집필
+    print(f"  ✍️ [코포터] 매거진 에디토리얼(상단 3줄 요약박스 + 맞춤형 소제목 + 중간 인포그래픽표 + 파스텔 형광펜) 원고 작성 중...")
+    generated = content_generator.generate_article_with_ai(target["title"], target["url"], article_index=article_index)
 
     title = generated.get("title", f"[AI 분석] {target['title'][:22]}")
     body_text = generated.get("body", target["title"])
     image_prompt = generated.get("image_prompt", "")
     summary_lines = generated.get("summary_lines", [f"{target['title'][:12]} 전격 공개!", "글로벌 테크 시장 술렁"])
 
-    # 16~18자 모바일 가독성 줄바꿈 적용
+    # 매거진 에디토리얼 가독성 포맷팅 적용 (AI 기사는 영수증 현상 없는 매거진 폭 자동 적용)
     formatted_body = formatter.format_mobile_text(body_text)
     paragraphs = [p for p in formatted_body.split("\n\n") if p.strip()]
 
@@ -117,8 +117,8 @@ def run_ai_article_routine(article_index: int):
         )
         return False
 
-    # 5. 📊 [코널리스트] 17px 볼드 소제목 + 센터 정렬 + 해시태그 스마트에디터 정밀 발행
-    print(f"  📊 [코널리스트] 네이버 스마트에디터 원격 발행 개시 (카테고리: AI 정보)...")
+    # 5. 📊 [코널리스트] 매거진 에디토리얼(19px 버티컬 바 소제목 + 왼쪽정렬 본문 + 중간 인포그래픽) 정밀 발행/임시저장
+    print(f"  📊 [코널리스트] 네이버 스마트에디터 원격 {'임시저장' if save_draft else '발행'} 개시 (카테고리: AI 정보)...")
     tags = generated.get(
         "tags",
         ["#인공지능", "#AI트렌드", "#테크뉴스", "#IT기사", "#지치블로그", "#신기술", "#AI정보"]
@@ -128,7 +128,8 @@ def run_ai_article_routine(article_index: int):
         content_paragraphs=paragraphs,
         image_paths=[thumb_path] if os.path.exists(thumb_path) else None,
         category_name="AI 정보",
-        tags=tags
+        tags=tags,
+        save_draft=save_draft
     )
 
     if not success:
@@ -138,6 +139,10 @@ def run_ai_article_routine(article_index: int):
             error_detail="네이버 스마트에디터 발행 단계 중 지연 또는 로그인 세션 오류 발생"
         )
         return False
+
+    if save_draft:
+        print(f"  🎉 [지치 컴퍼니] 대수술 완료 AI 매거진 기사 #{article_index} 임시저장 미션 성공 완료! ('{title}')\n")
+        return True
 
     # 발행 성공한 원문 제목 및 URL을 세션 캐시 및 영구 히스토리 파일에 등록하여 중복 선택 원천 차단
     _SESSION_PUBLISHED_TITLES.add(target["title"])
