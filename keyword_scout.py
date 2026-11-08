@@ -49,13 +49,22 @@ def get_published_blog_keywords() -> list:
 
 
 def is_already_published(item_name: str, published_db: list) -> bool:
-    clean_name = item_name.replace(" ", "")
+    clean_name = re.sub(r'[^가-힣a-zA-Z0-9]', '', item_name)
     for pub in published_db:
-        # 단어 상호 포함 관계 정밀 대조
-        if (pub in clean_name and len(pub) >= 4) or (clean_name in pub and len(clean_name) >= 4):
+        clean_pub = re.sub(r'[^가-힣a-zA-Z0-9]', '', pub)
+        if not clean_pub or not clean_name:
+            continue
+        # 1. 상호 포함 관계 (기호 제거 후)
+        if clean_name in clean_pub or (len(clean_pub) >= 4 and clean_pub in clean_name):
             return True
-        # 특정 고유 명사 직접 체크
-        if any(core in clean_name for core in ["교동짬뽕", "13찬", "복분자하이볼", "만찢남", "마파두부", "QWER샌드위치", "드럼키링"]):
+        # 2. 핵심 키워드 조합 검사 (예: 다마고치 + 호빵, 교동 + 짬뽕, 혜자 + 13찬 등)
+        core_tokens = [t for t in re.findall(r'[가-힣a-zA-Z0-9]{3,}', item_name) if t not in ["편의점", "신상", "삼립", "출시"]]
+        if len(core_tokens) >= 2 and all(token in clean_pub for token in core_tokens):
+            return True
+        # 3. 고유 명사 직접 체크
+        if any(core in clean_pub and core in clean_name for core in [
+            "교동짬뽕", "13찬", "복분자하이볼", "만찢남", "마파두부", "QWER샌드위치", "드럼키링", "다마고치호빵", "밤티라미수"
+        ]):
             return True
     return False
 
