@@ -565,6 +565,96 @@ def generate_infographic_table_card(
     return output_path
 
 
+def generate_tech_analysis_card(
+    topic: str,
+    key_points: list,
+    output_path: str = "tech_analysis_card.png",
+    author_badge: str = "지치 블로그 테크 전문 분석"
+) -> str:
+    """
+    [지치 블로그 테크 전문 분석 전용 1200x560 프리미엄 브리핑 카드]
+    - 지치 블로그 테크 전문 분석 글자 바로 뒤에 배치되어 시각적 신뢰도와 마무리를 완성합니다.
+    - 네이비 & 딥블루 그라데이션 바탕 + 3대 실무 체크포인트 카드
+    """
+    width, height = 1200, 560
+    img = Image.new("RGB", (width, height), (15, 23, 42))
+    draw = ImageDraw.Draw(img)
+
+    # 1. 은은한 블루 그라데이션 및 그리드 백그라운드
+    for y in range(height):
+        ratio = y / height
+        r = int(15 * (1 - ratio) + 24 * ratio)
+        g = int(23 * (1 - ratio) + 38 * ratio)
+        b = int(42 * (1 - ratio) + 75 * ratio)
+        draw.line([(0, y), (width, y)], fill=(r, g, b))
+
+    # 부드러운 네온 블러 원
+    for rad in range(260, 40, -15):
+        alpha_tint = int(14 * (1 - rad / 260))
+        draw.ellipse([(1000 - rad, -50 - rad), (1000 + rad, -50 + rad)], outline=(30 + alpha_tint, 64 + alpha_tint * 2, 175 + alpha_tint * 3), width=2)
+
+    # 2. 폰트 로드
+    f_badge = _get_korean_font(18, bold=True)
+    f_title = _get_korean_font(27, bold=True)
+    f_box_num = _get_korean_font(20, bold=True)
+    f_box_t = _get_korean_font(19, bold=True)
+    f_box_d = _get_korean_font(16, bold=False)
+    f_ft = _get_korean_font(15, bold=False)
+
+    # 3. 상단 배지 및 헤드라인
+    draw.rounded_rectangle([(60, 45), (320, 83)], radius=8, fill=(30, 58, 138), outline=(59, 130, 246), width=1)
+    draw.text((190, 64), f"★ {author_badge}", fill=(191, 219, 254), font=f_badge, anchor="mm")
+
+    clean_topic = topic.strip()
+    if len(clean_topic) > 36:
+        clean_topic = clean_topic[:36] + "..."
+    draw.text((60, 118), f"실무 적용 관전 포인트 & 핵심 판단 지침", fill=(255, 255, 255), font=f_title)
+
+    # 4. 3대 핵심 포인트 가로 3분할 카드
+    if not key_points or len(key_points) < 3:
+        key_points = [
+            ("아키텍처 선별", "작업 목적에 맞춘 경량/정밀 모델 이원화 전략 수립"),
+            ("프롬프트 정밀화", "변경 요소와 고정 요소를 분리한 파이프라인 구축"),
+            ("품질 사후 검증", "생성 결과물의 가독성 및 세부 정합성 전수 검수")
+        ]
+
+    card_w = 340
+    card_h = 280
+    start_x = 60
+    spacing = 30
+    card_y = 175
+
+    for idx, pt in enumerate(key_points[:3]):
+        cx = start_x + idx * (card_w + spacing)
+        # 카드 배경
+        draw.rounded_rectangle([(cx, card_y), (cx + card_w, card_y + card_h)], radius=14, fill=(30, 41, 59), outline=(51, 65, 85), width=2)
+        # 상단 넘버 배지
+        draw.rounded_rectangle([(cx + 20, card_y + 20), (cx + 56, card_y + 56)], radius=8, fill=(37, 99, 235))
+        draw.text((cx + 38, card_y + 38), f"0{idx+1}", fill=(255, 255, 255), font=f_box_num, anchor="mm")
+
+        # 카드 제목 & 설명
+        if isinstance(pt, (list, tuple)) and len(pt) >= 2:
+            p_title, p_desc = str(pt[0]), str(pt[1])
+        else:
+            parts = str(pt).split(":", 1)
+            p_title = parts[0].strip() if len(parts) > 1 else f"포인트 0{idx+1}"
+            p_desc = parts[1].strip() if len(parts) > 1 else parts[0].strip()
+
+        draw.text((cx + 70, card_y + 38), p_title[:14], fill=(241, 245, 249), font=f_box_t, anchor="lm")
+        draw.line([(cx + 20, card_y + 75), (cx + card_w - 20, card_y + 75)], fill=(51, 65, 85), width=1)
+
+        # 본문 줄바꿈
+        desc_lines = _wrap_text_by_pixel(draw, p_desc, f_box_d, card_w - 40)
+        for l_i, d_ln in enumerate(desc_lines[:6]):
+            draw.text((cx + 20, card_y + 105 + l_i * 26), d_ln, fill=(203, 213, 225), font=f_box_d)
+
+    # 5. 하단 워터마크
+    draw.text((width // 2, height - 35), "JICHI BLOG TECH ANALYSIS & EDITORIAL REVIEW", fill=(100, 116, 139), font=f_ft, anchor="mm")
+
+    img.save(output_path, "PNG")
+    return output_path
+
+
 def generate_dynamic_tech_illustration(topic: str, output_path: str, article_index: int = 1) -> str:
     """
     Gemini Image API 일시 지연 시 워터마크나 중복 폴백(파란 소용돌이/지구본)을 쓰지 않고,

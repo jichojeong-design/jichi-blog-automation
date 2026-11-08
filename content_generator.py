@@ -383,7 +383,10 @@ def generate_article_with_ai(topic: str, url: str, article_index: int = 1) -> di
      * table_headers: ["핵심 구분", "주요 팩트 및 기술·시장 수치", "산업 및 실무 파장"]
      * table_rows: 정확히 3개 행, 각 행은 ["구분명(8자 이내)", "구체적 팩트와 수치 설명(35~50자)", "시장/실무 파장 핵심 요약(25~40자)"]
 7. 지치 블로그 테크 전문 분석 (expert_analysis):
-   - 실무진과 투자자가 취해야 할 전략적 판단 기준을 2~3문장으로 날카롭게 제시 ('실제 현업 도입 시 제가 활용하고 있는 기준을 바탕으로' 자연스럽게 1회 연결)
+   - ⚠️ 매우 중요: 어색한 직역투나 기계 번역('잡지용 아트워크', '플레어/선버스트' 단순 나열 등) 절대 금지!
+   - 테크 전문 리서처로서 실제 실무진과 기업이 취해야 할 전략적 판단 기준을 정확한 용어로 날카롭게 2~3문장 제시할 것.
+   - 문장 시작 또는 중간에 '실제 현업 도입 시 제가 활용하고 있는 기준을 바탕으로 볼 때,'를 자연스럽게 1회 연결할 것.
+   - 이 분석 문단 또한 [PC·모바일 동시 최적화 1:2 규격]에 따라 반드시 각 문장을 `38~44자` 또는 `19~22자`로 완결되게 작성하고 마침표(.)로 끝맺을 것!
 8. 엔딩 2줄 슬로건 (ending_slogan):
    - 글을 마무리하는 여운 있는 2줄 요약 슬로건
 9. 금지 표현 엄격 배제:
@@ -516,25 +519,59 @@ def generate_article_with_ai(topic: str, url: str, article_index: int = 1) -> di
         # 4. 지치 블로그 테크 전문 분석
         expert_txt = clean_ai_artifacts(
             parsed.get("expert_analysis")
-            or "실제 현업 도입 시 제가 활용하고 있는 기준을 바탕으로 볼 때, 단순 벤치마크 수치보다 자사 워크플로우와의 호환성 및 규제 리스크를 선제적으로 검증하는 전략이 필수적입니다."
+            or "실제 현업 도입 시 제가 활용하고 있는 기준을 바탕으로 볼 때, 모델의 명칭이나 단순 기능 나열보다 자사 워크플로우와의 호환성을 선제적으로 검토하는 전략이 필수적입니다."
         )
         blocks.append("[SUB]▎ 지치 블로그 테크 전문 분석[/SUB]")
         blocks.append(expert_txt)
+
+        # 4-1. [대표님 특명] 2번째 업로드 사진: 지치 블로그 테크 전문 분석 글자 바로 뒤에 핵심 브리핑 카드 배치!
+        tech_card_path = os.path.join(base_dir, f"tech_analysis_card_{article_index}.png")
+        try:
+            # 원문 보도자료 실물 캡처 사진이 있으면 우선 활용하고, 없으면 테크 인사이트 브리핑 카드 렌더링
+            extracted_photo = None
+            if url and ("aitimes" in url or "news" in url):
+                for p_idx in [2, 1]:
+                    local_p = os.path.join(base_dir, f"article_aitimes_photo_{p_idx}.png")
+                    if os.path.exists(local_p):
+                        extracted_photo = local_p
+                        break
+
+            if extracted_photo and os.path.exists(extracted_photo):
+                blocks.append(f"__IMAGE__:{extracted_photo}")
+                print(f"  📸 [2번째 사진] 지치 블로그 테크 분석 직후 원문 실물 캡처 사진 배치: {extracted_photo}")
+            else:
+                formatter.generate_tech_analysis_card(
+                    topic=clean_core,
+                    key_points=[
+                        ("모델 아키텍처 선별", "작업 목적과 속도에 맞춘 경량/정밀 모델 이원화 전략"),
+                        ("프롬프트 정밀 분리", "수정 대상과 고정 유지 대상을 엄격히 구분하여 통제"),
+                        ("품질 사후 전수 검수", "생성 결과물의 가독성 및 세부 정합성 직접 확인")
+                    ],
+                    output_path=tech_card_path
+                )
+                blocks.append(f"__IMAGE__:{tech_card_path}")
+                print(f"  📊 [2번째 사진] 지치 블로그 테크 분석 직후 프리미엄 브리핑 카드 배치: {tech_card_path}")
+        except Exception as tc_err:
+            print(f"  ⚠️ 2번째 사진 처리 중 예외: {tc_err}")
 
         # 5. 수미상관 엔딩 슬로건 ([HOOK])
         ending_slogan = [clean_ai_artifacts(x) for x in (parsed.get("ending_slogan") or []) if x]
         if len(ending_slogan) >= 2:
             blocks.append(f"[HOOK]**{ending_slogan[0]}**\n[HL_SKY]**{ending_slogan[1]}**[/HL_SKY][/HOOK]")
 
-        # 6. 공식 출처 + 연관 분석 1건 + 공감 CTA
-        if url:
-            blocks.append(f"공식 출처:\n\n{url}")
-        blocks.append(best1_block)
+        # 6. 소중한 시간 감사 인사 & 공감(좋아요) CTA
         blocks.append(
             "소중한 시간 내어 읽어주셔서 진심으로 감사드립니다.\n"
             "오늘 전해드린 테크 분석이 유익하셨다면 **공감(좋아요)** 꾹 눌러주시고 이웃 추가 부탁드립니다.\n"
             "지치 블로그가 매일 가장 빠르고 정확한 글로벌 테크 동향을 전달해 드리겠습니다."
         )
+
+        # 7. 공식 출처
+        if url:
+            blocks.append(f"공식 출처:\n\n{url}")
+
+        # 8. [대표님 특명] 블로그 링크를 제일 마지막으로 재배치 (독자 이탈 방지 및 체류 시간 극대화!)
+        blocks.append(best1_block)
 
         clean_body = "\n\n".join(blocks)
         tags = parsed.get("tags") or ["#인공지능", "#AI트렌드", "#테크뉴스", "#IT분석", "#빅테크", "#지치블로그"]
@@ -607,17 +644,20 @@ __IMAGE__:{infographic_path}
 
 [SUB]▎ 지치 블로그 테크 전문 분석[/SUB]
 
-단순 사양 경쟁을 넘어 '실제 현업 인프라 비용 대비 실효성'을 확보했는지가 이번 기술의 최대 승부처입니다. 실제 현업 도입 시 제가 활용하고 있는 기준을 바탕으로 볼 때, 실무진은 벤치마크 점수에만 의존하지 말고 소규모 PoC(개념 검증)를 거쳐 자사 워크플로우에 최적화하는 전략이 요구됩니다.
+실제 현업 도입 시 제가 활용하고 있는 기준을 바탕으로 볼 때, 모델의 명칭이나 단순 기능 나열보다 자사 워크플로우와의 호환성을 선제적으로 검토하는 전략이 필수적입니다.
+단순 구도 작업과 정밀 그래픽 작업의 파이프라인을 분리하여 비용과 품질을 동시에 확보해야 합니다.
+
+__IMAGE__:{infographic_path}
+
+소중한 시간 내어 읽어주셔서 진심으로 감사드립니다.
+오늘 전해드린 테크 분석이 유익하셨다면 **공감(좋아요)** 꾹 눌러주시고 이웃 추가 부탁드립니다.
+지치 블로그가 매일 가장 날카롭고 신속한 글로벌 테크 동향을 전달해 드리겠습니다.
 
 공식 출처:
 
 {url}
 
-{best1_block}
-
-소중한 시간 내어 읽어주셔서 진심으로 감사드립니다.
-오늘 전해드린 테크 분석이 유익하셨다면 **공감(좋아요)** 꾹 눌러주시고 이웃 추가 부탁드립니다.
-지치 블로그가 매일 가장 날카롭고 신속한 글로벌 테크 동향을 전달해 드리겠습니다."""
+{best1_block}"""
 
     return {
         "title": fallback_title,
