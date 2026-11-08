@@ -175,16 +175,57 @@ def format_mobile_text(text: str, max_chars: int = 18) -> str:
     return result_text
 
 
+def _balance_sentence_color_tags(lines: list) -> list:
+    """
+    문장 단위(\n) 줄바꿈 시 컬러/형광펜 태그가 줄을 넘어 열려 있으면
+    해당 줄 끝에서 닫고 다음 줄 시작에서 다시 열어 태그 노출을 100% 원천 차단합니다.
+    """
+    color_names = ["RED", "BLUE", "MINT", "PURPLE", "HL_SKY", "HL_YELLOW"]
+    color_pat = r'(?:RED|BLUE|MINT|PURPLE|HL_SKY|HL_YELLOW)'
+    balanced = []
+    active_tag = None
+
+    for raw_ln in lines:
+        ln = raw_ln.strip()
+        if not ln:
+            continue
+        if active_tag and not ln.startswith(f"[{active_tag}]"):
+            ln = f"[{active_tag}]{ln}"
+
+        # 줄 내부의 태그 스캔
+        tokens = re.findall(rf'\[(/?)({color_pat})\]', ln)
+        cur_open = None
+        for is_close, cname in tokens:
+            if not is_close:
+                cur_open = cname
+            else:
+                if cur_open == cname:
+                    cur_open = None
+
+        if cur_open:
+            ln = f"{ln}[/{cur_open}]"
+            active_tag = cur_open
+        else:
+            active_tag = None
+
+        balanced.append(ln)
+
+    return balanced
+
+
 def format_magazine_article_text(text: str) -> str:
     """
-    [AI 정보 기사 전용 - ACE ETF급 매거진 에디토리얼 포맷터]
-    - 기존의 18자 강제 줄바꿈(세로 영수증 현상)을 전면 폐지!
-    - [HOOK], [SUMMARY_BOX], [QUOTE], [SUB], __IMAGE__: 등 매거진 컴포넌트 마커를 그대로 보존합니다.
-    - 일반 해설 문단은 표준 가로 문단 폭(왼쪽 정렬용)으로 자연스럽게 유지하되,
-      스마트에디터 dot(•) 및 번호 리스트(1. 2.) 트리거만 안전하게 제거합니다.
+    [AI 정보 기사 전용 - 해법 1: '1:2 배수 문장 길이 규격화 + 마침표(.)마다 줄바꿈' 포맷터]
+    - 기존의 18자 어절 강제 줄바꿈(세로 영수증 현상) 폐지!
+    - 모든 문장은 마침표(.)가 끝난 직후 줄바꿈(\n -> Shift+Enter)하여 PC에서 1문장=1줄로 시원하게 읽히도록 처리!
+    - 각 문장 길이를 38~44자(모바일 2줄 꽉 차는 길이 = PC 1줄 길이) 또는 19~22자(단문)로 규격화하여
+      모바일에서도 5~8자 꼬리 줄(톱니바퀴 현상) 없이 딱 2줄씩 정돈되게 떨어지도록 보장!
+    - 46자를 초과하는 긴 복합문(~하며, ~있으며 등)은 두 개의 완결문(마침표)으로 자동 분할!
     """
     if not text:
         return ""
+
+    color_pat = r'(?:RED|BLUE|MINT|PURPLE|HL_SKY|HL_YELLOW)'
 
     # 출처 및 URL 앞뒤 독립 문단 보장
     text = re.sub(r'공식\s*\n+\s*출처:', '공식 출처:', text)
@@ -226,7 +267,7 @@ def format_magazine_article_text(text: str) -> str:
                 out_blocks.append(f"[SUB]▎ {inner_sub}[/SUB]")
             continue
 
-        # 3. 일반 본문 문단: 스마트에디터 리스트 트리거(-, *, 1.) 제거 후 깔끔한 문장 단위 호흡 유지
+        # 3. 일반 본문 문단: 스마트에디터 리스트 트리거(-, *, 1.) 제거
         cleaned_lines = []
         for raw_ln in b.split("\n"):
             ln = raw_ln.strip()
@@ -240,13 +281,58 @@ def format_magazine_article_text(text: str) -> str:
         if not cleaned_lines:
             continue
 
-        # 엔딩 인사말이나 짧은 슬로건처럼 이미 의도적으로 줄바꿈된 블록은 줄바꿈 유지,
-        # 긴 해설 문단은 자연스러운 이어쓰기(문단 통일감) 제공
+        # 엔딩 인사말은 기존 줄바꿈 유지
+        if any("소중한 시간" in ln for ln in cleaned_lines):
+            out_blocks.append("\n".join(cleaned_lines))
+            continue
+
         joined = " ".join(cleaned_lines)
+
+        # **[BLUE]...[/BLUE]** 또는 **[BLUE]...**[/BLUE] 등 볼드·컬러 중첩 태그를 깔끔한 [BLUE]...[/BLUE]로 일원화
+        joined = re.sub(rf'\*\*\s*(\[/?{color_pat}\])\s*\*\*', r'\1', joined)
+        joined = re.sub(rf'\*\*\s*(\[/?{color_pat}\])', r'\1', joined)
+        joined = re.sub(rf'(\[/?{color_pat}\])\s*\*\*', r'\1', joined)
         joined = re.sub(r'\*\*([^\*\n]+?)\*\*', r'⟪B⟫\1⟪/B⟫', joined)
         joined = joined.replace('*', '')
         joined = joined.replace('⟪B⟫', '**').replace('⟪/B⟫', '**')
-        out_blocks.append(joined)
+
+        # [해법 1 핵심] 마침표(.) / 물음표(?) / 느낌표(!)가 끝날 때마다 줄바꿈(\n) 분리!
+        # 단, 마침표 직후에 닫히는 컬러 태그([/BLUE] 등)나 볼드(**)는 앞 문장에 그대로 붙여둠
+        sent_split_pat = rf'((?:다|요|죠|까|네|음|함|됨|임)[\.\?\!](?:\s*\[/{color_pat}\]|\s*\*\*)*)\s+'
+        raw_sentences = [s.strip() for s in re.sub(sent_split_pat, r'\1\n', joined).split('\n') if s.strip()]
+
+        # 만약 46자를 초과하는 긴 복합문(~하며, ~있으며, ~되며 등)이 있으면 두 개의 마침표 문장으로 자연스럽게 분할
+        refined_sentences = []
+        for s in raw_sentences:
+            vis_s = re.sub(rf'\[/?{color_pat}\]|\*\*', '', s).strip()
+            if len(vis_s) > 46:
+                s_split = s
+                s_split = re.sub(r'([가-힣]{2,})하며,\s+', r'\1합니다.\n', s_split, count=1)
+                if '\n' not in s_split:
+                    s_split = re.sub(r'있으며,\s+', '있습니다.\n', s_split, count=1)
+                if '\n' not in s_split:
+                    s_split = re.sub(r'없으며,\s+', '없습니다.\n', s_split, count=1)
+                if '\n' not in s_split:
+                    s_split = re.sub(r'되며,\s+', '됩니다.\n', s_split, count=1)
+                if '\n' not in s_split:
+                    s_split = re.sub(r'나뉘며,\s+', '나뉩니다.\n', s_split, count=1)
+                if '\n' not in s_split:
+                    s_split = re.sub(r'보이며,\s+', '보입니다.\n', s_split, count=1)
+                for sub_s in s_split.split('\n'):
+                    if sub_s.strip():
+                        refined_sentences.append(sub_s.strip())
+            else:
+                refined_sentences.append(s)
+
+        balanced_sentences = _balance_sentence_color_tags(refined_sentences)
+
+        # 한 문단에 문장이 4개 이상이면 2~3문장 단위로 소문단(빈 줄) 분리하여 모바일 벽돌 현상까지 완벽 방지
+        if len(balanced_sentences) >= 4:
+            mid = 2 if len(balanced_sentences) == 4 else 3
+            out_blocks.append("\n".join(balanced_sentences[:mid]))
+            out_blocks.append("\n".join(balanced_sentences[mid:]))
+        else:
+            out_blocks.append("\n".join(balanced_sentences))
 
     return "\n\n".join(out_blocks)
 

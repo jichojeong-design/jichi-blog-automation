@@ -408,6 +408,12 @@ def _type_styled_line(page, line_text: str):
     if not clean_line:
         return
 
+    # **[BLUE]...[/BLUE]** 또는 **[BLUE]...**[/BLUE] 등 볼드·컬러 중첩 태그를 깔끔한 [BLUE]...[/BLUE]로 정규화
+    color_pat = r'(?:RED|BLUE|MINT|PURPLE|HL_SKY|HL_YELLOW)'
+    clean_line = re.sub(rf'\*\*\s*(\[/?{color_pat}\])\s*\*\*', r'\1', clean_line)
+    clean_line = re.sub(rf'\*\*\s*(\[/?{color_pat}\])', r'\1', clean_line)
+    clean_line = re.sub(rf'(\[/?{color_pat}\])\s*\*\*', r'\1', clean_line)
+
     # 컬러/하이라이트 태그 및 **볼드** 정규식 분리
     pattern = r'(\[(?:RED|BLUE|MINT|PURPLE|HL_SKY|HL_YELLOW)\].*?\[/(?:RED|BLUE|MINT|PURPLE|HL_SKY|HL_YELLOW)\]|\*\*.*?\*\*)'
     parts = re.split(pattern, clean_line)
@@ -417,6 +423,7 @@ def _type_styled_line(page, line_text: str):
         tag_match = re.match(r'^\[(RED|BLUE|MINT|PURPLE|HL_SKY|HL_YELLOW)\](.*?)\[/\1\]$', p)
         if tag_match:
             cname, inner = tag_match.groups()
+            inner = re.sub(r'\[/?(?:RED|BLUE|MINT|PURPLE|HL_SKY|HL_YELLOW)\]', '', inner)
             if inner.startswith('**') and inner.endswith('**') and len(inner) >= 4:
                 inner = inner[2:-2]
             inner = inner.replace('*', '')
@@ -443,18 +450,27 @@ def _type_styled_line(page, line_text: str):
                     _reset_text_color(page)
         elif p.startswith('**') and p.endswith('**') and len(p) >= 4:
             bold_text = p[2:-2].replace('*', '')
+            # 만약 볼드 내부에 컬러 태그가 중첩되어 있다면 해당 컬러 적용 후 태그 문자열 완전 제거
+            inner_color = None
+            for cname in ["RED", "BLUE", "MINT", "PURPLE", "HL_SKY", "HL_YELLOW"]:
+                if f"[{cname}]" in bold_text:
+                    inner_color = cname
+                    break
+            bold_text = re.sub(r'\[/?(?:RED|BLUE|MINT|PURPLE|HL_SKY|HL_YELLOW)\]', '', bold_text).strip()
             is_red = any(rk in bold_text for rk in ["공감", "좋아요", "공감(좋아요)"])
             if is_red:
                 _set_text_color_red(page)
+            elif inner_color:
+                _set_text_color(page, COLOR_MAP.get(inner_color, "#0066cc"))
             page.keyboard.press("Control+b")
             time.sleep(0.02)
             page.keyboard.insert_text(bold_text)
             page.keyboard.press("Control+b")
             time.sleep(0.02)
-            if is_red:
+            if is_red or inner_color:
                 _reset_text_color(page)
         else:
-            clean_p = p.replace('*', '')
+            clean_p = re.sub(r'\[/?(?:RED|BLUE|MINT|PURPLE|HL_SKY|HL_YELLOW)\]', '', p).replace('*', '')
             if clean_p:
                 page.keyboard.insert_text(clean_p)
 
