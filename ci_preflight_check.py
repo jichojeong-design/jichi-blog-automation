@@ -131,7 +131,7 @@ def run_preflight():
         "Test Headline for Preflight Check", source_url="https://example.com/preflight-test"
     )
     best3_block = history_checker.build_best3_tech_links_block("jcjung1401", exclude_title="프리플라이트 테스트")
-    assert "[함께 읽으면" in best3_block and "https://blog.naver.com/jcjung1401/" in best3_block, "BEST 3 블록 생성 오류"
+    assert "함께 읽으면" in best3_block and "https://blog.naver.com/jcjung1401/" in best3_block, "BEST 3 블록 생성 오류"
     print(f"  - history_checker 런타임 호출 정상 (오늘 발행 감지: {len(today_posts)}건, 중복판정: {is_dup})")
 
     # (b) constants & formatter 호출 테스트

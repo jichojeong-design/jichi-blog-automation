@@ -524,33 +524,54 @@ def generate_article_with_ai(topic: str, url: str, article_index: int = 1) -> di
         blocks.append("[SUB]▎ 지치 블로그 테크 전문 분석[/SUB]")
         blocks.append(expert_txt)
 
-        # 4-1. [대표님 특명] 2번째 업로드 사진: 지치 블로그 테크 전문 분석 글자 바로 뒤에 핵심 브리핑 카드 배치!
+        # 4-1. [대표님 특명] 2번째 업로드 사진: 지치 블로그 테크 전문 분석 글자 바로 뒤에 배치!
         tech_card_path = os.path.join(base_dir, f"tech_analysis_card_{article_index}.png")
         try:
-            # 원문 보도자료 실물 캡처 사진이 있으면 우선 활용하고, 없으면 테크 인사이트 브리핑 카드 렌더링
             extracted_photo = None
-            if url and ("aitimes" in url or "news" in url):
-                for p_idx in [2, 1]:
-                    local_p = os.path.join(base_dir, f"article_aitimes_photo_{p_idx}.png")
-                    if os.path.exists(local_p):
-                        extracted_photo = local_p
-                        break
+            if url and url.startswith("http"):
+                try:
+                    import requests
+                    import urllib.request
+                    from bs4 import BeautifulSoup
+                    resp_p = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=8)
+                    if resp_p.status_code == 200:
+                        soup_p = BeautifulSoup(resp_p.text, "html.parser")
+                        body_div = soup_p.find("div", id="article-view-content-div") or soup_p.find("article") or soup_p
+                        cand_Urls = []
+                        for img_el in body_div.find_all("img"):
+                            src_u = img_el.get("src") or ""
+                            if "/news/photo/" in src_u and "watermark" not in src_u and "logo" not in src_u:
+                                if src_u.startswith("//"):
+                                    src_u = "https:" + src_u
+                                elif src_u.startswith("/"):
+                                    from urllib.parse import urljoin
+                                    src_u = urljoin(url, src_u)
+                                if src_u not in cand_Urls:
+                                    cand_Urls.append(src_u)
+                        if len(cand_Urls) >= 2:
+                            dl_path = os.path.join(base_dir, f"article_inline_photo_{article_index}.png")
+                            urllib.request.urlretrieve(cand_Urls[1], dl_path)
+                            if os.path.exists(dl_path) and os.path.getsize(dl_path) > 15000:
+                                extracted_photo = dl_path
+                except Exception:
+                    pass
 
             if extracted_photo and os.path.exists(extracted_photo):
                 blocks.append(f"__IMAGE__:{extracted_photo}")
-                print(f"  📸 [2번째 사진] 지치 블로그 테크 분석 직후 원문 실물 캡처 사진 배치: {extracted_photo}")
+                print(f"  📸 [2번째 사진] 지치 블로그 테크 분석 직후 원문 2번째 실물 사진 배치: {extracted_photo}")
             else:
+                t_rows = info_data.get("table_rows") or []
+                custom_pts = []
+                for r in t_rows[:3]:
+                    if isinstance(r, list) and len(r) >= 3:
+                        custom_pts.append((clean_ai_artifacts(str(r[0])), clean_ai_artifacts(str(r[2]))))
                 formatter.generate_tech_analysis_card(
                     topic=clean_core,
-                    key_points=[
-                        ("모델 아키텍처 선별", "작업 목적과 속도에 맞춘 경량/정밀 모델 이원화 전략"),
-                        ("프롬프트 정밀 분리", "수정 대상과 고정 유지 대상을 엄격히 구분하여 통제"),
-                        ("품질 사후 전수 검수", "생성 결과물의 가독성 및 세부 정합성 직접 확인")
-                    ],
+                    key_points=custom_pts if len(custom_pts) >= 3 else None,
                     output_path=tech_card_path
                 )
                 blocks.append(f"__IMAGE__:{tech_card_path}")
-                print(f"  📊 [2번째 사진] 지치 블로그 테크 분석 직후 프리미엄 브리핑 카드 배치: {tech_card_path}")
+                print(f"  📊 [2번째 사진] 지치 블로그 테크 분석 직후 맞춤형 브리핑 카드 배치: {tech_card_path}")
         except Exception as tc_err:
             print(f"  ⚠️ 2번째 사진 처리 중 예외: {tc_err}")
 
