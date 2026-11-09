@@ -323,41 +323,63 @@ def execute_daily_sequence():
     event_name = os.environ.get("GITHUB_EVENT_NAME", "workflow_dispatch")
 
     if event_name in ["schedule", "workflow_dispatch", "push"] or "--full-daily" in sys.argv:
-        print("=" * 60)
-        print("🚀 [지치 컴퍼니 정규 스케줄러: AI 고품질 기사 2편 발행 가동 (품질 극대화 편제)]")
-        print("=" * 60)
-
-        max_target = 2
-        today_live = history_checker.get_today_published_ai_articles("jcjung1401")
-        already_count = len(today_live) if "--force" not in sys.argv else 0
-        if already_count >= max_target:
-            print(f"✅ 오늘(KST) 이미 AI 정규 기사 {already_count}/{max_target}편이 정상 발행되어 있습니다. (중복 발행 방어 완료)")
-            return
-
-        needed = max_target - already_count
-        print(f"📊 오늘 발행 현황: {already_count}/{max_target}편 완료 -> 남은 {needed}편 연속 발행 시작 (10분 안전 간격)")
-
-        success_count = 0
-        start_idx = already_count + 1
-        for idx, i in enumerate(range(start_idx, max_target + 1)):
+        lock_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "daily_scheduler.lock")
+        if os.path.exists(lock_file) and "--force" not in sys.argv:
             try:
-                ok = run_ai_article_routine(i)
-            except Exception as routine_err:
-                import traceback
-                print(f"  🚨 [비상 예외 방어] 기사 #{i} 실행 중 예외 발생: {routine_err}")
-                traceback.print_exc()
-                ok = False
-            if ok:
-                success_count += 1
-            if idx < needed - 1:
-                print(f"\n⏳ 네이버 봇 필터링 우회를 위해 10분(600초) 안전 대기 후 기사 #{i+1} 발행을 시작합니다...")
-                time.sleep(600)
+                mtime = os.path.getmtime(lock_file)
+                if time.time() - mtime < 1500:
+                    print("⚠️ [동시 실행 방지] 이미 다른 스케줄러 프로세스가 발행 작업을 수행 중입니다. 중복 실행을 건너뜁니다.")
+                    return
+            except Exception:
+                pass
+        try:
+            with open(lock_file, "w", encoding="utf-8") as lf:
+                lf.write(str(os.getpid()))
+        except Exception:
+            pass
 
-        if success_count == 0:
-            print("\n❌ [치명적 오류] 오늘 하루치 정규 기사 발행이 모두 실패했습니다! (Exit Code 1 반환)")
-            sys.exit(1)
+        try:
+            print("=" * 60)
+            print("🚀 [지치 컴퍼니 정규 스케줄러: AI 고품질 기사 2편 발행 가동 (품질 극대화 편제)]")
+            print("=" * 60)
 
-        print(f"\n🎉 오늘 하루치 정규 기사 발행 완료! (신규 성공: {success_count}편 / 누적: {already_count + success_count}편)")
+            max_target = 2
+            today_live = history_checker.get_today_published_ai_articles("jcjung1401")
+            already_count = len(today_live) if "--force" not in sys.argv else 0
+            if already_count >= max_target:
+                print(f"✅ 오늘(KST) 이미 AI 정규 기사 {already_count}/{max_target}편이 정상 발행되어 있습니다. (중복 발행 방어 완료)")
+                return
+
+            needed = max_target - already_count
+            print(f"📊 오늘 발행 현황: {already_count}/{max_target}편 완료 -> 남은 {needed}편 연속 발행 시작 (10분 안전 간격)")
+
+            success_count = 0
+            start_idx = already_count + 1
+            for idx, i in enumerate(range(start_idx, max_target + 1)):
+                try:
+                    ok = run_ai_article_routine(i)
+                except Exception as routine_err:
+                    import traceback
+                    print(f"  🚨 [비상 예외 방어] 기사 #{i} 실행 중 예외 발생: {routine_err}")
+                    traceback.print_exc()
+                    ok = False
+                if ok:
+                    success_count += 1
+                if idx < needed - 1:
+                    print(f"\n⏳ 네이버 봇 필터링 우회를 위해 10분(600초) 안전 대기 후 기사 #{i+1} 발행을 시작합니다...")
+                    time.sleep(600)
+
+            if success_count == 0:
+                print("\n❌ [치명적 오류] 오늘 하루치 정규 기사 발행이 모두 실패했습니다! (Exit Code 1 반환)")
+                sys.exit(1)
+
+            print(f"\n🎉 오늘 하루치 정규 기사 발행 완료! (신규 성공: {success_count}편 / 누적: {already_count + success_count}편)")
+        finally:
+            try:
+                if os.path.exists(lock_file):
+                    os.remove(lock_file)
+            except Exception:
+                pass
     elif "--inception" in sys.argv:
         print("=" * 60)
         print("🚀 [즉시 실행: 1위 기사 '인셉션 충격 반전' 각색 웹툰 임시저장 가동]")

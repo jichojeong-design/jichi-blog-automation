@@ -8,6 +8,9 @@ import constants
 import collector
 import prompt_engine
 import snack_trends
+import history_checker
+import content_generator
+import daily_scheduler
 
 st.set_page_config(page_title="지치 컴퍼니 올인원 통합 관제 센터", page_icon="🏢", layout="wide")
 
@@ -116,7 +119,7 @@ with col_alert1:
     <div style="background: linear-gradient(135deg, #1a0f12, #241419); border: 2px solid #e32652; padding: 14px 20px; border-radius: 14px; margin-bottom: 16px; box-shadow: 0 0 25px rgba(227,38,82,0.25);">
         <span style="font-size: 15px; font-weight: 800; color: #ff4d6d;">🚨 [아침 9시 무인 발행 안전 관제 시스템 가동 중 — Fail-Safe]</span><br/>
         <span style="font-size: 13px; color: #fecdd3; line-height: 1.5;">
-            AI 기사 3편 및 웹툰이 09:03까지 발행되지 않으면 <b>네이버 메일로 긴급 알림</b>이 즉시 발송됩니다. 출근길 이상 감지 시 오른쪽 비상 버튼을 눌러주세요!
+            매일 아침 09:00 KST에 <b>ACE ETF급 매거진 AI 기사 2편(10분 안전 인터벌)</b>이 자동 발행되며, 이상 감지 시 <b>네이버 메일로 긴급 알림</b>이 즉시 발송됩니다!
         </span>
     </div>
     """, unsafe_allow_html=True)
@@ -262,6 +265,33 @@ with tab_news:
         if selected_news:
             st.text_input("선택된 기사 제목", value=selected_news.get('title', ''))
             st.text_input("출처 URL", value=selected_news.get('url', ''))
+            col_a1, col_a2, col_a3 = st.columns(3)
+            with col_a1:
+                if st.button("✍️ 매거진 원고 · 인포그래픽 생성 미리보기", use_container_width=True):
+                    with st.spinner("매거진 에디토리얼 원고(해법 1: 38~44자 마침표 줄바꿈) 생성 중..."):
+                        art = content_generator.generate_article_with_ai(selected_news['title'], selected_news['url'], article_index=1)
+                        st.session_state["preview_art"] = art
+                        st.success("매거진 원고 및 인포그래픽/테크카드 생성 완료!")
+            with col_a2:
+                if st.button("💾 네이버 블로그 임시저장 실행", use_container_width=True):
+                    with st.spinner("스마트에디터 ONE 임시저장 진행 중..."):
+                        ok = daily_scheduler.run_ai_article_routine(article_index=1, save_draft=True)
+                        if ok:
+                            st.success("네이버 블로그 임시저장 완료!")
+                        else:
+                            st.error("임시저장 실패")
+            with col_a3:
+                if st.button("🚀 오늘자 매거진 기사 즉시 실전 발행", use_container_width=True):
+                    with st.spinner("스마트에디터 ONE 실전 발행 진행 중..."):
+                        ok = daily_scheduler.run_ai_article_routine(article_index=1, save_draft=False)
+                        if ok:
+                            st.success("실전 발행 완료!")
+                        else:
+                            st.error("실전 발행 실패")
+            if st.session_state.get("preview_art"):
+                pa = st.session_state["preview_art"]
+                st.markdown(f"#### 📌 생성된 제목: `{pa.get('title', '')}`")
+                st.code(formatter.format_magazine_article_text(pa.get("body", "")), language="markdown")
 
 # ==========================================
 # 탭 3: 웹툰 제작실 (코서치·코디터·코자이너)

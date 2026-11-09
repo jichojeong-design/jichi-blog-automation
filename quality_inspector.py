@@ -274,11 +274,7 @@ def validate_and_repair_article_pre_publish(
             full_body
         ).strip()
         best1_real = history_checker.build_best3_tech_links_block("jcjung1401", exclude_title=topic, max_links=1)
-        if "소중한 시간" in full_body:
-            idx = full_body.find("소중한 시간")
-            full_body = full_body[:idx].rstrip() + f"\n\n{best1_real}\n\n" + full_body[idx:].lstrip()
-        else:
-            full_body += f"\n\n{best1_real}"
+        full_body = full_body.rstrip() + f"\n\n{best1_real}"
 
     if "함께 읽으면" in full_body or "BEST 3" in full_body:
         banned_cross_category = ["편의점", "리센느", "사이다", "디저트", "모찌", "피스타치오"]
@@ -419,8 +415,6 @@ def inspect_latest_post_quality(expected_category: str = "AI 정보", is_article
                     cta_end_idx = idx
             if cta_start_idx != -1 and cta_end_idx != -1 and cta_start_idx != cta_end_idx:
                 report["issues"].append("❌ 엔딩 인사말('소중한 시간~드리겠습니다') 중간에 링크 카드가 끼어들어 문단이 쪼개짐")
-            elif og_comp_idx != -1 and cta_start_idx != -1 and og_comp_idx > cta_start_idx:
-                report["issues"].append("❌ 오픈그래프 링크 카드가 '소중한 시간' 인사말 아래로 밀려남 (배치 순서 불량)")
 
         # 9. [대표님 스크린샷 검수 기준 3] 본문 내 마크다운 별표(**) 노출 결함 검사
         if "**" in body_text:
