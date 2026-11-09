@@ -288,6 +288,9 @@ def format_magazine_article_text(text: str) -> str:
 
         joined = " ".join(cleaned_lines)
 
+        # 마침표가 연속 2개 찍히는 오타(..) 즉시 단일 마침표(.)로 정규화
+        joined = re.sub(r'\.{2,}', '.', joined)
+
         # **[BLUE]...[/BLUE]** 또는 **[BLUE]...**[/BLUE] 등 볼드·컬러 중첩 태그를 깔끔한 [BLUE]...[/BLUE]로 일원화
         joined = re.sub(rf'\*\*\s*(\[/?{color_pat}\])\s*\*\*', r'\1', joined)
         joined = re.sub(rf'\*\*\s*(\[/?{color_pat}\])', r'\1', joined)
@@ -297,8 +300,8 @@ def format_magazine_article_text(text: str) -> str:
         joined = joined.replace('⟪B⟫', '**').replace('⟪/B⟫', '**')
 
         # [해법 1 핵심] 마침표(.) / 물음표(?) / 느낌표(!)가 끝날 때마다 줄바꿈(\n) 분리!
-        # 단, 마침표 직후에 닫히는 컬러 태그([/BLUE] 등)나 볼드(**)는 앞 문장에 그대로 붙여둠
-        sent_split_pat = rf'((?:다|요|죠|까|네|음|함|됨|임)[\.\?\!](?:\s*\[/{color_pat}\]|\s*\*\*)*)\s+'
+        # 문장 끝 부호가 1개 이상(+), 마침표 직후에 닫히는 컬러 태그([/BLUE] 등)나 볼드(**)는 앞 문장에 그대로 붙여둠
+        sent_split_pat = rf'((?:다|요|죠|까|네|음|함|됨|임)[\.\?\!]+(?:\s*\[/{color_pat}\]|\s*\*\*)*)\s+'
         raw_sentences = [s.strip() for s in re.sub(sent_split_pat, r'\1\n', joined).split('\n') if s.strip()]
 
         # 만약 46자를 초과하는 긴 복합문(~하며, ~있으며, ~되며 등)이 있으면 두 개의 마침표 문장으로 자연스럽게 분할

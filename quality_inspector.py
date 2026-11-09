@@ -224,7 +224,12 @@ def validate_and_repair_article_pre_publish(
     if subheading_count < 3:
         repairs_done.append(f"소제목 수량 확인 ({subheading_count}개)")
 
-    re_formatted = formatter.format_mobile_text(full_body)
+    # AI 기사 전용 포매터와 웹툰 포매터 분기
+    is_mag = any(m in full_body for m in ["[HOOK]", "[SUMMARY_BOX]", "[SUB]", "[QUOTE]"])
+    if is_mag:
+        re_formatted = formatter.format_magazine_article_text(full_body)
+    else:
+        re_formatted = formatter.format_mobile_text(full_body)
     repaired_paragraphs = [p for p in re_formatted.split("\n\n") if p.strip()]
     if has_awkward_break and not any(m in full_body for m in ["[HOOK]", "[SUMMARY_BOX]", "[SUB]"]):
         repairs_done.append("본문 줄바꿈 호흡 불량 감지 -> 문장/절 단위 자연스러운 줄바꿈으로 자동 완벽 수리")
@@ -306,7 +311,12 @@ def validate_and_repair_article_pre_publish(
             print(f"  🛑 [코리티 중복 기사 감지] 오늘 이미 발행된 글('{tp_t}')과 고유 핵심 키워드({common})가 겹치므로 중복 발행을 즉시 차단합니다.")
             return False, repaired_title, repaired_summary, repaired_paragraphs
 
-    re_formatted = formatter.format_mobile_text(full_body)
+    # AI 기사 전용 포매터와 웹툰 포매터 분기
+    is_mag = any(m in full_body for m in ["[HOOK]", "[SUMMARY_BOX]", "[SUB]", "[QUOTE]"])
+    if is_mag:
+        re_formatted = formatter.format_magazine_article_text(full_body)
+    else:
+        re_formatted = formatter.format_mobile_text(full_body)
     repaired_paragraphs = [p for p in re_formatted.split("\n\n") if p.strip()]
 
     if repairs_done:

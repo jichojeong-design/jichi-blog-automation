@@ -79,8 +79,8 @@ def run_ai_article_routine(article_index: int, save_draft: bool = False):
     image_prompt = generated.get("image_prompt", "")
     summary_lines = generated.get("summary_lines", [f"{target['title'][:12]} 전격 공개!", "글로벌 테크 시장 술렁"])
 
-    # 매거진 에디토리얼 가독성 포맷팅 적용 (AI 기사는 영수증 현상 없는 매거진 폭 자동 적용)
-    formatted_body = formatter.format_mobile_text(body_text)
+    # 매거진 에디토리얼 가독성 포맷팅 적용 (해법 1: 38~44자 마침표 줄바꿈)
+    formatted_body = formatter.format_magazine_article_text(body_text)
     paragraphs = [p for p in formatted_body.split("\n\n") if p.strip()]
 
     # 3. 🎨 [코자이너] Google Gemini Image 기본 엔진 기반 3D 일러스트 렌더링 & 1691x930 썸네일 합성

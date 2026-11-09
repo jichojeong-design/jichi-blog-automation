@@ -88,6 +88,9 @@ def clean_ai_artifacts(text: str) -> str:
     
     # 소제목([ ... ]) 내부의 AI 특유의 촌스러운 느낌표(!) 자동 제거: 예: [팩트 체크!] -> [팩트 체크]
     text = re.sub(r'\[([^\]]*?)!+([^\]]*?)\]', r'[\1\2]', text)
+
+    # 마침표 연속 2개(..) 오타 정규화
+    text = re.sub(r'\.{2,}', '.', text)
     
     return text.strip()
 
